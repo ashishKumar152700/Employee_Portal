@@ -4,7 +4,7 @@ import { View, Text } from 'react-native';
 export default function AssetModule() {
   return (
     <View>
-      <Text>Asset Module</Text>
+      <Text>AssetModule</Text>
      </View>
   );
 }
