@@ -6,6 +6,8 @@ import { View } from 'react-native';
 import BottomTabNavLeave from '../BottomNav/BottomNavForLeave';
 import Profile from '../../Screen/Profile/Profile';
 import TimesheetCalendar from '../../Screen/Timesheet/TimesheetCalendar';
+import AssetModule from '../../Screen/Asset/AssetRequest';
+import MyTickets from '../../Screen/Asset/MyTickets';
 import BottomNavForAsset from '../BottomNav/BottomNavForAsset';
 
 const Drawer = createDrawerNavigator();
@@ -20,7 +22,7 @@ function DrawerNavigator() {
         <Drawer.Screen name="Attendance" component={BottomTabNavigator} /> 
         <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} /> 
         <Drawer.Screen name="Timesheet" component={TimesheetCalendar} />  
-        <Drawer.Screen name="AssetModule" component={BottomNavForAsset} /> 
+        <Drawer.Screen name="AssetModule" component={AssetModule} /> 
         <Drawer.Screen name="MyTickets" component={BottomNavForAsset} /> 
         <Drawer.Screen name="Profile" component={Profile} /> 
         
