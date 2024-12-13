@@ -1,5 +1,7 @@
 
+import { useNavigation } from '@react-navigation/native';
 import * as React from 'react';
+import { Button } from 'react-native';
 import { ScrollView, StyleSheet, TextInput, View, Text } from 'react-native';
 import { DataTable } from 'react-native-paper';
 
@@ -38,6 +40,7 @@ const MyTickets = () => {
           value={searchQuery}
           onChangeText={(text) => setSearchQuery(text)}
         />
+         
       </View>
 
       <DataTable>

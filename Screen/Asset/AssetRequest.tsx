@@ -100,7 +100,7 @@ export default function AssetModule() {
     <View style={{ flex: 1, padding: 10 }}>
       <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row' }}>
         <Text style={{ fontSize: 15, fontWeight: 'bold' }}>Raise Ticket For</Text>
-        <Button mode="contained" onPress={handlePress}>
+        <Button style={{backgroundColor:"rgb(0,47,81)"}} mode="contained" onPress={handlePress}>
           MyTickets
         </Button>
       </View>
