@@ -20,9 +20,9 @@ export default function AssetModule() {
   const [showAlert, setShowAlert] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<Asset | null>(null);
 
-  // const handlePress = (): void => {
-  //   navigation.navigate('MyTickets' as never);
-  // };
+  const handlePress = (): void => {
+    navigation.navigate('MyTickets' as never);
+  };
 
   const assets: Asset[] = [
     {

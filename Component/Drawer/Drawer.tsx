@@ -22,7 +22,7 @@ function DrawerNavigator() {
         <Drawer.Screen name="Attendance" component={BottomTabNavigator} /> 
         <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} /> 
         <Drawer.Screen name="Timesheet" component={TimesheetCalendar} />  
-        <Drawer.Screen name="AssetModule" component={AssetModule} /> 
+        <Drawer.Screen name="AssetModule" component={BottomNavForAsset} /> 
         <Drawer.Screen name="MyTickets" component={BottomNavForAsset} /> 
         <Drawer.Screen name="Profile" component={Profile} /> 
         
