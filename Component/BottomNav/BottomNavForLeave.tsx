@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MyLeaveScreen from '../../Screen/MyLeave/MyLeaveScreen';
 import LeaveApplicationScreen from '../../Screen/MyLeave/LeaveApplicationScreen';
+import TabViewExample from '../LeaveScreen/LeaveTabs';
 const Tab = createBottomTabNavigator();
 
 function BottomTabNavLeave() {
@@ -22,6 +23,7 @@ function BottomTabNavLeave() {
       <Tab.Screen 
         name="Apply for Leaves" 
         component={LeaveApplicationScreen} 
+        // component={TabViewExample} 
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (

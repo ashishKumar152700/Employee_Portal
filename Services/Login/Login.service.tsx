@@ -18,6 +18,8 @@ class LoginServices {
         );
 
         if (response.status === 200) {
+          console.log("----------------------------------------",response.data.data);
+          
           const { accessToken, user } = response.data.data;
 
           await AsyncStorage.setItem("accessToken", accessToken);

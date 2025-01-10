@@ -65,23 +65,30 @@ const PunchScreen: React.FC = () => {
   useEffect(() => {
     const fetchPunchInfo = async () => {
       try {
-       
-          const punchInfo = punchInforSelector;
-
-          if (punchInfo.length > 0 && punchInfo[0].punchintime) {
-            setClockInTime(punchInfo[0].punchintime); 
-            setClockOutTime(punchInfo[0].punchouttime);
-            console.log('Punch In Time:', punchInfo[0].punchintime);
-          } else {
-            console.log('No punch in time found in the stored data.');
-          }
-        // } else {
-        //   console.log('No punch info found in storage.');
-        // }
+        const punchInfo = punchInforSelector;
+    
+        if (punchInfo.length > 0 && punchInfo[0].punchintime) {
+          setClockInTime(punchInfo[0].punchintime); 
+          setClockOutTime(punchInfo[0].punchouttime);
+    
+          // Convert duration in seconds to hr:min:sec
+          const totalSeconds = punchInfo[0].duration;
+          const hours = Math.floor(totalSeconds / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+          const formattedDuration = `${hours}h ${minutes}m `;
+    
+          setTotalTime(formattedDuration); // Store in formatted string
+          console.log('Punch In Time:', punchInfo[0].punchintime);
+          console.log('Duration:', formattedDuration);
+        } else {
+          console.log('No punch in time found in the stored data.');
+        }
       } catch (error) {
         console.error('Error fetching punch info from AsyncStorage:', error);
       }
     };
+    
 
     fetchPunchInfo();
   }, []);

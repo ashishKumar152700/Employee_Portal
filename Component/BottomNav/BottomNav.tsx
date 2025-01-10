@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import PunchScreen from '../../Screen/Attendance/Punch';
 import Schedule from '../../Screen/Calander/Calander';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import AgendaScreen from '../../Screen/Calander/Testing';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,6 +22,7 @@ function BottomTabNavigator() {
       />
       <Tab.Screen 
         name="Calander" 
+        // component={AgendaScreen} 
         component={Schedule} 
         options={{
           headerShown: false,
