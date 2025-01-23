@@ -25,9 +25,9 @@ class LoginServices {
           await AsyncStorage.setItem("accessToken", accessToken);
           await AsyncStorage.setItem("user", JSON.stringify(user));
 
-          dispatch({type : "punchInfo" , payload : response.data.data.user.punchInfo })
-          dispatch({type : "userDetails" , payload : response.data.data})
-
+          await dispatch({type : "punchInfo" , payload : response.data.data.user.punchInfo })
+          await dispatch({type : "userDetails" , payload : response.data.data})
+          
           if (user.manager) {
 
             dispatch({type : "managerInfo" , payload : user.manager})

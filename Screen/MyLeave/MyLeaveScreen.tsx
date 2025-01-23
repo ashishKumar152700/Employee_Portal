@@ -1,24 +1,21 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
-import {
-  View,
-  Text,
-  SafeAreaView,
-  StyleSheet,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, SafeAreaView, StyleSheet } from "react-native";
 import * as Progress from "react-native-progress";
 import { useDispatch, useSelector } from "react-redux";
-import { getLeaves, leaveHistoryPending } from "../../Services/Leave/Leave.service";
-import TabViewExample from "../../Component/LeaveScreen/LeaveTabs";
+import { getLeaves } from "../../Services/Leave/Leave.service";
+import { FAB } from "react-native-paper"; 
+import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../../Global/Types';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 export default function MyLeaveScreen() {
   const [leaveDetails, setLeaveDetails] = useState(null);
-  const [pendingLeave, setPendingLeave] = useState(null);
-  const [activeTab, setActiveTab] = useState("Pending");
-
   const dispatch = useDispatch();
-  const leaveDetailsSelector = useSelector((state:any) => state.leaveDetails);
+  const leaveDetailsSelector = useSelector((state: any) => state.leaveDetails);
+  const navigation = useNavigation(); 
+  type leaveHistory = StackNavigationProp<RootStackParamList, 'leaveHistory'>;
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     async function fetchLeaveDetails() {
       try {
         const leaves = await getLeaves(dispatch);
@@ -30,105 +27,131 @@ export default function MyLeaveScreen() {
     fetchLeaveDetails();
   }, [dispatch]);
 
-  const totalLeaves = 28;
-  const casualLeavesAllowed = 6;
-  const sickLeavesAllowed = 6;
-  const paidAllowed = 12;
-  const optionalAllowed = 4;
-
+  const totalLeaves = 24;
+  const paidleave = leaveDetailsSelector?.paidleave ?? 0;
   const casualLeaves = leaveDetailsSelector?.casualleave ?? 0;
   const sickLeaves = leaveDetailsSelector?.sickleave ?? 0;
-  const paid = leaveDetailsSelector?.paidleave ?? 0;
-  const optional = leaveDetailsSelector?.optionalleave ?? 0;
+  const optionalLeave = leaveDetailsSelector?.optionalleave ?? 0;
 
-  const usedLeaves = casualLeaves + sickLeaves + paid + optional;
-  const leaveBalance = totalLeaves;
+  const leaveProgress = (usedLeaves) => usedLeaves / totalLeaves;
 
-  const progressLB =  totalLeaves;
-  const progressCasual = (casualLeavesAllowed - casualLeaves) / casualLeavesAllowed;
-  const progressSick = (sickLeavesAllowed - sickLeaves) / sickLeavesAllowed;
-  const progressPaid = (paidAllowed - paid) / paidAllowed;
-  const progressOptional = (optionalAllowed - optional) / optionalAllowed;
+  const handleLeaveHistoryPress = () => {
+    navigation.navigate('leaveHistory'); // Navigate to the Leave History screen
+  };
 
-  useEffect(() => {
-    const fetchPendingLeave = async () => {
-      try {
-        const pendingLeave = await leaveHistoryPending("Pending");
-        setPendingLeave(pendingLeave);
-      } catch (error) {
-        console.error("Error fetching pending leave:", error);
-      }
-    };
-    fetchPendingLeave();
-  }, []);
-
+  
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.cardDiv}>
+        {/* Leave Balance */}
         <View style={styles.balanceCard}>
-          <View style={{ marginBottom: 45 }}>
-            <Progress.Circle
-              size={140}
-              progress={progressLB}
-              showsText
-              formatText={() => `${leaveBalance}`}
-              color="#A020F0"
-              unfilledColor="lavender"
-              thickness={10}
-            />
-            <Text style={styles.balanceText}>Leave Balance</Text>
+          <Progress.Circle
+            size={130}
+            progress={leaveProgress(paidleave + casualLeaves + sickLeaves + optionalLeave)}
+            showsText
+            formatText={() =>
+              `${totalLeaves - (paidleave + casualLeaves + sickLeaves + optionalLeave)}`
+            }
+            color="#c087e6"
+            unfilledColor="#E5E5E5"
+            thickness={10}
+            borderWidth={0}
+          />
+          <Text style={styles.balanceText}>Leave Balance</Text>
+        </View>
+
+        {/* Leave Summary */}
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>
+              <Text style={styles.bullet}>• </Text>
+              <Text style={{fontSize:15}}>Total Leave</Text>
+            </Text>
+            <Text style={styles.summaryValue}>{totalLeaves}</Text>
           </View>
-          <View style={[styles.leaveTypeCircle, styles.casual]}>
-            <Progress.Circle
-              size={60}
-              progress={progressCasual}
-              showsText
-              formatText={() => `${casualLeaves}`}
-              color="orange"
-              unfilledColor="#FFDAB9"
-              thickness={6}
-            />
-            <Text style={styles.leaveTypeTextCasual}>Casual</Text>
-          </View>
-          <View style={[styles.leaveTypeCircle, styles.sick]}>
-            <Progress.Circle
-              size={60}
-              progress={progressSick}
-              showsText
-              formatText={() => `${sickLeaves}`}
-              color="green"
-              unfilledColor="yellowgreen"
-              thickness={6}
-            />
-            <Text style={styles.leaveTypeTextSick}>Sick</Text>
-          </View>
-          <View style={[styles.leaveTypeCircle, styles.optional]}>
-            <Progress.Circle
-              size={60}
-              progress={progressOptional}
-              showsText
-              formatText={() => `${optional}`}
-              color="#f44708"
-              unfilledColor="#f44708"
-              thickness={6}
-            />
-            <Text style={styles.leaveTypeTextOptional}>Optional</Text>
-          </View>
-          <View style={[styles.leaveTypeCircle, styles.paid]}>
-            <Progress.Circle
-              size={60}
-              progress={progressPaid}
-              showsText
-              formatText={() => `${paid}`}
-              color="#D81B90"
-              unfilledColor="#FCE4EC"
-              thickness={6}
-            />
-            <Text style={styles.leaveTypeTextPaid}>Paid</Text>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>
+              <Text style={styles.bullet}>• </Text>
+              <Text style={{fontSize:15}}>Used Leave</Text>
+            </Text>
+            <Text style={[styles.summaryValue, { color: "#A020F0" }]}>
+              {paidleave + casualLeaves + sickLeaves}
+            </Text>
           </View>
         </View>
+
+        {/* Leave Types */}
+        <View style={styles.leaveTypesRow}>
+          <View style={styles.leaveType}>
+            <Progress.Circle
+              size={80}
+              progress={leaveProgress(paidleave)}
+              showsText
+              formatText={() => `${paidleave}`}
+              color="#007BFF"
+              unfilledColor="#E5E5E5"
+              thickness={8}
+              borderWidth={0}
+            />
+            <Text style={styles.leaveTypeLabel}>Paid Leave</Text>
+          </View>
+          <View style={styles.leaveType}>
+            <Progress.Circle
+              size={80}
+              progress={leaveProgress(casualLeaves)}
+              showsText
+              formatText={() => `${casualLeaves}`}
+              color="#28A745"
+              unfilledColor="#E5E5E5"
+              thickness={8}
+              borderWidth={0}
+            />
+            <Text style={styles.leaveTypeLabel}>Casual Leave</Text>
+          </View>
+          <View style={styles.leaveType}>
+            <Progress.Circle
+              size={80}
+              progress={leaveProgress(sickLeaves)}
+              showsText
+              formatText={() => `${sickLeaves}`}
+              color="#FFC107"
+              unfilledColor="#E5E5E5"
+              thickness={8}
+              borderWidth={0}
+            />
+            <Text style={styles.leaveTypeLabel}>Sick Leave</Text>
+          </View>
+          
+          
+        </View>
+
+        <View style={styles.optional}>
+            <Progress.Circle
+              size={80}
+              progress={leaveProgress(optionalLeave)}
+              showsText
+              formatText={() => `${optionalLeave}`}
+              color="#d8315b"
+              unfilledColor="#E5E5E5"
+              thickness={8}
+              borderWidth={0}
+            />
+            <Text style={styles.leaveTypeLabel}>Optional Leave</Text>
+
+          </View>
+            {/* <TabViewExample/> */}
+
+        
       </View>
-      <TabViewExample/>
+
+              <FAB
+          style={styles.fab}
+          icon="history"
+          label="Leave History"
+          onPress={handleLeaveHistoryPress}
+          color="white"
+        />
+
     </SafeAreaView>
   );
 }
@@ -139,69 +162,74 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
   },
+  optional:{
+    marginTop:35
+  },
   cardDiv: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 40,
-    marginBottom: 5,
+    paddingTop: 20,
   },
   balanceCard: {
     alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    height: 200,
-    width: 200,
+    marginBottom: 10,
   },
   balanceText: {
-    marginTop: 8,
+    marginTop: 12,
     fontSize: 18,
-    textAlign: "center",
-    fontWeight: "900",
-    color: "#A020F0",
+    fontWeight: "700",
+    color: "#000",
   },
-  leaveTypeCircle: {
-    position: "absolute",
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "80%",
+    marginVertical: 20,
+  },
+  summaryItem: {
     alignItems: "center",
-    justifyContent: "center",
   },
-  casual: {
-    top: -40,
-    left: -60,
-  },
-  sick: {
-    bottom: 10,
-    right: -50,
-  },
-  optional: {
-    bottom: 10,
-    left: -60,
-  },
-  paid: {
-    top: -40,
-    right: -50,
-  },
-  leaveTypeTextCasual: {
+  summaryLabel: {
     fontSize: 14,
-    color: "orange",
-    textAlign: "center",
-    fontWeight: "700",
+    color: "#A0A0A0",
+    fontWeight: "500",
   },
-  leaveTypeTextSick: {
-    fontSize: 14,
-    color: "green",
-    textAlign: "center",
+  summaryValue: {
+    fontSize: 16,
     fontWeight: "700",
+    color: "#000",
   },
-  leaveTypeTextOptional: {
-    fontSize: 14,
-    color: "#f44708",
-    textAlign: "center",
-    fontWeight: "700",
+  leaveTypesRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginTop: 20,
   },
-  leaveTypeTextPaid: {
+  bullet: {
+    color: "grey",
+    fontSize: 30,
+    margin: 0,
+  },
+  leaveType: {
+    alignItems: "center",
+    width: "30%",
+  },
+  leaveTypeLabel: {
     fontSize: 14,
-    color: "#D81B90",
+    color: "#A0A0A0",
+    marginTop: 8,
     textAlign: "center",
-    fontWeight: "700",
+  },
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
+    // backgroundColor: "purple",
+    // backgroundColor: "#007BFF",
+    backgroundColor: "rgb(0, 41, 87)",
+
+  },
+ 
+  fabLabel: {
+    color: "white",  // Set font color to white
   },
 });

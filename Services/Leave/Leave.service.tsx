@@ -4,7 +4,6 @@ import { baseUrl } from "../../Global/Config";
 
 
   export const getLeaves = async (dispatch: any) => {
-    // console.log("[getLeaves] Starting API call to fetch user leaves");
 
     try {
       const token = await AsyncStorage.getItem("accessToken");
@@ -56,6 +55,7 @@ export const submitLeaveApplication = async (leaveDetails : any) => {
       leavepart: leaveDetails.leavepart || '',
       reason: leaveDetails.reason,
       approver: leaveDetails.approver,
+      leavenow: leaveDetails.leavenow, 
     });
 
     console.log('Submitting leave application with payload:', data);

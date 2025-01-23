@@ -1,4 +1,3 @@
-
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Dimensions } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { changePassword, getUser } from '../../Services/User/User.service';
@@ -7,7 +6,7 @@ import { useSelector } from 'react-redux';
 const { width, height } = Dimensions.get('window');
 
 // Function to scale sizes based on device width
-const scaleSize = (size: any) => (width / 375) * size;
+const scaleSize = (size) => (width / 375) * size;
 
 const Profile = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -17,9 +16,9 @@ const Profile = () => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmpassword, setconfirmpassword] = useState('');
-  const [user, setUser] = useState<any>(null);
-  
-  const userDetailsSelector = useSelector((state: any) => state.userDetails);
+  const [user, setUser] = useState(null);
+
+  const userDetailsSelector = useSelector((state:any) => state.userDetails);
 
   console.log("userDetailsSelector :- ", userDetailsSelector);
 
@@ -30,7 +29,7 @@ const Profile = () => {
   async function getUserDetails() {
     try {
       console.log('[ProfileUI] Fetching user details...');
-      const userDetails = await getUser(); 
+      const userDetails = await getUser();
 
       if (userDetails) {
         console.log('[ProfileUI] User details fetched successfully:', userDetails);
@@ -54,52 +53,35 @@ const Profile = () => {
       }
     : {};
 
-
   const handleSubmit = () => {
     console.log(`${currentField}: ${currentValue}`);
     setModalVisible(false);
   };
 
   const handleChangePassword = async () => {
-    console.log("old pass : " , oldPassword);
-    console.log("new pass : " , newPassword);
-    console.log("confirm new pass : " , confirmpassword);
-
-    
     if (!oldPassword || !newPassword || !confirmpassword) {
-      alert("Please fill in both fields.");
+      alert("Please fill in all fields.");
       return;
     }
-  
+
     try {
-      const message = await changePassword(oldPassword, newPassword,confirmpassword);
-      alert(message); 
+      const message = await changePassword(oldPassword, newPassword, confirmpassword);
+      alert(message);
       setPasswordModalVisible(false);
       setOldPassword('');
       setNewPassword('');
-      setconfirmpassword('')
-    } catch (error: any) {
+      setconfirmpassword('');
+    } catch (error) {
       alert(error.message);
-      console.log("im here 💡");
-      
     }
   };
-  
 
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.header}>Profile</Text> */}
-
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {Object.entries(profileData).map(([key, value]) => (
           <View style={styles.profileInfo} key={key}>
-            <View>
-              <Text style={styles.label}>{key.charAt(0).toUpperCase() + key.slice(1)}:</Text>
-              <Text style={styles.info}>{value}</Text>
-            </View>
-            {/* <TouchableOpacity onPress={() => handleEdit(key, value)} style={styles.iconButton}>
-              <Icon name="edit" size={scaleSize(24)} color="#007bff" />
-            </TouchableOpacity> */}
+            <Text style={styles.info}>{key} :: {value}</Text>
           </View>
         ))}
 
@@ -107,38 +89,6 @@ const Profile = () => {
           <Text style={styles.changePasswordText}>Change Password</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Edit Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalHeader}>
-              Edit {currentField.charAt(0).toUpperCase() + currentField.slice(1)}
-            </Text>
-
-            <TextInput
-              placeholder={`Enter new ${currentField}`}
-              style={styles.input}
-              value={currentValue}
-              onChangeText={setCurrentValue}
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
-                <Text style={styles.submitButtonText}>Submit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelButton}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Change Password Modal */}
       <Modal
@@ -188,64 +138,44 @@ const Profile = () => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: scaleSize(20),
-    backgroundColor: '#f2f3f8',
-  },
-  header: {
-    fontSize: scaleSize(26),
-    fontWeight: 'bold',
-    color: '#002957',
-    marginBottom: scaleSize(15),
-    textAlign: 'center',
+    backgroundColor: '#f9faff',
   },
   scrollContainer: {
     flexGrow: 1,
+    padding: scaleSize(20),
   },
   profileInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
     padding: scaleSize(15),
-    marginVertical: scaleSize(5),
-    marginHorizontal: scaleSize(5),
+    marginVertical: scaleSize(8),
     borderRadius: scaleSize(10),
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 5,
-    
+    elevation: 3,
   },
   label: {
-    fontSize: scaleSize(16),
+    fontSize: scaleSize(14),
     fontWeight: '600',
     color: '#555',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   info: {
-    fontSize: scaleSize(16),
-    fontWeight: '500',
+    fontSize: scaleSize(14),
     color: '#333',
-  },
-  iconButton: {
-    padding: scaleSize(5),
+    fontWeight: '500',
   },
   changePasswordButton: {
-    backgroundColor: 'rgb(0, 41, 87)',
-    paddingVertical: scaleSize(12),
-    borderRadius: scaleSize(10),
-    alignItems: 'center',
     marginTop: scaleSize(20),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 6,
+    backgroundColor: '#002957',
+    paddingVertical: scaleSize(12),
+    borderRadius: scaleSize(8),
+    alignItems: 'center',
   },
   changePasswordText: {
     color: '#fff',
@@ -256,7 +186,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   modalView: {
     width: '85%',
@@ -265,32 +195,34 @@ const styles = StyleSheet.create({
     padding: scaleSize(20),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
   },
   modalHeader: {
-    fontSize: scaleSize(20),
+    fontSize: scaleSize(18),
     fontWeight: 'bold',
-    marginBottom: scaleSize(15),
+    marginBottom: scaleSize(10),
     textAlign: 'center',
+    color: '#002957',
   },
   input: {
-    height: scaleSize(45),
+    height: scaleSize(40),
     borderColor: '#ddd',
     borderWidth: 1,
-    borderRadius: scaleSize(8),
-    paddingHorizontal: scaleSize(12),
-    marginBottom: scaleSize(15),
+    borderRadius: scaleSize(6),
+    paddingHorizontal: scaleSize(10),
+    marginBottom: scaleSize(12),
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   submitButton: {
-    backgroundColor: 'rgb(0, 41, 87)',
-    padding: scaleSize(12),
-    borderRadius: scaleSize(8),
+    backgroundColor: '#002957',
+    paddingVertical: scaleSize(10),
+    paddingHorizontal: scaleSize(15),
+    borderRadius: scaleSize(6),
     flex: 1,
     marginRight: scaleSize(5),
   },
@@ -301,8 +233,9 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#ccc',
-    padding: scaleSize(12),
-    borderRadius: scaleSize(8),
+    paddingVertical: scaleSize(10),
+    paddingHorizontal: scaleSize(15),
+    borderRadius: scaleSize(6),
     flex: 1,
     marginLeft: scaleSize(5),
   },
@@ -313,4 +246,3 @@ const styles = StyleSheet.create({
 });
 
 export default Profile;
-

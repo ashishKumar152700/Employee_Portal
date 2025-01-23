@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from "react";
 import {
   FlatList,
   View,
@@ -8,18 +8,17 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
-} from 'react-native';
-import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
-import { useEffect, useState } from 'react';
-import { leaveHistoryPending } from '../../Services/Leave/Leave.service';
-import { Swipeable } from 'react-native-gesture-handler';
-import Icon from 'react-native-vector-icons/FontAwesome'; // Import the icon library
+} from "react-native";
+
+import { TabView, SceneMap, TabBar } from "react-native-tab-view";
+import { useEffect, useState } from "react";
+import { leaveHistoryPending } from "../../Services/Leave/Leave.service";
 
 const LeaveRoute = ({ leaveType }) => {
   const [leaveData, setLeaveData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-    
+
   useEffect(() => {
     const fetchLeaveData = async () => {
       try {
@@ -29,10 +28,10 @@ const LeaveRoute = ({ leaveType }) => {
         if (response.status === 200) {
           setLeaveData(response.data.data);
         } else {
-          setError('Failed to fetch data');
+          setError("Failed to fetch data");
         }
       } catch (error) {
-        setError('Error fetching data');
+        setError("Error fetching data");
       } finally {
         setLoading(false);
       }
@@ -41,36 +40,10 @@ const LeaveRoute = ({ leaveType }) => {
     fetchLeaveData();
   }, [leaveType]);
 
-  const handleCancel = (id) => {
-    Alert.alert(
-      'Cancel Leave',
-      'Are you sure you want to cancel this leave?',
-      [
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-        {
-          text: 'Yes',
-          onPress: () => {
-            setLeaveData((prev) => prev.filter((item) => item.id !== id));
-          },
-        },
-      ]
-    );
-  };
-
-  const renderRightActions = (id, cardHeight) => (
-    <TouchableOpacity
-      style={[styles.rightAction, { height: cardHeight }]} // Set height dynamically
-      onPress={() => handleCancel(id)}
-    >
-      <Icon name="trash" size={24} color="white" />
-    </TouchableOpacity>
-  );
-
   if (loading) {
-    return <ActivityIndicator size="large" color="purple" style={styles.loader} />;
+    return (
+      <ActivityIndicator size="large" color="purple" style={styles.loader} />
+    );
   }
 
   if (error) {
@@ -79,48 +52,72 @@ const LeaveRoute = ({ leaveType }) => {
 
   return (
     <FlatList
-    data={leaveData}
-    keyExtractor={(item) => item.id.toString()}
-    renderItem={({ item }) => {
-      // Measure card height dynamically
-      let cardHeight : any;
-      return (
-        <View
-          onLayout={(event) => {
-            cardHeight = event.nativeEvent.layout.height; // Capture card height
-          }}
-        >
-          {leaveType === 'Pending' ? (
-            <Swipeable renderRightActions={() => renderRightActions(item.id, cardHeight)}>
-              <View style={styles.itemContainer}>
-                <Text style={styles.itemText}>Leave Type: {item.leavetype}</Text>
-                <Text style={styles.itemText}>
-                  Apply Date: {new Date(item.applydate).toLocaleDateString()}
-                </Text>
-                <Text style={styles.itemText}>
-                  Period: {item.leavestart} to {item.leaveend}
-                </Text>
-                <Text style={styles.itemText}>Reason: {item.reason}</Text>
-              </View>
-            </Swipeable>
-          ) : (
-            <View style={styles.itemContainer}>
-              <Text style={styles.itemText}>Leave Type: {item.leavetype}</Text>
-              <Text style={styles.itemText}>
-                Apply Date: {new Date(item.applydate).toLocaleDateString()}
-              </Text>
-              <Text style={styles.itemText}>
-                Period: {item.leavestart} to {item.leaveend}
-              </Text>
-              <Text style={styles.itemText}>Reason: {item.reason}</Text>
-            </View>
-          )}
-        </View>
-      );
-    }}
-    contentContainerStyle={styles.contentContainer}
-  />
+      data={leaveData}
+      keyExtractor={(item) => item.id.toString()}
+      renderItem={({ item }) => {
+        let itemTextStyle = [
+          styles.itemText,
+          leaveType === "Declined" && { color: "red" },
+          leaveType === "Approved" && { color: "green" },
+          leaveType === "Pending" && { color: "#ff8600" },
+        ];
 
+        // Check if leave start and leave end are the same
+        const isSameDate = item.leavestart === item.leaveend;
+        const parseDate = (dateString) => {
+          const [day, month, year] = dateString.split("/"); // Split the dd/mm/yyyy str ing
+          return new Date(year, month - 1, day); // Create a Date object (month is 0-based)
+        };
+        return (
+          <View style={styles.itemContainer}>
+            <Text
+              style={[
+                { fontWeight: "500", fontSize: 15 },
+               
+              ]}
+            >
+              • {item.leavetype}
+            </Text>
+            <Text style={styles.durationText}>
+              Applied From{" "}
+              {isSameDate
+                ? new Intl.DateTimeFormat("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  }).format(parseDate(item.leavestart))
+                : `${new Intl.DateTimeFormat("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  }).format(
+                    parseDate(item.leavestart)
+                  )} to ${new Intl.DateTimeFormat("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  }).format(parseDate(item.leaveend))}`}
+            </Text>
+            <Text
+              style={[
+                styles.dateText,
+                leaveType === "Pending" && { color: "#ff8600" }, // Orange for Pending
+                leaveType === "Approved" && { color: "green" }, // Green for Approved
+                leaveType === "Declined" && { color: "red" }, // Red for Declined
+              ]}
+            >
+              {new Intl.DateTimeFormat("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              }).format(new Date(item.applydate))}
+            </Text>
+          </View>
+        );
+        
+      }}
+      contentContainerStyle={styles.contentContainer}
+    />
   );
 };
 
@@ -131,9 +128,9 @@ const renderScene = SceneMap({
 });
 
 const routes = [
-  { key: 'first', title: 'Pending' },
-  { key: 'second', title: 'Approve' },
-  { key: 'third', title: 'Declined' },
+  { key: "first", title: "Pending"},
+  { key: "second", title: "Approve" },
+  { key: "third", title: "Declined" },
 ];
 
 export default function TabViewExample() {
@@ -151,64 +148,88 @@ export default function TabViewExample() {
           {...props}
           style={styles.tabBar}
           indicatorStyle={styles.indicator}
+          
         />
       )}
+      style={styles.tabView}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  tabView: {
+    backgroundColor: "white",
+  },
+  dateText: {
+    fontSize: 14, // Adjust font size
+    fontWeight: "bold", // Make the text bold
+    color: "#007BFF", // Choose a color (blue in this case)
+    textAlign: "right", // Align to the right if needed
+    marginTop: 5, // Add some spacing above
+  },
   itemContainer: {
     padding: 10,
-    marginTop:14,
-    margin: 5,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    marginVertical: 7,
+    marginHorizontal: 0,
+    borderRadius: 12,
+    backgroundColor: "#f9f9f9",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 5,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 0.5,
+    borderColor: "#ccc",
+  },
+  durationText: {
+    fontSize: 12,
+    color: "#808080",
+    fontWeight: "500",
+    marginBottom: 10,
+    lineHeight: 25,
   },
   itemText: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 8,
+    fontSize: 13,
+    color: "#444",
+    // marginBottom: 4,
+    fontWeight: "600",
+    lineHeight: 22,
+    
   },
   contentContainer: {
     paddingBottom: 50,
+    paddingHorizontal: 8,
+    backgroundColor: "white",
+    
   },
   tabBar: {
-    backgroundColor: 'purple',
+    // backgroundColor: "purple",
+    // backgroundColor: "#007BFF",
+    backgroundColor: "rgb(0, 41, 87)",
+
+      color:'red',
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
   },
   label: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   indicator: {
-    backgroundColor: 'white',
+    backgroundColor: "#ff9f43",
+    height: 4,
+    borderRadius: 2,
   },
   loader: {
     marginTop: 20,
+    alignSelf: "center",
   },
   errorText: {
-    textAlign: 'center',
-    color: 'red',
+    textAlign: "center",
+    color: "#d9534f",
     fontSize: 18,
-  },
-  rightAction: {
-    backgroundColor: 'red',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    height: '100%', // Acts as a fallback if `cardHeight` is not passed
-  },
-  
-  actionText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "600",
+    marginVertical: 20,
   },
 });

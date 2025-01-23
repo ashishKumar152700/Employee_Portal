@@ -1,4 +1,3 @@
-
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
@@ -20,9 +19,7 @@ export default function AssetModule() {
   const [showAlert, setShowAlert] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<Asset | null>(null);
 
-  const handlePress = (): void => {
-    navigation.navigate('MyTickets' as never);
-  };
+ 
 
   const assets: Asset[] = [
     {
@@ -56,7 +53,7 @@ export default function AssetModule() {
       image: require('../../assets/device/printer_PNG101579.png'),
     },
     {
-      id: 'MICX30',
+      id: 'MICX302',
       name: 'Headphone',
       location: 'Boat',
       image: require('../../assets/device/headphones_PNG101978.png'),
@@ -70,15 +67,15 @@ export default function AssetModule() {
   ];
 
   const renderItem = ({ item }: { item: Asset }) => {
-    const handleItemPress = (): void => {
+    const handleChevronPress = (): void => {
       setSelectedItem(item);
       setShowAlert(true);
     };
 
     return (
-      <TouchableOpacity onPress={handleItemPress}>
+      <TouchableOpacity>
         <LinearGradient
-          colors={['white', '#D3D3D3']}
+          colors={['white', 'white', '#D3D3D3']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.item}
@@ -90,19 +87,18 @@ export default function AssetModule() {
               ID: {item.id} {item.location}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#999" />
+          <TouchableOpacity onPress={handleChevronPress}>
+          <Ionicons name="arrow-forward" size={24} color="#999" />
+          </TouchableOpacity>
         </LinearGradient>
       </TouchableOpacity>
     );
   };
-
   return (
-    <View style={{ flex: 1, padding: 10 }}>
-      <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row' }}>
-        <Text style={{ fontSize: 15, fontWeight: 'bold' }}>Raise Ticket For</Text>
-        <Button mode="contained" onPress={handlePress}>
-          MyTickets
-        </Button>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Raise Ticket For</Text>
+        
       </View>
 
       <FlatList
@@ -112,7 +108,6 @@ export default function AssetModule() {
         style={styles.list}
       />
 
-      {/* AwesomeAlert for displaying alert */}
       <AwesomeAlert
         show={showAlert}
         showProgress={false}
@@ -130,7 +125,6 @@ export default function AssetModule() {
         }}
         customView={
           <View style={styles.customAlertContainer}>
-            <Ionicons name='ios-information-circle-outline' size={60} color="#4CAF50" />
             <Text style={styles.alertTitle}>Are you sure?</Text>
             <Text style={styles.alertMessage}>
               Do you want to raise a ticket for this category?
@@ -143,6 +137,28 @@ export default function AssetModule() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white', // Set background color to white
+    padding: 10,
+  },
+  header: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: '400',
+    marginBottom:10,
+    
+  },
+  button: {
+    backgroundColor: '#007BFF',
+  },
+  list: {
+    padding: 0,
+  },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -151,16 +167,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
     marginBottom: 10,
-    borderRadius: 5,
+    borderRadius: 15,
   },
   itemImage: {
     width: 70,
     height: 80,
     borderRadius: 8,
     resizeMode: 'contain',
-  },
-  list: {
-    padding: 0,
   },
   itemName: {
     fontSize: 16,
@@ -171,7 +184,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
-    justifyContent: 'space-between',
   },
   customAlertContainer: {
     alignItems: 'center',
@@ -192,5 +204,3 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
-
-

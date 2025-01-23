@@ -86,14 +86,15 @@ const MyTickets = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor:'white'
   },
   searchContainer: {
     padding: 15,
-    backgroundColor: '#f1f1f1',
+    backgroundColor: 'white',
   },
   searchInput: {
     height: 40,
-    width: 200,
+    width: '100%',
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 5,
@@ -104,12 +105,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   header: {
-    backgroundColor: 'rgb(0,47,81)',
+    // backgroundColor: 'rgb(0,47,81)',
     paddingHorizontal: 0,
 
   },
   headerText: {
-    color: '#ffffff',
+    color: 'black',
     fontWeight: 'bold',
     fontSize: 14,
   },

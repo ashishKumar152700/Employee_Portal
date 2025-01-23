@@ -1,26 +1,16 @@
-
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { Feather } from '@expo/vector-icons';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { punchService } from '../../Services/Punch/Punch.service';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from 'react-redux';
 import ClockComponent from './ClockComponent';
+import Toast from 'react-native-toast-message';
 
 const { width, height } = Dimensions.get('window');
-
-const scaleFont = (size :any) => {
-  const scale = width / 375; 
-  return Math.round(size * scale);
-};
-
-const scaleSize = (size :any) => {
-  const scale = width / 375; 
-  return Math.round(size * scale);
-};
+const scaleFont = (size: any) => Math.round(size * (width / 375));
+const scaleSize = (size: any) => Math.round(size * (width / 375));
 
 interface ClockButtonProps {
   time: string;
@@ -31,7 +21,7 @@ interface ClockButtonProps {
 }
 
 const ClockButton: React.FC<ClockButtonProps> = ({ time, date, type, onPress, isLoading }) => (
-  <View >
+  <View>
     <LinearGradient
       colors={type === 'in' ? ['#3481ed', '#c087e6'] : ['#98309c', '#d93473']}
       style={styles.gradientButton}
@@ -41,7 +31,7 @@ const ClockButton: React.FC<ClockButtonProps> = ({ time, date, type, onPress, is
           <ActivityIndicator size="large" color="white" />
         ) : (
           <>
-            <MaterialIcons name='touch-app' size={scaleSize(50)} color="white"  />
+            <MaterialIcons name='touch-app' size={scaleSize(50)} color="white" />
             <Text style={styles.buttonText}>{type === 'in' ? 'CLOCK IN' : 'CLOCK OUT'}</Text>
           </>
         )}
@@ -60,166 +50,144 @@ const PunchScreen: React.FC = () => {
 
   const punchInforSelector = useSelector((state: any) => state.punchInfo);
 
-  console.log("punchInforSelector :- ", punchInforSelector);
-  
   useEffect(() => {
     const fetchPunchInfo = async () => {
       try {
         const punchInfo = punchInforSelector;
-    
         if (punchInfo.length > 0 && punchInfo[0].punchintime) {
-          setClockInTime(punchInfo[0].punchintime); 
+          console.log('-------------------------------',punchInfo[0].punchintime);
+          
+          setClockInTime(punchInfo[0].punchintime);
           setClockOutTime(punchInfo[0].punchouttime);
-    
-          // Convert duration in seconds to hr:min:sec
+          
           const totalSeconds = punchInfo[0].duration;
           const hours = Math.floor(totalSeconds / 3600);
           const minutes = Math.floor((totalSeconds % 3600) / 60);
-    
-          const formattedDuration = `${hours}h ${minutes}m `;
-    
-          setTotalTime(formattedDuration); // Store in formatted string
-          console.log('Punch In Time:', punchInfo[0].punchintime);
-          console.log('Duration:', formattedDuration);
-        } else {
-          console.log('No punch in time found in the stored data.');
+          setTotalTime(`${hours}h ${minutes}m`);
+          console.log('Total Time:  ${hours}h ${minutes}m', totalTime);
+          
         }
       } catch (error) {
-        console.error('Error fetching punch info from AsyncStorage:', error);
+        console.error('Error fetching punch info:', error);
       }
     };
-    
-
     fetchPunchInfo();
-  }, []);
-  
-  const requestLocationPermission = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
+  }, [punchInforSelector]);
 
-    console.log("status : " , status);
-    
+  const requestLocationPermission = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      showLocationAlert();
-      return true;
-    }
-    else{
+      await showLocationAlert();
       return false;
     }
-  };
-
-
-  const showLocationAlert = () => {
-    return new Promise(async (resolve , reject) => {
-      Alert.alert(
-        'Location Disabled',
-        'Please enable location services to proceed.',
-        [
-          {
-            text: 'No Thanks',
-            onPress: () => resolve(false),
-            style: 'cancel',
-          },
-          {
-            text: 'Turn On',
-            onPress: async () => {
-              await Location.requestForegroundPermissionsAsync();
-              resolve(true);
-            },
-          },
-        ],
-        { cancelable: false }
-      );
-    });
+    return true;
   };
   
+
+  const showLocationAlert = () => new Promise<boolean>((resolve) => {
+    Toast.show({
+      type: 'error',
+      position: 'top',
+      text1: 'Location Disabled',
+      text2: 'Please enable location services to proceed.',
+      visibilityTime: 3000,
+      autoHide: true,
+      onPress: () => resolve(false),
+    });
+  });
+
   const getLocation = async () => {
-    let hasPermission = await requestLocationPermission();
-    console.log("hasPermission : " , hasPermission);
-    
-    if (!hasPermission) {
-      const enableLocation = await showLocationAlert();
-      console.log("enableLocation : ", enableLocation);
-      if (!enableLocation) {
-        return Alert.alert(
-          'Location Disabled',
-          'Please enable location services to punch.'); // or throw an error, depending on your use case
-      }
-    }
-  
-   return await Location.getCurrentPositionAsync({}).then((loc)=>{
-      console.log("print the location : " , loc);
+    const permissionGranted = await requestLocationPermission();
+    if (!permissionGranted) return undefined;
+
+    try {
+      const location = await Location.getCurrentPositionAsync({});
+      console.log('checking speed', location);
       
-      return loc;
-    }).catch((err)=>{
-      console.log("error in location declined : ", err);
-       Alert.alert(
-        'Location Disabled',
-        `${err}`);
-        return undefined;
-    });
-   
-    
+      return location;
+    } catch (error) {
+      console.error("Location Error:", error);
+      Toast.show({
+        type: 'error',
+        position: 'top',
+        text1: 'Location Error',
+        text2: 'Unable to fetch location.',
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+      return undefined;
+    }
   };
-  
+
   const handleClockIn = async () => {
     setIsClockInLoading(true);
-    const location : any = await getLocation();
-    
-    console.log("print the location 1.1 : ", location);
-    
+    const location = await getLocation();
     if (location) {
-      const now = new Date();
-      
-      setClockInDate(now);
-      
+      setClockInDate(new Date());
       try {
         const response = await punchService.PunchInApi(location);
-        console.log("response to check : " , response.data.punchintime);
-        
         if (response.message === 'Already Puched In!') {
           setClockInTime(response.data.punchintime);
-          Alert.alert('Info', response.message);
+          Toast.show({
+            type: 'info',
+            position: 'top',
+            text1: 'Info',
+            text2: response.message,
+            visibilityTime: 3000,
+            autoHide: true,
+          });
         } else {
           setClockInTime(response.data.punchintime);
-          Alert.alert('Success', response.message);
+          Toast.show({
+            type: 'success',
+            position: 'top',
+            text1: 'Success',
+            text2: response.message,
+            visibilityTime: 3000,
+            autoHide: true,
+          });
         }
       } catch (error) {
         console.error('Punch In Error:', error);
-        Alert.alert('Error', 'An error occurred while clocking in.');
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Error',
+          text2: 'An error occurred while clocking in.',
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       }
     }
-    
     setIsClockInLoading(false);
   };
-  
 
   const handleClockOut = async () => {
-
-    
-     const punchInfoString = await AsyncStorage.getItem('punchInfo');
-          const punchInfo = JSON.parse(punchInfoString);
-    
-
-   
     setIsClockOutLoading(true);
-    const location : any = await getLocation();
-    console.log("location during punch out : " , location);
+    const location = await getLocation();
     if (location) {
-      // const now = new Date();
-      // setClockOutTime(punchInfo[0].punchouttime);
-     
       try {
-       const response = await punchService.PunchOutApi(location); 
-       console.log("response from service to punch screen : " , response);
-
-       const formattedDuration = response.formattedDuration
-       setTotalTime(formattedDuration);
-       setClockOutTime(response.punchouttime);  
-        
-        Alert.alert('Success', response.punchOutMessage);
+        const response = await punchService.PunchOutApi(location);
+        setTotalTime(response.formattedDuration);
+        setClockOutTime(response.punchouttime);
+        Toast.show({
+          type: 'success',
+          position: 'top',
+          text1: 'Success',
+          text2: response.punchOutMessage,
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       } catch (error) {
         console.error('Punch Out Error:', error);
-        Alert.alert('Error', 'An error occurred while clocking out.');
+        Toast.show({
+          type: 'error',
+          position: 'top',
+          text1: 'Error',
+          text2: 'An error occurred while clocking out.',
+          visibilityTime: 3000,
+          autoHide: true,
+        });
       }
     }
     setIsClockOutLoading(false);
@@ -229,9 +197,9 @@ const PunchScreen: React.FC = () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.card}>
-         <ClockComponent />
+          <ClockComponent />
           <ClockButton
-            time={clockInTime || "09:10 AM"}
+            time={clockInTime}
             date="March 19, 2024 - Friday"
             type="in"
             onPress={handleClockIn}
@@ -266,6 +234,8 @@ const PunchScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
+
+      <Toast />
     </View>
   );
 };
@@ -273,23 +243,20 @@ const PunchScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: 'rgb(0, 41, 87)',
-    backgroundColor:'lightgrey' ,
-    // backgroundColor: '#133E87',
+    backgroundColor: '#f8f9fa',
     padding: scaleSize(13),
     alignItems: 'center',
-    paddingBottom: scaleSize(65) ,
+    paddingBottom: scaleSize(5),
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    
-    
   },
   card: {
     backgroundColor: '#FFFFFF',
-    // backgroundColor: '#CBDCEB',
+    borderWidth: 0.5,
+    borderColor: '#ced4da',
     borderRadius: 10,
     elevation: 1,
     shadowColor: '#000',
@@ -302,18 +269,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minHeight: scaleSize(100),
     justifyContent: 'center',
-  },
-  liveTime: {
-    fontSize: scaleFont(36),
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: 'rgb(0, 41, 87)',
-  },
-  dateText: {
-    fontSize: scaleFont(16),
-    textAlign: 'center',
-    color: 'rgb(0, 41, 87)',
-    marginBottom: scaleSize(20),
   },
   buttonText: {
     fontSize: scaleFont(20),
@@ -348,7 +303,7 @@ const styles = StyleSheet.create({
     fontSize: scaleFont(12),
     color: 'rgb(0, 41, 87)',
     marginTop: scaleSize(4),
-    fontWeight:'bold'
+    fontWeight: 'bold',
   },
 });
 
