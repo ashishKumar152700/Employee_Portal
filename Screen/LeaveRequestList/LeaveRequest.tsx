@@ -34,13 +34,41 @@ const LeaveRequest = () => {
     fetchLeaveRequests();
   }, [userID]);
 
-  const handleApprove = (requestId) => {
-    console.log(`Approved request ID: ${requestId}`);
+  const handleApprove = async (requestId) => {
+    try {
+      console.log(`Approved request ID: ${requestId}`);
+  
+      // Call the API to approve
+      await managerLeaveRequestClass.LeaveStatusUpdate(requestId, "Approve");
+  
+      // Update the local state to remove the approved request
+      setLeaveRequests((prevRequests) =>
+        prevRequests.filter((request) => request.id !== requestId)
+      );
+      console.log("Request approved and removed from the list.");
+    } catch (error) {
+      console.error("Error approving request:", error);
+    }
   };
-
-  const handleReject = (requestId) => {
-    console.log(`Rejected request ID: ${requestId}`);
+  
+  const handleReject = async (requestId) => {
+    try {
+      console.log(`Rejected request ID: ${requestId}`);
+  
+      // Call the API to reject
+      await managerLeaveRequestClass.LeaveStatusUpdate(requestId, "Decline");
+  
+      // Update the local state to remove the rejected request
+      setLeaveRequests((prevRequests) =>
+        prevRequests.filter((request) => request.id !== requestId)
+      );
+      console.log("Request rejected and removed from the list.");
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+    }
   };
+  
+  
 
   const renderRightActions = (requestId) => (
     <View style={styles.actions}>
@@ -62,7 +90,7 @@ const LeaveRequest = () => {
   const renderItem = ({ item }) => (
     <Swipeable
       renderRightActions={() => renderRightActions(item.id)}
-      overshootFriction={8} // Adjust swiping sensitivity
+      overshootFriction={8}
     >
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -87,9 +115,14 @@ const LeaveRequest = () => {
           <Icon name="comment" size={20} color="#666" />
           <Text style={styles.reasonText}>Reason: {item.reason}</Text>
         </View>
+        <View style={styles.cardDetail}>
+          <Icon name="info" size={20} color="#666" />
+          <Text style={styles.reasonText}>Status: {item.status || "Pending"}</Text>
+        </View>
       </View>
     </Swipeable>
   );
+  
 
   const formatDate = (date) => {
     if (!date) return "Invalid Date";
@@ -169,7 +202,7 @@ const styles = StyleSheet.create({
   cardDetail: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 7,
   },
   cardText: {
     fontSize: 16,

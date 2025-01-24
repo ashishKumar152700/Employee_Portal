@@ -16,7 +16,9 @@ import { ScrollView } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { submitLeaveApplication } from "../../Services/Leave/Leave.service";
 import { useDispatch, useSelector } from "react-redux";
-import Toast from 'react-native-toast-message';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../Global/Types';
 
 const leaveTypes = {
   Casual: "Casual Leave",
@@ -30,7 +32,6 @@ const LeaveApplicationScreen: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>("full-day");
   const [reason, setReason] = useState<string>("");
-  const [approverName, setApproverName] = useState<string>("");
   const [approverId, setApproverId] = useState<number>(0);
   const [applicationDate] = useState<string>(new Date().toISOString());
   const [totalDays, setTotalDays] = useState<number>(1);
@@ -38,6 +39,8 @@ const LeaveApplicationScreen: React.FC = () => {
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [userDOJ, setUserDOJ] = useState<Date | null>(null);
+  const navigation = useNavigation<LoginScreenNavigationProp>();
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MyLeaveScreen'>;
 
   
   const leave_Details = useSelector((state: any) => state.leaveDetails);
@@ -125,19 +128,9 @@ const LeaveApplicationScreen: React.FC = () => {
             response.message || "Leave application submitted successfully!"
           );
 
-          const showLocationAlert = () => new Promise<boolean>((resolve) => {
-              Toast.show({
-                type: 'error',
-                position: 'top',
-                text1: 'Location Disabled',
-                text2: 'Please enable location services to proceed.',
-                visibilityTime: 3000,
-                autoHide: true,
-                onPress: () => resolve(false),
-              });
-            });
-            
           resetForm();
+          navigation.navigate('MyLeaveScreen');
+
         } else {
           Alert.alert(
             "Error",

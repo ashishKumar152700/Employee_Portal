@@ -58,7 +58,7 @@ const LeaveRoute = ({ leaveType }) => {
         let itemTextStyle = [
           styles.itemText,
           leaveType === "Declined" && { color: "red" },
-          leaveType === "Approved" && { color: "green" },
+          leaveType === "approve" && { color: "green" },
           leaveType === "Pending" && { color: "#ff8600" },
         ];
 
@@ -102,8 +102,8 @@ const LeaveRoute = ({ leaveType }) => {
               style={[
                 styles.dateText,
                 leaveType === "Pending" && { color: "#ff8600" }, // Orange for Pending
-                leaveType === "Approved" && { color: "green" }, // Green for Approved
-                leaveType === "Declined" && { color: "red" }, // Red for Declined
+                leaveType === "Approve" && { color: "green" }, // Green for Approved
+                leaveType === "Decline" && { color: "red" }, // Red for Declined
               ]}
             >
               {new Intl.DateTimeFormat("en-GB", {
@@ -123,8 +123,8 @@ const LeaveRoute = ({ leaveType }) => {
 
 const renderScene = SceneMap({
   first: () => <LeaveRoute leaveType="Pending" />,
-  second: () => <LeaveRoute leaveType="Approved" />,
-  third: () => <LeaveRoute leaveType="Declined" />,
+  second: () => <LeaveRoute leaveType="Approve" />,
+  third: () => <LeaveRoute leaveType="Decline" />,
 });
 
 const routes = [

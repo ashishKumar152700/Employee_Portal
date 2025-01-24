@@ -36,7 +36,7 @@ export default function MyLeaveScreen() {
   const leaveProgress = (usedLeaves) => usedLeaves / totalLeaves;
 
   const handleLeaveHistoryPress = () => {
-    navigation.navigate('leaveHistory'); // Navigate to the Leave History screen
+    navigation.navigate('leaveHistory'); 
   };
 
   

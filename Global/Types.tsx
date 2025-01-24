@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Main: undefined;
   leaveHistory:undefined;
   Login:undefined;
+  MyLeaveScreen:undefined
 };
 
 // Type for navigation prop

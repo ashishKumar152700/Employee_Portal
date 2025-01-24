@@ -143,8 +143,8 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     alignItems: 'center',
-    marginBottom: 30,
-    padding: 20,
+    marginBottom: 20,
+    // padding: 20,
     // backgroundColor: '#002957',
     borderRadius: 15,
   },

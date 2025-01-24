@@ -1,7 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { Button } from 'react-native-paper';
 import { FlatList, TouchableOpacity } from 'react-native-gesture-handler';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -62,7 +61,7 @@ export default function AssetModule() {
       id: 'MICX3064',
       name: 'Dockstation',
       location: 'Dlink',
-      image: require('../../assets/device/docking-station-usb-c.png'),
+      image: require('../../assets/device/headphones_PNG101978.png'),
     },
   ];
 

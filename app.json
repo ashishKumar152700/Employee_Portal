@@ -1,22 +1,14 @@
 {
   "expo": {
-    "name": "essp",
-    "slug": "essp",
+    "name": "essp202",
+    "slug": "essp202",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.sudhirtbk9.essp"
+     
+      "package": "com.sudhirtbk9.essp202"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,10 +26,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "1cd7a327-3001-4321-984c-6abd81ec43b3"
+        "projectId": "1fbc41dd-e388-48ed-93b5-b94c522fb277"
       }
     },
     "owner": "sudhir-tbk9"
   }
 }
-
