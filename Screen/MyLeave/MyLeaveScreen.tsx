@@ -222,9 +222,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 16,
-    bottom: 16,
-    // backgroundColor: "purple",
-    // backgroundColor: "#007BFF",
+    bottom: 86,
     backgroundColor: "rgb(0, 41, 87)",
 
   },
