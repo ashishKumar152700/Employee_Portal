@@ -39,17 +39,14 @@ const ClockButton: React.FC<ClockButtonProps> = ({
   isLoading,
   disabled = false,
 }) => {
-  // Use gray colors if the button is disabled.
   const gradientColors = disabled
     ? ["#b0b0b0", "#d3d3d3"]
     : type === "in"
     ? ["#3481ed", "#c087e6"]
     : ["#98309c", "#d93473"];
 
-  // Instead of setting the TouchableOpacity disabled prop,
-  // intercept the press event.
   const handlePress = () => {
-    if (isLoading) return; // Ignore presses during loading.
+    if (isLoading) return;
     if (disabled && type === "in") {
       Toast.show({
         type: "info",
@@ -98,6 +95,8 @@ const PunchScreen: React.FC = () => {
   const [address, setAddress] = useState<string>("");
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [punchType, setPunchType] = useState<"in" | "out" | null>(null);
+  // State variable to force re-render MapView
+  const [mapKey, setMapKey] = useState<number>(0);
 
   const punchInforSelector = useSelector((state: any) => state.punchInfo);
 
@@ -146,9 +145,12 @@ const PunchScreen: React.FC = () => {
     const permissionGranted = await requestLocationPermission();
     if (!permissionGranted) return undefined;
     try {
-      const locResult = await Location.getCurrentPositionAsync({});
+      const locResult = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,  // High accuracy
+        maximumAge: 0,                    // Ensure fresh data
+      });
       const { latitude, longitude } = locResult.coords;
-      // Get address using reverse geocoding
+      console.log("Fetched location:", latitude, longitude);
       const addressResponse = await Location.reverseGeocodeAsync({ latitude, longitude });
       if (addressResponse && addressResponse.length > 0) {
         const addr = addressResponse[0];
@@ -160,6 +162,8 @@ const PunchScreen: React.FC = () => {
         setAddress(formattedAddress);
       }
       setLocation({ latitude, longitude });
+      // Update mapKey to force MapView re-render
+      setMapKey((prev) => prev + 1);
       return locResult;
     } catch (error) {
       console.error("Location Error:", error);
@@ -176,14 +180,13 @@ const PunchScreen: React.FC = () => {
   };
 
   const handleClockIn = async () => {
-    // Check again in case the button press event didn't intercept.
     if (clockInTime) {
       Toast.show({
         type: "info",
         position: "top",
         text1: "Already Punched In",
         text2: "You have already punched in.",
-        visibilityTime: 3000,
+        visibilityTime: 6000,
         autoHide: true,
       });
       return;
@@ -247,7 +250,7 @@ const PunchScreen: React.FC = () => {
           position: "top",
           text1: "Success",
           text2: response.punchOutMessage,
-          visibilityTime: 3000,
+          visibilityTime: 6000,
           autoHide: true,
         });
       } catch (error) {
@@ -276,7 +279,6 @@ const PunchScreen: React.FC = () => {
             type="in"
             onPress={handleClockIn}
             isLoading={isClockInLoading}
-            // Mark as disabled if a punch in exists.
             disabled={!!clockInTime}
           />
         </View>
@@ -316,6 +318,7 @@ const PunchScreen: React.FC = () => {
             {location ? (
               <>
                 <MapView
+                  key={mapKey} // Force re-render on each update
                   style={styles.map}
                   region={{
                     latitude: location.latitude,
@@ -343,7 +346,11 @@ const PunchScreen: React.FC = () => {
             )}
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setIsMapVisible(false)}
+              onPress={() => {
+                setIsMapVisible(false);
+                setLocation(null);
+                setAddress("");
+              }}
             >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
@@ -453,7 +460,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 15,
-    backgroundColor: "#3481ed",
+    backgroundColor: "rgb(0, 41, 87)",
     alignItems: "center",
     width: "100%",
   },
@@ -465,4 +472,3 @@ const styles = StyleSheet.create({
 });
 
 export default PunchScreen;
-
