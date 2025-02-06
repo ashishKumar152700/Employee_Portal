@@ -66,6 +66,13 @@ const LoginScreen = () => {
       setLoading(false);
     }
   };
+
+  // const handleLogin = async () => {
+   
+  
+  //       navigation.navigate('Main');
+  
+  // };
   
 
   const handleFingerprintLogin = async () => {

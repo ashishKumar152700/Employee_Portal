@@ -169,7 +169,7 @@ export default function TimesheetForm({
         value={taskTitle}
         onChangeText={setTaskTitle}
         style={{
-          borderWidth: 1,
+          borderWidth: 0.5,
           borderRadius: 5,
           padding: 10,
           marginVertical: 5,
@@ -181,7 +181,7 @@ export default function TimesheetForm({
         value={assignedProject === "No Project" ? "" : assignedProject}
         onChangeText={(value) => setAssignedProject(value || "No Project")}
         style={{
-          borderWidth: 1,
+          borderWidth: 0.5,
           borderRadius: 5,
           padding: 10,
           marginVertical: 5,
@@ -193,7 +193,7 @@ export default function TimesheetForm({
           flexDirection: "row",
           justifyContent: "space-between",
           marginVertical: 5,
-          borderWidth: 1,
+          borderWidth: 0.5,
           borderRadius: 5,
           padding: 10,
         }}
@@ -227,7 +227,7 @@ export default function TimesheetForm({
         onChangeText={setDescription}
         multiline
         style={{
-          borderWidth: 1,
+          borderWidth: 0.5,
           borderRadius: 5,
           padding: 10,
           marginVertical: 10,
@@ -351,7 +351,7 @@ export default function TimesheetForm({
             <Button
               title="Close"
               onPress={() => setTaskReviewVisible(false)}
-              color="rgb(0, 41, 87)"
+              // color="rgb(0, 41, 87)"
               
             />
           </View>

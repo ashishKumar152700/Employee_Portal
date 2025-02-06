@@ -16,12 +16,15 @@ import { ScrollView } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { submitLeaveApplication } from "../../Services/Leave/Leave.service";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../Global/Types';
 
 const leaveTypes = {
-  Casual: "casualleaves",
-  Sick: "sickleaves",
-  Optional: "optionalleaves",
-  Paid: "paidleaves",
+  Casual: "Casual Leave",
+  Sick: "Sick Leave",
+  Optional: "Optional Leave",
+  Paid: "Paid Leave",
 };
 
 const LeaveApplicationScreen: React.FC = () => {
@@ -29,7 +32,6 @@ const LeaveApplicationScreen: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string>("full-day");
   const [reason, setReason] = useState<string>("");
-  const [approverName, setApproverName] = useState<string>("");
   const [approverId, setApproverId] = useState<number>(0);
   const [applicationDate] = useState<string>(new Date().toISOString());
   const [totalDays, setTotalDays] = useState<number>(1);
@@ -37,11 +39,17 @@ const LeaveApplicationScreen: React.FC = () => {
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [userDOJ, setUserDOJ] = useState<Date | null>(null);
+  const navigation = useNavigation<LoginScreenNavigationProp>();
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MyLeaveScreen'>;
 
   
-  let dispatch = useDispatch()
-  
+  const leave_Details = useSelector((state: any) => state.leaveDetails);
 
+  useEffect(() => {
+    console.log("leave_Details updated", leave_Details);
+  }, [leave_Details]);
+    
+  
   const resetForm = () => {
     setLeaveType(leaveTypes.Casual);
     setSelectedStartDate(null);
@@ -54,7 +62,6 @@ const LeaveApplicationScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    // getManagerDetails();
     getUserDetails();
   }, []);
 
@@ -64,15 +71,12 @@ const LeaveApplicationScreen: React.FC = () => {
  
     try {
       const userDetailsString = await AsyncStorage.getItem("user");
-      // console.log("userDetailsString : ", userDetailsString);
 
       if (userDetailsString) {
         const userDetails = JSON.parse(userDetailsString);
-        // console.log("User details:", userDetails);
         const joiningDate = new Date(userDetails.joiningdate); 
         setUserDOJ(joiningDate);
-        // console.log("User DOJ details:", userDOJ);
-        // console.log("applicationDate:", applicationDate);
+
       }
     } catch (error) {
       console.error("Error retrieving user details:", error);
@@ -80,16 +84,7 @@ const LeaveApplicationScreen: React.FC = () => {
   }
 
   const managerDetailsSelector = useSelector((state:any) => state.managerInfo ) ;
-  // console.log("managerDetailsSelector : " , managerDetailsSelector);
-  // console.log("managerDetailsSelector.name : " , managerDetailsSelector.name);
-  // console.log("managerDetailsSelector.id : " , managerDetailsSelector.id);
-  
-  // function getManagerDetails() {
-  //       setApproverName(managerDetailsSelector.name);
-  //       setApproverId(managerDetailsSelector.id);
-  //       console.log("setting managerDetailsSelector.name : " , managerDetailsSelector.name);
-  //       console.log("setting managerDetailsSelector.id : " , managerDetailsSelector.id);  
-  //     }
+
    
 
 
@@ -108,43 +103,49 @@ const LeaveApplicationScreen: React.FC = () => {
       Alert.alert("Error", "Reason for leave is required.");
       return;
     }
+  
+  
+      const leaveApplication = {
+        leavetype: leaveType,
+        leavestart: selectedStartDate
+          ? format(selectedStartDate, "dd/MM/yyyy")
+          : "",
+        leaveend: selectedEndDate
+          ? format(selectedEndDate, "dd/MM/yyyy")
+          : format(selectedStartDate, "dd/MM/yyyy"),
+        leavepart: selectedOption,
+        reason: reason.trim(),
+        approver: managerDetailsSelector.id,
+      };
+      
+      console.log("Leave Application:", leaveApplication);
+  
+      try {
+        const response = await submitLeaveApplication(leaveApplication);
+        if (response.status === 200) {
+          Alert.alert(
+            "Success",
+            response.message || "Leave application submitted successfully!"
+          );
 
-    const leaveApplication = {
-      leavetype: leaveType,
-      applydate: applicationDate,
-      leavestart: selectedStartDate
-        ? format(selectedStartDate, "dd/MM/yyyy")
-        : "",
-      leaveend: selectedEndDate
-        ? format(selectedEndDate, "dd/MM/yyyy")
-        : format(selectedStartDate, "dd/MM/yyyy"),
-      leavepart: selectedOption,
-      leavestatus: "Pending",
-      reason: reason.trim(),
-      approver: managerDetailsSelector.id,
-    };
+          resetForm();
+          navigation.navigate('MyLeaveScreen');
 
-    try {
-      const response = await submitLeaveApplication(leaveApplication);
-      if (response.status === 200) {
-        Alert.alert(
-          "Success",
-          response.message || "Leave application submitted successfully!"
-        );
-        resetForm();
-      } else {
+        } else {
+          Alert.alert(
+            "Error",
+            response.message || "Failed to submit leave application."
+          );
+        }
+      } catch (error) {
         Alert.alert(
           "Error",
-          response.message || "Failed to submit leave application."
+          "An error occurred while submitting the leave application."
         );
       }
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        "An error occurred while submitting the leave application."
-      );
-    }
+    
   };
+  
 
   const onDateChange = (date: Date) => {
     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
@@ -158,7 +159,7 @@ const LeaveApplicationScreen: React.FC = () => {
 
   const calculateTotalDays = () => {
     if (selectedStartDate && !selectedEndDate) {
-      setShowDropdown(leaveType === leaveTypes.Casual);
+      setShowDropdown(leaveType === leaveTypes.Casual || leaveType === leaveTypes.Paid || leaveType === leaveTypes.Sick || leaveType === leaveTypes.Paid );
       const leavepart = selectedOption === "full-day" ? 1 : 0.5;
       setTotalDays(leavepart);
     } else if (selectedStartDate && selectedEndDate) {
@@ -286,7 +287,7 @@ const LeaveApplicationScreen: React.FC = () => {
               onPress={handleConfirmDates}
               style={styles.closeButton}
             >
-              <Text style={styles.closeButtonText}>OK</Text>
+              <Text style={styles.closeButtonText} >OK</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -331,7 +332,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
-    marginBottom: 68,
   },
   header: {
     fontSize: 24,
@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
   },
 
   submitButton: {
-    backgroundColor: "rgb(0, 41, 87)",
     paddingVertical: 15,
+    backgroundColor: "rgb(0, 41, 87)",
     borderRadius: 8,
     marginTop: 25,
     marginBottom: 25,
@@ -431,12 +431,14 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
+    
     fontSize: 16,
     textAlign: "center",
   },
   picker: {
     height: 50,
     width: "100%",
+    
   },
   modalContainer: {
     flex: 1,

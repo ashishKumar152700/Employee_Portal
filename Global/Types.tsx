@@ -5,6 +5,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 export type RootStackParamList = {
   LoginScreen: undefined;
   Main: undefined;
+  leaveHistory:undefined;
+  Login:undefined;
+  MyLeaveScreen:undefined
 };
 
 // Type for navigation prop

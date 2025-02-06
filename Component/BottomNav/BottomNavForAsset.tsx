@@ -1,87 +1,69 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import * as React from 'react';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import AssetModule from '../../Screen/Asset/AssetRequest';
 import MyTickets from '../../Screen/Asset/MyTickets';
 
-const Tab = createBottomTabNavigator();
 
-function BottomNavForAsset() {
+
+const renderScene = SceneMap({
+  first: AssetModule,
+  second: MyTickets,
+});
+
+const routes = [
+  { key: 'first', title: 'Asset' },
+  { key: 'second', title: 'My Tickets' },
+];
+
+export default function BottomNavForAsset() {
+  const layout = useWindowDimensions();
+  const [index, setIndex] = React.useState(0);
+
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: {
-          backgroundColor: 'white',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          height: 66,
-          display: 'flex',
-          paddingBottom: 8,
-          flexDirection: 'row',
-          position: 'absolute',
-        },
-      }}
-    >
-      <Tab.Screen
-        name="Leave Request"
-        component={AssetModule}
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="desktop" color="rgb(0,47,81)" size={25} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="My Tickets"
-        component={MyTickets}
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="ticket" color="rgb(0,47,81)" size={25} /> // Corrected icon name
-          ),
-        }}
-      />
-    </Tab.Navigator>
+    <TabView
+      navigationState={{ index, routes }}
+      renderScene={renderScene}
+      onIndexChange={setIndex}
+      initialLayout={{ width: layout.width }}
+      style={styles.tabView}
+      tabBarPosition='bottom'
+      renderTabBar={(props) => (
+             <TabBar
+               {...props}
+               style={styles.tabBar}
+               indicatorStyle={styles.indicator}
+               
+             />
+           )}
+    />
   );
 }
 
-export default BottomNavForAsset;
-
-// import React from 'react';
-// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-// import Icon from 'react-native-vector-icons/FontAwesome';
-// import AssetModule from '../../Screen/Asset/AssetRequest';
-// import MyTickets from '../../Screen/Asset/MyTickets';
-// const Tab = createBottomTabNavigator();
-
-// function BottomNavForAsset() {
-//   return (
-//     <Tab.Navigator screenOptions={{tabBarStyle:{backgroundColor:'white' , justifyContent: 'center', overflow:'hidden', height:66 , display:'flex'  ,paddingBottom:8 , flexDirection:'row' , position: "absolute"}}}>
-    
-//       <Tab.Screen 
-//         name="Leave Request" 
-//         component={AssetModule} 
-//         options={{
-//           headerShown: false,
-//           tabBarIcon: ({ color, size }) => (
-//             <Icon name="mouse" color={color} size={25} /> 
-//           ),
-//         }}
-//       />
-//       <Tab.Screen 
-//         name="My Tickets" 
-//         component={MyTickets} 
-//         options={{
-//           headerShown: false,
-//           tabBarIcon: ({ color, size }) => (
-//             <Icon name="ticket" color={color} size={25} /> 
-//           ),
-//         }}
-//       />
-     
-//     </Tab.Navigator>
-//   );
-// }
-
-// export default BottomNavForAsset;
+const styles = StyleSheet.create({
+  tabView: {
+    flex: 1,
+  },
+  indicator: {
+    backgroundColor: "#ff9f43",
+    height: 4,
+    borderRadius: 2,
+  },
+  tabBar: {
+    // backgroundColor: "purple",
+    backgroundColor: "rgb(0, 41, 87)",
+      color:'red',
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  scene: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+});

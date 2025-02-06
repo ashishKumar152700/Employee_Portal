@@ -2,10 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { baseUrl } from "../../Global/Config";
 
-// class LeaveServices {
-  // Fetch leaves for the user
+
   export const getLeaves = async (dispatch: any) => {
-    console.log("[getLeaves] Starting API call to fetch user leaves");
 
     try {
       const token = await AsyncStorage.getItem("accessToken");
@@ -57,6 +55,7 @@ export const submitLeaveApplication = async (leaveDetails : any) => {
       leavepart: leaveDetails.leavepart || '',
       reason: leaveDetails.reason,
       approver: leaveDetails.approver,
+      leavenow: leaveDetails.leavenow, 
     });
 
     console.log('Submitting leave application with payload:', data);
@@ -86,4 +85,38 @@ export const submitLeaveApplication = async (leaveDetails : any) => {
     throw error;
   }
 };
+
+
+export const leaveHistoryPending = async (leaveStatus) => {
+  try {
+    const token = await AsyncStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('No access token found. Please log in again.');
+    }
+
+    const response = await axios.get(`${baseUrl}/api/v1/leaves/history?status=${leaveStatus}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 200) {
+      console.log("Leave history fetched:", response);
+     
+      return response;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch leave history");
+    }
+  } catch (error: any) {
+    console.error("Error fetching pending leave history:", error);
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error("An error occurred while fetching pending leave details.");
+    }
+  } finally {
+    console.log("[Pending API call completed]");
+  }
+};
+
 
