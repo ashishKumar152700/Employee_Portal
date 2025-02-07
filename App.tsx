@@ -9,7 +9,7 @@ import { applyMiddleware, legacy_createStore as createStore } from "redux";
 import { thunk } from "redux-thunk";
 import reducers from "./Global/reducers";
 import TabViewExample from "./Component/LeaveScreen/LeaveTabs";
-import SplashScreen from "./SplashScreen";  
+
 const Stack = createStackNavigator();
 const store = createStore(reducers, applyMiddleware(thunk));
 
@@ -19,11 +19,7 @@ export default function App() {
       <SafeAreaView style={{ flex: 1 }}>
         <NavigationContainer>
           <Stack.Navigator initialRouteName="Splash">
-            <Stack.Screen
-              name="Splash"
-              component={SplashScreen}  
-              options={{ headerShown: false }}
-            />
+           
             <Stack.Screen
               name="Login"
               component={LoginScreen}

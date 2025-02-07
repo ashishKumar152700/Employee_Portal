@@ -69,16 +69,7 @@ const TimesheetCalendar: React.FC<TimesheetCalendarProps> = () => {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      {/* <Text
-        style={{
-          fontSize: 35,
-          fontWeight: "900",
-          marginBottom: 10,
-          paddingVertical: 20,
-        }}
-      >
-        Timesheet Calendar
-      </Text> */}
+    
 
       <Calendar
         onDayPress={openTimesheetModal}

@@ -1,10 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View, Button } from 'react-native';
 import { FlatList, TouchableOpacity } from 'react-native-gesture-handler';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import AwesomeAlert from 'react-native-awesome-alerts';
+import Modal from "react-native-modal";
 
 type Asset = {
   id: string;
@@ -17,8 +17,6 @@ export default function AssetModule() {
   const navigation = useNavigation();
   const [showAlert, setShowAlert] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<Asset | null>(null);
-
- 
 
   const assets: Asset[] = [
     {
@@ -61,7 +59,7 @@ export default function AssetModule() {
       id: 'MICX3064',
       name: 'Dockstation',
       location: 'Dlink',
-      image: require('../../assets/device/headphones_PNG101978.png'),
+      image: require('../../assets/device/docking.png'),
     },
   ];
 
@@ -87,17 +85,17 @@ export default function AssetModule() {
             </Text>
           </View>
           <TouchableOpacity onPress={handleChevronPress}>
-          <Ionicons name="arrow-forward" size={24} color="#999" />
+            <Ionicons name="arrow-forward" size={24} color="#999" />
           </TouchableOpacity>
         </LinearGradient>
       </TouchableOpacity>
     );
   };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Raise Ticket For</Text>
-        
       </View>
 
       <FlatList
@@ -107,30 +105,19 @@ export default function AssetModule() {
         style={styles.list}
       />
 
-      <AwesomeAlert
-        show={showAlert}
-        showProgress={false}
-        closeOnTouchOutside={false}
-        closeOnHardwareBackPress={false}
-        showCancelButton={true}
-        showConfirmButton={true}
-        cancelText="Cancel"
-        confirmText="OK"
-        cancelButtonColor="#DD6B55"
-        confirmButtonColor="#2089dc"
-        onCancelPressed={() => setShowAlert(false)}
-        onConfirmPressed={() => {
-          setShowAlert(false);
-        }}
-        customView={
-          <View style={styles.customAlertContainer}>
-            <Text style={styles.alertTitle}>Are you sure?</Text>
-            <Text style={styles.alertMessage}>
-              Do you want to raise a ticket for this category?
-            </Text>
+       
+      <Modal isVisible={showAlert} onBackdropPress={() => setShowAlert(false)}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.alertTitle}>Are you sure?</Text>
+          <Text style={styles.alertMessage}>
+            Do you want to raise a ticket for this category?
+          </Text>
+          <View style={styles.buttonContainer}>
+            <Button title="Cancel" color="#DD6B55" onPress={() => setShowAlert(false)} />
+            <Button title="OK" color="#2089dc" onPress={() => setShowAlert(false)} />
           </View>
-        }
-      />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -138,7 +125,7 @@ export default function AssetModule() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white', // Set background color to white
+    backgroundColor: 'white',
     padding: 10,
   },
   header: {
@@ -149,11 +136,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 20,
     fontWeight: '400',
-    marginBottom:10,
-    
-  },
-  button: {
-    backgroundColor: '#007BFF',
+    marginBottom: 10,
   },
   list: {
     padding: 0,
@@ -184,22 +167,27 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
-  customAlertContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 5,
+  modalContainer: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
   },
   alertTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 8,
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 10,
   },
   alertMessage: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 5,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    gap: 10,
   },
 });
+

@@ -90,7 +90,7 @@ const Profile = () => {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Change Password Modal */}
+     
       <Modal
         animationType="slide"
         transparent={true}

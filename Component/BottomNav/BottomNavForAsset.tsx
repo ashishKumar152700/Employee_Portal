@@ -44,7 +44,7 @@ export default function BottomNavForAsset() {
         </View>
       </PagerView>
 
-      {/* Custom Bottom Tab Bar */}
+   
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tabItem, page === 0 && styles.activeTab]}

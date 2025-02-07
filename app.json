@@ -6,9 +6,14 @@
     "orientation": "portrait",
     "icon": "",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "android": {
-     
-      "package": "com.sudhirtbk9.essp202"
+      "package": "com.sudhirtbk9.essp202",
+      "jsEngine": "hermes"
     },
     "web": {
       "favicon": "./assets/favicon.png"

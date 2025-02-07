@@ -43,7 +43,7 @@ export default function MyLeaveScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.cardDiv}>
-        {/* Leave Balance */}
+       
         <View style={styles.balanceCard}>
           <Progress.Circle
             size={130}
@@ -60,7 +60,7 @@ export default function MyLeaveScreen() {
           <Text style={styles.balanceText}>Leave Balance</Text>
         </View>
 
-        {/* Leave Summary */}
+       
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>
@@ -80,7 +80,7 @@ export default function MyLeaveScreen() {
           </View>
         </View>
 
-        {/* Leave Types */}
+     
         <View style={styles.leaveTypesRow}>
           <View style={styles.leaveType}>
             <Progress.Circle
@@ -139,7 +139,7 @@ export default function MyLeaveScreen() {
             <Text style={styles.leaveTypeLabel}>Optional Leave</Text>
 
           </View>
-            {/* <TabViewExample/> */}
+           
 
         
       </View>

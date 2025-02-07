@@ -44,7 +44,7 @@ export default function BottomNavForLeaveScreen() {
         </View>
       </PagerView>
 
-      {/* Custom Bottom Tab Bar */}
+  
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tabItem, page === 0 && styles.activeTab]}
@@ -109,77 +109,3 @@ const styles = StyleSheet.create({
   },
 });
 
-
-// import * as React from 'react';
-// import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
-// import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
-// import AssetModule from '../../Screen/Asset/AssetRequest';
-// import MyTickets from '../../Screen/Asset/MyTickets';
-// import PunchScreen from '../../Screen/Attendance/Punch';
-// import Schedule from '../../Screen/Calander/Calander';
-// import LeaveApplicationScreen from '../../Screen/MyLeave/LeaveApplicationScreen';
-// import MyLeaveScreen from '../../Screen/MyLeave/MyLeaveScreen';
-
-
-
-// const renderScene = SceneMap({
-//   first: MyLeaveScreen,
-//   second: LeaveApplicationScreen,
-// });
-
-// const routes = [
-//   { key: 'first', title: 'Leave Detail' },
-//   { key: 'second', title: 'Apply For Leave' },
-// ];
-
-// export default function BottomNavForLeaveScreen() {
-//   const layout = useWindowDimensions();
-//   const [index, setIndex] = React.useState(0);
-
-//   return (
-//    <TabView
-//        navigationState={{ index, routes }}
-//        renderScene={renderScene}
-//        onIndexChange={setIndex}
-//        initialLayout={{ width: layout.width }}
-//        style={styles.tabView}
-//        tabBarPosition='bottom'
-//        renderTabBar={(props) => (
-//               <TabBar
-//                 {...props}
-//                 style={styles.tabBar}
-//                 indicatorStyle={styles.indicator}
-                
-//               />
-//             )}
-//      />
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   tabView: {
-//     flex: 1,
-//   },
-//   indicator: {
-//     backgroundColor: "#ff9f43",
-//     height: 4,
-//     borderRadius: 2,
-//   },
-//   scene: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   tabBar: {
-//     // backgroundColor: "purple",
-//     backgroundColor: "rgb(0, 41, 87)",
-//       color:'red',
-//     borderBottomWidth: 1,
-//     borderBottomColor: "#e0e0e0",
-//   },
-//   text: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     color: '#333',
-//   },
-// });
