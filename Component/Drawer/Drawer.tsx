@@ -12,6 +12,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import LeaveRequest from '../../Screen/LeaveRequestList/LeaveRequest';
 import ProfilePage from '../../Screen/Profile/Testing';
+import BottomTabNavigator from '../BottomNav/BottomNav';
+import BottomTabNavLeave from '../BottomNav/BottomNavForLeave';
 
 const Drawer = createDrawerNavigator();
 
@@ -79,8 +81,8 @@ function DrawerNavigator() {
           
         }}
       >
-        <Drawer.Screen name="Attendance" component={BottomNavForPunchScreen} />
-        <Drawer.Screen name="MyLeaveScreen" component={BottomNavForLeaveScreen} />
+        <Drawer.Screen name="Attendance" component={BottomTabNavigator} />
+        <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} />
         <Drawer.Screen name="Timesheet" component={CalendarListScreen} />
         <Drawer.Screen name="AssetModule" component={BottomNavForAsset} />
         <Drawer.Screen name="MyTickets" component={MyTickets} />

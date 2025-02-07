@@ -3,35 +3,44 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MyLeaveScreen from '../../Screen/MyLeave/MyLeaveScreen';
 import LeaveApplicationScreen from '../../Screen/MyLeave/LeaveApplicationScreen';
-import TabViewExample from '../LeaveScreen/LeaveTabs';
+
 const Tab = createBottomTabNavigator();
 
 function BottomTabNavLeave() {
   return (
-    <Tab.Navigator screenOptions={{tabBarStyle:{backgroundColor:'white' , justifyContent: 'center', overflow:'hidden', height:66 , display:'flex'  ,paddingBottom:8 , flexDirection:'row' , position: "absolute"}}}>
-    
+    <Tab.Navigator
+      screenOptions={{
+        tabBarStyle: {
+          backgroundColor: 'rgb(0, 41, 87)', // Dark blue background for consistency
+          height: 66,
+          paddingBottom: 8,
+          flexDirection: 'row',
+          position: 'absolute',
+        },
+        tabBarActiveTintColor: '#ff9f43', // Highlighted tab color
+        tabBarInactiveTintColor: '#fff',  // Default white for inactive tabs
+      }}
+    >
       <Tab.Screen 
         name="Leave Details" 
         component={MyLeaveScreen} 
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Icon name="list" color={color} size={25} /> 
+            <Icon name="list" color={color} size={25} />
           ),
         }}
       />
       <Tab.Screen 
         name="Apply for Leaves" 
         component={LeaveApplicationScreen} 
-        // component={TabViewExample} 
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Icon name="plus" color={color} size={25} /> 
+            <Icon name="plus" color={color} size={25} />
           ),
         }}
       />
-     
     </Tab.Navigator>
   );
 }

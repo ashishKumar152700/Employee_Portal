@@ -7,7 +7,7 @@
     "icon": "",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash2.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -21,6 +21,7 @@
     "plugins": [
       [
         "expo-build-properties",
+        
         {
           "android": {
             "usesCleartextTraffic": true,

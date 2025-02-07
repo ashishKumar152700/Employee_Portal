@@ -146,7 +146,7 @@ const PunchScreen: React.FC = () => {
     if (!permissionGranted) return undefined;
     try {
       const locResult = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High, 
+        accuracy: Location.Accuracy.BestForNavigation, 
         maximumAge: 0,                  
       });
       const { latitude, longitude } = locResult.coords;
@@ -369,11 +369,13 @@ const styles = StyleSheet.create({
     padding: scaleSize(13),
     alignItems: "center",
     paddingBottom: scaleSize(5),
+    marginBottom: scaleSize(55),
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
+    
   },
   card: {
     backgroundColor: "#FFFFFF",
