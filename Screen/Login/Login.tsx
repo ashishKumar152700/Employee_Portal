@@ -17,12 +17,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { RFPercentage } from 'react-native-responsive-fontsize';
 import { RootStackParamList } from '../../Global/Types';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { loginservice } from '../../Services/Login/Login.service';
 import { useDispatch } from 'react-redux';
+import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 
 const { width, height } = Dimensions.get('window');
 
@@ -66,13 +66,6 @@ const LoginScreen = () => {
       setLoading(false);
     }
   };
-
-  // const handleLogin = async () => {
-   
-  
-  //       navigation.navigate('Main');
-  
-  // };
   
 
   const handleFingerprintLogin = async () => {
@@ -228,12 +221,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   welcomeText: {
-    fontSize: RFPercentage(3),
+    fontSize: scale(18),
     fontWeight: 'bold',
     color: 'rgb(0, 41, 87)',
   },
   portalText: {
-    fontSize: RFPercentage(2.5),
+    fontSize: scale(16),
     color: '#555',
     textAlign: 'center',
     marginTop: 5,
@@ -253,11 +246,11 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: RFPercentage(2.2),
+    fontSize: scale(14),
     fontWeight: '600',
   },
   orText: {
-    fontSize: RFPercentage(2),
+    fontSize: scale(12),
     color: 'rgb(0, 41, 87)',
     marginTop: 20,
   },
@@ -280,8 +273,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     color: 'rgb(0, 41, 87)',
-    fontSize: RFPercentage(2),
-    // marginVertical: 5,
+    fontSize: scale(12), 
     textDecorationLine: 'underline',
   },
 });

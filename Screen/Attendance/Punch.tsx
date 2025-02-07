@@ -146,8 +146,8 @@ const PunchScreen: React.FC = () => {
     if (!permissionGranted) return undefined;
     try {
       const locResult = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,  // High accuracy
-        maximumAge: 0,                    // Ensure fresh data
+        accuracy: Location.Accuracy.High, 
+        maximumAge: 0,                  
       });
       const { latitude, longitude } = locResult.coords;
       console.log("Fetched location:", latitude, longitude);
@@ -162,7 +162,6 @@ const PunchScreen: React.FC = () => {
         setAddress(formattedAddress);
       }
       setLocation({ latitude, longitude });
-      // Update mapKey to force MapView re-render
       setMapKey((prev) => prev + 1);
       return locResult;
     } catch (error) {
@@ -311,7 +310,7 @@ const PunchScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Modal Dialog for Map with Address */}
+    
       <Modal visible={isMapVisible} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.mapContainer}>

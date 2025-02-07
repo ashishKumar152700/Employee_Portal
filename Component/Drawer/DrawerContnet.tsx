@@ -41,7 +41,7 @@ export const CustomDrawerContent = (props: any) => {
   return (
     <View style={styles.container}>
       <DrawerContentScrollView {...props} style={styles.drawerContent}>
-        {/* User Info Section */}
+      
         <View style={styles.userInfoContainer}>
           <Image source={{ uri: userInfo.profilePic }} style={styles.profilePic} />
           <Text style={styles.username}>{userInfo.username}</Text>
@@ -88,8 +88,7 @@ export const CustomDrawerContent = (props: any) => {
           <Text style={styles.submenuButtonText}>Leave Request</Text>
         </TouchableOpacity>
       </DrawerContentScrollView>
-
-      ;
+      
 
 <View style={styles.logoutContainer}>
   <TouchableOpacity
