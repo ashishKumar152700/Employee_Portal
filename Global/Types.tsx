@@ -6,6 +6,9 @@ export type RootStackParamList = {
   LoginScreen: undefined;
   Main: undefined;
   leaveHistory:undefined;
+  loanHistory:undefined;
+  salaryAdHistory:undefined;
+  reimburseHistory:undefined;
   Login:undefined;
   MyLeaveScreen:undefined
 };

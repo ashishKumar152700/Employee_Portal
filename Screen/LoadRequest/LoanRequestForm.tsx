@@ -1,67 +1,75 @@
-import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, FAB } from 'react-native-paper';
-import { Picker } from '@react-native-picker/picker';
-import * as DocumentPicker from 'expo-document-picker';
+import React, { useState } from "react";
+import { View, Text, Button, StyleSheet, ScrollView } from "react-native";
+import { TextInput, FAB } from "react-native-paper";
+import { Picker } from "@react-native-picker/picker";
+import * as DocumentPicker from "expo-document-picker";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../../Global/Types";
 
 const LoanRequestForm: React.FC = () => {
-  const [name, setName] = useState<string>('');
-  const [employeeCode, setEmployeeCode] = useState<string>('');
-  const [approverName, setApproverName] = useState<string>('');
-  const [department, setDepartment] = useState<string>('');
-  const [loanAmount, setLoanAmount] = useState<string>('');
-  const [reason, setReason] = useState<string>('');
-  const [loanType, setLoanType] = useState<string>('');
-  const [otherLoanReason, setOtherLoanReason] = useState<string>('');
-  const [monthlyIncome, setMonthlyIncome] = useState<string>('');
-  const [repaymentPeriod, setRepaymentPeriod] = useState<string>('');
-  const [address, setAddress] = useState<string>('');
-  const [emergencyContact, setEmergencyContact] = useState<string>('');
+  const [name, setName] = useState<string>("");
+  const [employeeCode, setEmployeeCode] = useState<string>("");
+  const [approverName, setApproverName] = useState<string>("");
+  const [department, setDepartment] = useState<string>("");
+  const [loanAmount, setLoanAmount] = useState<string>("");
+  const [reason, setReason] = useState<string>("");
+  const [loanType, setLoanType] = useState<string>("");
+  const [otherLoanReason, setOtherLoanReason] = useState<string>("");
+  const [monthlyIncome, setMonthlyIncome] = useState<string>("");
+  const [repaymentPeriod, setRepaymentPeriod] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [emergencyContact, setEmergencyContact] = useState<string>("");
   const [documents, setDocuments] = useState<any[]>([]); // To store multiple uploaded documents
+  type loanHistory = StackNavigationProp<RootStackParamList, 'loanHistory'>;
 
   const handleSubmit = () => {
-    console.log('Name:', name);
-    console.log('Employee Code:', employeeCode);
-    console.log('Approver Name:', approverName);
-    console.log('Department:', department);
-    console.log('Loan Amount:', loanAmount);
-    console.log('Reason:', reason);
-    console.log('Loan Type:', loanType);
-    console.log('Employee Code:', employeeCode);
-    console.log('Monthly Income:', monthlyIncome);
-    console.log('Repayment Period:', repaymentPeriod);
-    console.log('Address:', address);
-    console.log('Emergency Contact:', emergencyContact);
-    if (loanType === 'other') {
-      console.log('Other Loan Reason:', otherLoanReason);
+    console.log("Name:", name);
+    console.log("Employee Code:", employeeCode);
+    console.log("Approver Name:", approverName);
+    console.log("Department:", department);
+    console.log("Loan Amount:", loanAmount);
+    console.log("Reason:", reason);
+    console.log("Loan Type:", loanType);
+    console.log("Employee Code:", employeeCode);
+    console.log("Monthly Income:", monthlyIncome);
+    console.log("Repayment Period:", repaymentPeriod);
+    console.log("Address:", address);
+    console.log("Emergency Contact:", emergencyContact);
+    if (loanType === "other") {
+      console.log("Other Loan Reason:", otherLoanReason);
     }
     if (documents.length > 0) {
-      console.log('Uploaded Documents:', documents.map(doc => doc.name));
+      console.log(
+        "Uploaded Documents:",
+        documents.map((doc) => doc.name)
+      );
     }
   };
 
   const handleLoanTypeChange = (itemValue: string) => {
     setLoanType(itemValue);
-    if (itemValue !== 'other') {
-      setOtherLoanReason('');
+    if (itemValue !== "other") {
+      setOtherLoanReason("");
     }
   };
 
-  const handleLeaveHistoryPress = () => {
-    console.log("Leave History Button Pressed");
+  const navigation = useNavigation(); 
+  const handleLoanHistoryPress = () => {
+    navigation.navigate('loanHistory');
   };
 
   const handleDocumentUpload = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
-        type: 'image/*', // Allow only image file types
+        type: "image/*", // Allow only image file types
       });
       if (res) {
-        console.log('Uploaded document:', res);  // Debugging line to check document info
-        setDocuments(prevDocs => [...prevDocs, res]); // Add new document to the list
+        console.log("Uploaded document:", res); // Debugging line to check document info
+        setDocuments((prevDocs) => [...prevDocs, res]); // Add new document to the list
       }
     } catch (err) {
-      console.error('Document pick error', err);
+      console.error("Document pick error", err);
     }
   };
 
@@ -80,7 +88,7 @@ const LoanRequestForm: React.FC = () => {
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
             outlineColor="rgb(0, 41, 87)"
-            theme={{ colors: { background: 'white' } }}
+            theme={{ colors: { background: "white" } }}
           />
           <TextInput
             label="Employee Code"
@@ -90,7 +98,7 @@ const LoanRequestForm: React.FC = () => {
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
             outlineColor="rgb(0, 41, 87)"
-            theme={{ colors: { background: 'white' } }}
+            theme={{ colors: { background: "white" } }}
           />
         </View>
 
@@ -103,7 +111,7 @@ const LoanRequestForm: React.FC = () => {
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
             outlineColor="rgb(0, 41, 87)"
-            theme={{ colors: { background: 'white' } }}
+            theme={{ colors: { background: "white" } }}
           />
           <TextInput
             label="Department"
@@ -113,7 +121,7 @@ const LoanRequestForm: React.FC = () => {
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
             outlineColor="rgb(0, 41, 87)"
-            theme={{ colors: { background: 'white' } }}
+            theme={{ colors: { background: "white" } }}
           />
         </View>
 
@@ -126,7 +134,7 @@ const LoanRequestForm: React.FC = () => {
           mode="outlined"
           activeOutlineColor="rgb(0, 41, 87)"
           outlineColor="rgb(0, 41, 87)"
-          theme={{ colors: { background: 'white' } }}
+          theme={{ colors: { background: "white" } }}
         />
         <TextInput
           label="Reason for Loan"
@@ -136,7 +144,7 @@ const LoanRequestForm: React.FC = () => {
           mode="outlined"
           activeOutlineColor="rgb(0, 41, 87)"
           outlineColor="rgb(0, 41, 87)"
-          theme={{ colors: { background: 'white' } }}
+          theme={{ colors: { background: "white" } }}
         />
         <TextInput
           label="Monthly Income"
@@ -147,7 +155,7 @@ const LoanRequestForm: React.FC = () => {
           mode="outlined"
           activeOutlineColor="rgb(0, 41, 87)"
           outlineColor="rgb(0, 41, 87)"
-          theme={{ colors: { background: 'white' } }}
+          theme={{ colors: { background: "white" } }}
         />
         <TextInput
           label="Repayment Period (Months)"
@@ -158,7 +166,7 @@ const LoanRequestForm: React.FC = () => {
           mode="outlined"
           activeOutlineColor="rgb(0, 41, 87)"
           outlineColor="rgb(0, 41, 87)"
-          theme={{ colors: { background: 'white' } }}
+          theme={{ colors: { background: "white" } }}
         />
 
         <Text style={styles.label}>Select Loan Type</Text>
@@ -173,7 +181,7 @@ const LoanRequestForm: React.FC = () => {
           <Picker.Item label="Other Loan" value="other" />
         </Picker>
 
-        {loanType === 'other' && (
+        {loanType === "other" && (
           <TextInput
             label="Please specify other loan type"
             value={otherLoanReason}
@@ -182,16 +190,16 @@ const LoanRequestForm: React.FC = () => {
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
             outlineColor="rgb(0, 41, 87)"
-            theme={{ colors: { background: 'white' } }}
+            theme={{ colors: { background: "white" } }}
           />
         )}
 
         {/* Document Upload Section */}
         <View style={styles.documentUploadContainer}>
-          <Button 
-            title="Upload Document" 
-            onPress={handleDocumentUpload} 
-            color="rgb(0, 41, 87)" 
+          <Button
+            title="Upload Document"
+            onPress={handleDocumentUpload}
+            color="rgb(0, 41, 87)"
           />
           {documents.length > 0 ? (
             <View style={styles.documentList}>
@@ -207,14 +215,18 @@ const LoanRequestForm: React.FC = () => {
           )}
         </View>
 
-        <Button title="Submit Request" onPress={handleSubmit} color="rgb(0, 41, 87)" />
+        <Button
+          title="Submit Request"
+          onPress={handleSubmit}
+          color="rgb(0, 41, 87)"
+        />
       </ScrollView>
 
       <FAB
         style={styles.fab}
         icon="bank"
         label="Loan History"
-        onPress={handleLeaveHistoryPress}
+        onPress={handleLoanHistoryPress}
         color="white"
       />
     </View>
@@ -224,7 +236,7 @@ const LoanRequestForm: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   scrollView: {
     padding: 20,
@@ -232,31 +244,31 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: 'bold',
-    color: 'rgb(0, 41, 87)',
+    fontWeight: "bold",
+    color: "rgb(0, 41, 87)",
     marginBottom: 30,
-    textAlign: 'center',
+    textAlign: "center",
   },
   input: {
     marginBottom: 20,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   label: {
     fontSize: 18,
-    color: 'rgb(0, 41, 87)',
+    color: "rgb(0, 41, 87)",
     marginBottom: 15,
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     // marginBottom: 20,
   },
   halfWidth: {
-    width: '48%',
+    width: "48%",
   },
   picker: {
     height: 50,
-    borderColor: 'rgb(0, 41, 87)',
+    borderColor: "rgb(0, 41, 87)",
     borderWidth: 1,
     borderRadius: 8,
     marginBottom: 20,
@@ -266,7 +278,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgb(0, 41, 87)',
+    borderColor: "rgb(0, 41, 87)",
   },
   documentList: {
     marginTop: 10,
@@ -276,20 +288,20 @@ const styles = StyleSheet.create({
   },
   documentName: {
     fontSize: 14,
-    color: 'rgb(0, 41, 87)',
+    color: "rgb(0, 41, 87)",
   },
   documentText: {
     fontSize: 18,
-    color: 'black',
+    color: "black",
     marginTop: 10,
     marginBottom: 10,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     right: 20,
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: "rgb(0, 41, 87)",
     borderRadius: 50,
   },
 });
