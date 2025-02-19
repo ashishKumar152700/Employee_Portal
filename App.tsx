@@ -9,6 +9,9 @@ import { applyMiddleware, legacy_createStore as createStore } from "redux";
 import { thunk } from "redux-thunk";
 import reducers from "./Global/reducers";
 import TabViewExample from "./Component/LeaveScreen/LeaveTabs";
+import LoanTabNavigator from "./Component/LoanScreens/LoanTabs";
+import SalaryAdTabNavigator from "./Component/SalaryScreen/salaryTabs";
+import ReimbursementTabNavigator from "./Component/ReimburseScreen/reimburseTabs";
 
 const Stack = createStackNavigator();
 const store = createStore(reducers, applyMiddleware(thunk));
@@ -33,6 +36,21 @@ export default function App() {
             <Stack.Screen
               name="leaveHistory"
               component={TabViewExample}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="loanHistory"
+              component={LoanTabNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="salaryAdHistory"
+              component={SalaryAdTabNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="reimburseHistory"
+              component={ReimbursementTabNavigator}
               options={{ headerShown: false }}
             />
           </Stack.Navigator>
