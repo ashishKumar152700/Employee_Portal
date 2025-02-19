@@ -11,7 +11,7 @@ function BottomTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: 'rgb(0, 41, 87)', // Dark blue background
+          backgroundColor: 'rgb(0, 41, 87)', 
           height: 66,
           paddingBottom: 8,
           flexDirection: 'row',

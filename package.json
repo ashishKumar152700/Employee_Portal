@@ -26,6 +26,7 @@
     "expo-linear-gradient": "~14.0.2",
     "expo-local-authentication": "~15.0.2",
     "expo-location": "~18.0.5",
+    "portal": "file:",
     "react": "^18.3.1",
     "react-native": "^0.76.7",
     "react-native-calendar-picker": "^8.0.5",
