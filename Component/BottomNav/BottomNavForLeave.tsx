@@ -11,14 +11,14 @@ function BottomTabNavLeave() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: 'rgb(0, 41, 87)', // Dark blue background for consistency
+          backgroundColor: 'white', // Dark blue background for consistency
           height: 66,
           paddingBottom: 8,
           flexDirection: 'row',
           position: 'absolute',
         },
-        tabBarActiveTintColor: '#ff9f43', // Highlighted tab color
-        tabBarInactiveTintColor: '#fff',  // Default white for inactive tabs
+        tabBarActiveTintColor: 'rgb(0, 41, 87)', // Theme-consistent dark blue
+        tabBarInactiveTintColor: 'black',  // Default white color for inactive tabs
       }}
     >
       <Tab.Screen 

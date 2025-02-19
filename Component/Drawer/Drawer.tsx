@@ -18,6 +18,7 @@ import Dashboard from '../../Screen/DashBoard/DashBoard';
 import LoanRequestForm from '../../Screen/LoadRequest/LoanRequestForm';
 import SalaryAdvanceRequestForm from '../../Screen/SalaryAdvance/SalaryAdvanceRequestForm';
 import ReimbursementForm from '../../Screen/Reimbursement/ReimbursementForm';
+import TaxModule from '../../Screen/TaxModule/TaxModule';
 
 const Drawer = createDrawerNavigator();
 
@@ -96,6 +97,7 @@ function DrawerNavigator() {
         <Drawer.Screen name="LoanRequest" component={LoanRequestForm} />
         <Drawer.Screen name="SalaryAdvanceRequest" component={SalaryAdvanceRequestForm} />
         <Drawer.Screen name="Reimbursement" component={ReimbursementForm} />
+        <Drawer.Screen name="TaxModule" component={TaxModule} />
 
       </Drawer.Navigator>
     </View>
