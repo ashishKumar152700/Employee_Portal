@@ -15,7 +15,7 @@ const formatAppliedDate = (dateString) => {
   const date = new Date(dateString);
   // If the date is invalid, return the original string
   if (isNaN(date.getTime())) return dateString;
-  const options = { day: "numeric", month: "short", year: "numeric" };
+  const options = { day: "numeric" as const, month: "short" as const, year: "numeric" as const };
   return date.toLocaleDateString("en-GB", options);
 };
 
@@ -75,6 +75,9 @@ const LeaveRoute = ({ leaveType }) => {
           </View>
           <Text style={styles.durationText}>
             Applied From {item.leavestart} to {item.leaveend}
+          </Text>
+          <Text style={styles.durationText}>
+            Reason : {item.reason} 
           </Text>
         </View>
       )}
@@ -145,6 +148,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 0.5,
     borderColor: "#ccc",
+
   },
   headerRow: {
     flexDirection: "row",
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   itemText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
     color: "#444",
   },
@@ -162,7 +166,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   durationText: {
-    fontSize: 14,
+    fontSize: 12,
+    marginBottom:4,
     color: "#808080",
     fontWeight: "500",
   },

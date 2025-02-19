@@ -14,6 +14,10 @@ import LeaveRequest from '../../Screen/LeaveRequestList/LeaveRequest';
 import ProfilePage from '../../Screen/Profile/Testing';
 import BottomTabNavigator from '../BottomNav/BottomNav';
 import BottomTabNavLeave from '../BottomNav/BottomNavForLeave';
+import Dashboard from '../../Screen/DashBoard/DashBoard';
+import LoanRequestForm from '../../Screen/LoadRequest/LoanRequestForm';
+import SalaryAdvanceRequestForm from '../../Screen/SalaryAdvance/SalaryAdvanceRequestForm';
+import ReimbursementForm from '../../Screen/Reimbursement/ReimbursementForm';
 
 const Drawer = createDrawerNavigator();
 
@@ -88,6 +92,11 @@ function DrawerNavigator() {
         <Drawer.Screen name="MyTickets" component={MyTickets} />
         <Drawer.Screen name="LeaveRequest" component={LeaveRequest} />
         <Drawer.Screen name="Profile" component={ProfilePage} />
+        <Drawer.Screen name="DashBoard" component={Dashboard} />
+        <Drawer.Screen name="LoanRequest" component={LoanRequestForm} />
+        <Drawer.Screen name="SalaryAdvanceRequest" component={SalaryAdvanceRequestForm} />
+        <Drawer.Screen name="Reimbursement" component={ReimbursementForm} />
+
       </Drawer.Navigator>
     </View>
   );

@@ -146,8 +146,7 @@ const PunchScreen: React.FC = () => {
     if (!permissionGranted) return undefined;
     try {
       const locResult = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation, 
-        maximumAge: 0,                  
+        accuracy: Location.Accuracy.BestForNavigation,                
       });
       const { latitude, longitude } = locResult.coords;
       console.log("Fetched location:", latitude, longitude);
