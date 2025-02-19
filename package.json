@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
-    "@react-native-async-storage/async-storage": "^1.23.1",
-    "@react-native-picker/picker": "^2.7.5",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-picker/picker": "^2.9.0",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/drawer": "^6.7.2",
     "@react-navigation/native": "^6.1.18",
@@ -20,17 +20,20 @@
     "@rneui/themed": "^4.0.0-rc.8",
     "axios": "^1.7.7",
     "date-fns": "^4.1.0",
-    "expo": "~52.0.31",
+    "expo": "52.0.35",
     "expo-build-properties": "~0.13.2",
-    "expo-dev-client": "^5.0.11",
+    "expo-dev-client": "5.0.12",
+    "expo-document-picker": "~13.0.3",
     "expo-linear-gradient": "~14.0.2",
     "expo-local-authentication": "~15.0.2",
-    "expo-location": "~18.0.5",
+    "expo-location": "18.0.6",
     "portal": "file:",
     "react": "^18.3.1",
+    "react-hook-form": "^7.54.2",
     "react-native": "^0.76.7",
     "react-native-calendar-picker": "^8.0.5",
     "react-native-calendars": "^1.1307.0",
+    "react-native-chart-kit": "^6.12.0",
     "react-native-generic-table-page": "^0.4.1",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-grid-component": "^2.0.1",
@@ -38,10 +41,12 @@
     "react-native-maps": "1.18.0",
     "react-native-modal": "^13.0.1",
     "react-native-paper": "^5.12.5",
+    "react-native-picker-select": "^9.3.1",
     "react-native-progress": "^5.0.1",
     "react-native-reanimated": "^3.16.7",
-    "react-native-safe-area-context": "^4.12.0",
+    "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
+    "react-native-svg": "15.8.0",
     "react-native-tab-view": "^4.0.5",
     "react-native-toast-message": "^2.2.1",
     "react-native-vector-icons": "^10.2.0",
@@ -64,7 +69,8 @@
         "listUnknownPackages": false,
         "exclude": [
           "react-native-modal",
-          "react-native-maps"
+          "react-native-maps",
+          "react-native-chart-kit"
         ]
       }
     }

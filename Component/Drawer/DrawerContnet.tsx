@@ -50,6 +50,14 @@ export const CustomDrawerContent = (props: any) => {
 
         <TouchableOpacity
           style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("DashBoard")}
+        >
+          <MaterialIcons name="dashboard" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>DashBoard</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.submenuButton}
           onPress={() => props.navigation.navigate("Attendance")}
         >
           <MaterialIcons name="fingerprint" size={24} color="#555" style={styles.iconStyle} />
@@ -87,6 +95,34 @@ export const CustomDrawerContent = (props: any) => {
           <MaterialIcons name="person" size={24} color="#555" style={styles.iconStyle} />
           <Text style={styles.submenuButtonText}>Leave Request</Text>
         </TouchableOpacity>
+
+        
+
+        <TouchableOpacity
+          style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("LoanRequest")}
+        >
+          <MaterialIcons name="account-balance" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>Loan Request</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("SalaryAdvanceRequest")}
+        >
+          <MaterialIcons name="attach-money" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>Salary Advance Request</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("Reimbursement")}
+        >
+          <MaterialIcons name="receipt" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>Reimbursement</Text>
+        </TouchableOpacity>
+      
+
       </DrawerContentScrollView>
       
 
