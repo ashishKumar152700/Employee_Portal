@@ -1,8 +1,10 @@
-
-
 import React, { useEffect, useState } from "react";
-import { 
-  FlatList, View, Text, StyleSheet, ActivityIndicator 
+import {
+  FlatList,
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from "react-native-vector-icons/FontAwesome";
@@ -15,7 +17,11 @@ const formatAppliedDate = (dateString) => {
   const date = new Date(dateString);
   // If the date is invalid, return the original string
   if (isNaN(date.getTime())) return dateString;
-  const options = { day: "numeric" as const, month: "short" as const, year: "numeric" as const };
+  const options = {
+    day: "numeric" as const,
+    month: "short" as const,
+    year: "numeric" as const,
+  };
   return date.toLocaleDateString("en-GB", options);
 };
 
@@ -45,9 +51,11 @@ const LeaveRoute = ({ leaveType }) => {
   }, [leaveType]);
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#ff9f43" style={styles.loader} />;
+    return (
+      <ActivityIndicator size="large" color="#ff9f43" style={styles.loader} />
+    );
   }
-  
+
   if (error) {
     return <Text style={styles.errorText}>{error}</Text>;
   }
@@ -76,9 +84,7 @@ const LeaveRoute = ({ leaveType }) => {
           <Text style={styles.durationText}>
             Applied From {item.leavestart} to {item.leaveend}
           </Text>
-          <Text style={styles.durationText}>
-            Reason : {item.reason} 
-          </Text>
+          <Text style={styles.durationText}>Reason : {item.reason}</Text>
         </View>
       )}
       contentContainerStyle={styles.contentContainer}
@@ -100,28 +106,34 @@ export default function LeaveTabNavigator() {
         tabBarInactiveTintColor: "#fff",
       }}
     >
-      <Tab.Screen 
-        name="Pending" 
-        children={() => <LeaveRoute leaveType="Pending" />} 
+      <Tab.Screen
+        name="Pending"
+        children={() => <LeaveRoute leaveType="Pending" />}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color }) => <Icon name="clock-o" color={color} size={25} />,
+          tabBarIcon: ({ color }) => (
+            <Icon name="clock-o" color={color} size={25} />
+          ),
         }}
       />
-      <Tab.Screen 
-        name="Approved" 
-        children={() => <LeaveRoute leaveType="Approve" />} 
+      <Tab.Screen
+        name="Approved"
+        children={() => <LeaveRoute leaveType="Approve" />}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color }) => <Icon name="check" color={color} size={25} />,
+          tabBarIcon: ({ color }) => (
+            <Icon name="check" color={color} size={25} />
+          ),
         }}
       />
-      <Tab.Screen 
-        name="Declined" 
-        children={() => <LeaveRoute leaveType="Decline" />} 
+      <Tab.Screen
+        name="Declined"
+        children={() => <LeaveRoute leaveType="Decline" />}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color }) => <Icon name="times" color={color} size={25} />,
+          tabBarIcon: ({ color }) => (
+            <Icon name="times" color={color} size={25} />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -148,7 +160,6 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 0.5,
     borderColor: "#ccc",
-
   },
   headerRow: {
     flexDirection: "row",
@@ -167,14 +178,14 @@ const styles = StyleSheet.create({
   },
   durationText: {
     fontSize: 12,
-    marginBottom:4,
+    marginBottom: 4,
     color: "#808080",
     fontWeight: "500",
   },
   contentContainer: {
     paddingBottom: 50,
     backgroundColor: "white",
-    height:"100%"
+    height: "100%",
   },
   loader: {
     marginTop: 20,

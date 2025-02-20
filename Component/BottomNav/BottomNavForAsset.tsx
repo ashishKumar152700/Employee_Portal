@@ -18,7 +18,7 @@ function BottomNavForAsset() {
           position: 'absolute',
         },
         tabBarActiveTintColor: 'rgb(0, 41, 87)', // Theme-consistent dark blue
-        tabBarInactiveTintColor: 'black',  // Default white color for inactive tabs
+        tabBarInactiveTintColor: 'grey',  // Default white color for inactive tabs
       }}
     >
       <Tab.Screen 
