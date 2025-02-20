@@ -13,7 +13,12 @@
     },
     "android": {
       "package": "com.sudhirtbk9.essp202",
-      "jsEngine": "hermes"
+      "jsEngine": "hermes",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBTuDT9OJLrhj4XrIhOvUkdg2x54gSYEwU"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

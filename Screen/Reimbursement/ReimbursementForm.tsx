@@ -5,6 +5,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../Global/Types";
+import { useSelector } from "react-redux";
 
 const ReimbursementForm: React.FC = () => {
   const [name, setName] = useState<string>("");
@@ -18,6 +19,8 @@ const ReimbursementForm: React.FC = () => {
     "reimburseHistory"
   >;
 
+  const userDetailsSelector = useSelector((state:any) => state.userDetails ) ;
+ 
   const handleSubmit = () => {
     console.log("Name:", name);
     console.log("Employee Code:", employeeCode);
@@ -60,8 +63,9 @@ const ReimbursementForm: React.FC = () => {
         <View style={styles.row}>
           <TextInput
             label="Name"
-            value={name}
-            onChangeText={setName}
+            value={userDetailsSelector.user.name}
+            // onChangeText={setName}
+            disabled
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
@@ -70,8 +74,9 @@ const ReimbursementForm: React.FC = () => {
           />
           <TextInput
             label="Employee Code"
-            value={employeeCode}
-            onChangeText={setEmployeeCode}
+            value={String(userDetailsSelector.user.employeecode)}
+            // onChangeText={setEmployeeCode}
+            disabled
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"

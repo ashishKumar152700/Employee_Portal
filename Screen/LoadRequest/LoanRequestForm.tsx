@@ -6,11 +6,12 @@ import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../Global/Types";
+import { useSelector } from "react-redux";
 
 const LoanRequestForm: React.FC = () => {
-  const [name, setName] = useState<string>("");
-  const [employeeCode, setEmployeeCode] = useState<string>("");
-  const [approverName, setApproverName] = useState<string>("");
+  // const [name, setName] = useState<string>("");
+  // const [employeeCode, setEmployeeCode] = useState<any>("");
+  // const [approverName, setApproverName] = useState<string>("");
   const [department, setDepartment] = useState<string>("");
   const [loanAmount, setLoanAmount] = useState<string>("");
   const [reason, setReason] = useState<string>("");
@@ -23,15 +24,18 @@ const LoanRequestForm: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]); // To store multiple uploaded documents
   type loanHistory = StackNavigationProp<RootStackParamList, 'loanHistory'>;
 
+  const managerDetailsSelector = useSelector((state:any) => state.managerInfo ) ;
+  const userDetailsSelector = useSelector((state:any) => state.userDetails ) ;
+  
+
   const handleSubmit = () => {
-    console.log("Name:", name);
-    console.log("Employee Code:", employeeCode);
-    console.log("Approver Name:", approverName);
+    console.log("Employee Nmae:", userDetailsSelector.user.name);
+    console.log("Employee Code:", userDetailsSelector.user.employeecode);
+    console.log("Approver Name:", managerDetailsSelector.name);
     console.log("Department:", department);
     console.log("Loan Amount:", loanAmount);
     console.log("Reason:", reason);
     console.log("Loan Type:", loanType);
-    console.log("Employee Code:", employeeCode);
     console.log("Monthly Income:", monthlyIncome);
     console.log("Repayment Period:", repaymentPeriod);
     console.log("Address:", address);
@@ -82,8 +86,9 @@ const LoanRequestForm: React.FC = () => {
         <View style={styles.row}>
           <TextInput
             label="Name"
-            value={name}
-            onChangeText={setName}
+            value={userDetailsSelector.user.name}
+            disabled
+            // onChangeText={setName}
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
@@ -92,8 +97,9 @@ const LoanRequestForm: React.FC = () => {
           />
           <TextInput
             label="Employee Code"
-            value={employeeCode}
-            onChangeText={setEmployeeCode}
+            value={String(userDetailsSelector.user.employeecode)}
+            // onChangeText={setEmployeeCode}
+            disabled
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
@@ -105,8 +111,9 @@ const LoanRequestForm: React.FC = () => {
         <View style={styles.row}>
           <TextInput
             label="Approver Name"
-            value={approverName}
-            onChangeText={setApproverName}
+            value={managerDetailsSelector.name}
+            // onChangeText={setApproverName}
+            disabled
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
@@ -116,7 +123,8 @@ const LoanRequestForm: React.FC = () => {
           <TextInput
             label="Department"
             value={department}
-            onChangeText={setDepartment}
+            disabled
+            // onChangeText={setDepartment}
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"

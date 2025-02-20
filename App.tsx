@@ -12,6 +12,9 @@ import TabViewExample from "./Component/LeaveScreen/LeaveTabs";
 import LoanTabNavigator from "./Component/LoanScreens/LoanTabs";
 import SalaryAdTabNavigator from "./Component/SalaryScreen/salaryTabs";
 import ReimbursementTabNavigator from "./Component/ReimburseScreen/reimburseTabs";
+import AddMemberNavigator from "./Component/AddMemberScreen/addMemberTabs";
+import OvertimeNavigator from "./Component/OvertimeScreen/OvertimeTabs";
+import ResignNavigator from "./Component/ResignScreen/ResignTabs";
 
 const Stack = createStackNavigator();
 const store = createStore(reducers, applyMiddleware(thunk));
@@ -53,6 +56,22 @@ export default function App() {
               component={ReimbursementTabNavigator}
               options={{ headerShown: false }}
             />
+            <Stack.Screen
+              name="overtimeHistory"
+              component={OvertimeNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="addMemberHistory"
+              component={AddMemberNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="resignHistory"
+              component={ResignNavigator}
+              options={{ headerShown: false }}
+            />
+         
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

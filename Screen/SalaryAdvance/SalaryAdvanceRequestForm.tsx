@@ -4,6 +4,7 @@ import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, FAB } from 'react-native-paper';
 import { RootStackParamList } from '../../Global/Types';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useSelector } from 'react-redux';
 
 const SalaryAdvanceRequestForm: React.FC = () => {
   const [name, setName] = useState<string>('');
@@ -14,6 +15,9 @@ const SalaryAdvanceRequestForm: React.FC = () => {
   const [reason, setReason] = useState<string>('');
   type salaryAdHistory = StackNavigationProp<RootStackParamList, 'salaryAdHistory'>;
 
+  const managerDetailsSelector = useSelector((state:any) => state.managerInfo ) ;
+  const userDetailsSelector = useSelector((state:any) => state.userDetails ) ;
+  
 
   const navigation = useNavigation(); 
   const handlesalaryAdHistoryPress = () => {
@@ -37,8 +41,9 @@ const SalaryAdvanceRequestForm: React.FC = () => {
         <View style={styles.row}>
           <TextInput
             label="Name"
-            value={name}
-            onChangeText={setName}
+            value={userDetailsSelector.user.name}
+            // onChangeText={setName}
+            disabled
             style={[styles.input, styles.halfInput]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
@@ -47,8 +52,9 @@ const SalaryAdvanceRequestForm: React.FC = () => {
           />
           <TextInput
             label="Employee Code"
-            value={employeeCode}
-            onChangeText={setEmployeeCode}
+            value={String(userDetailsSelector.user.employeecode)}
+            // onChangeText={setEmployeeCode}
+            disabled
             style={[styles.input, styles.halfInput]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
@@ -61,8 +67,9 @@ const SalaryAdvanceRequestForm: React.FC = () => {
         <View style={styles.row}>
           <TextInput
             label="Approver Name"
-            value={approverName}
-            onChangeText={setApproverName}
+            value={managerDetailsSelector.name}
+            // onChangeText={setApproverName}
+            disabled
             style={[styles.input, styles.halfInput]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
@@ -73,6 +80,7 @@ const SalaryAdvanceRequestForm: React.FC = () => {
             label="Department"
             value={department}
             onChangeText={setDepartment}
+
             style={[styles.input, styles.halfInput]}
             mode="outlined"
             activeOutlineColor="rgb(0, 41, 87)"
