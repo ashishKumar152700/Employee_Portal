@@ -21,6 +21,7 @@ import ReimbursementForm from '../../Screen/Reimbursement/ReimbursementForm';
 import AddEmployeeRequestForm from '../../Screen/AddEmpToTeam/AddEmployeeRequestForm';
 import OvertimeRequestForm from '../../Screen/Overtime/OvertimeRequestForm';
 import ResignationForm from '../../Screen/Resignation/ResignationForm';
+import TaxModule from '../../Screen/TaxModule/TaxModule';
 const Drawer = createDrawerNavigator();
 
 const CustomHeader = ({ navigation, title }) => {
@@ -98,6 +99,7 @@ function DrawerNavigator() {
         <Drawer.Screen name="AddMember" component={AddEmployeeRequestForm} />
         <Drawer.Screen name="OvertimeRequest" component={OvertimeRequestForm} />
         <Drawer.Screen name="SeparationRequest" component={ResignationForm} />
+        <Drawer.Screen name="TaxModule" component={TaxModule} />
 
       </Drawer.Navigator>
     </View>
