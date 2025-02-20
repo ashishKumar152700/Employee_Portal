@@ -16,7 +16,8 @@ import { punchService } from "../../Services/Punch/Punch.service";
 import { useSelector } from "react-redux";
 import ClockComponent from "./ClockComponent";
 import Toast from "react-native-toast-message";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+
 
 const { width } = Dimensions.get("window");
 const scaleFont = (size: any) => Math.round(size * (width / 375));
@@ -72,7 +73,11 @@ const ClockButton: React.FC<ClockButtonProps> = ({
             <ActivityIndicator size="large" color="white" />
           ) : (
             <>
-              <MaterialIcons name="touch-app" size={scaleSize(50)} color="white" />
+              <MaterialIcons
+                name="touch-app"
+                size={scaleSize(50)}
+                color="white"
+              />
               <Text style={styles.buttonText}>
                 {type === "in" ? "CLOCK IN" : "CLOCK OUT"}
               </Text>
@@ -91,7 +96,10 @@ const PunchScreen: React.FC = () => {
   const [clockInDate, setClockInDate] = useState<Date | null>(null);
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [address, setAddress] = useState<string>("");
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [punchType, setPunchType] = useState<"in" | "out" | null>(null);
@@ -113,7 +121,7 @@ const PunchScreen: React.FC = () => {
           setTotalTime(`${hours}h ${minutes}m`);
         }
       } catch (error) {
-        console.error("Error fetching punch info:", error);
+        console.error("Error fetching punch irnfo:", error);
       }
     };
     fetchPunchInfo();
@@ -141,27 +149,50 @@ const PunchScreen: React.FC = () => {
       });
     });
 
+
+  const getAddressFromCoordinates = async (latitude: number, longitude: number) => {
+    try {
+      let response = await Location.reverseGeocodeAsync({ latitude, longitude });
+      console.log("checking log : " , response);
+      
+      if (response.length > 0) {
+        let addressData = response[0];
+        let fullAddress = `${addressData.name ? addressData.name + ", " : ""}${addressData.street ? addressData.street + ", " : ""}${addressData.city ? addressData.city + ", " : ""}${addressData.region ? addressData.region + ", " : ""}${addressData.country}`;
+        
+        console.log("Fetched Address 0.1 : ", response[0].formattedAddress);
+        setAddress(response[0].formattedAddress);
+      } else {
+        console.warn("No address found");
+        setAddress("Address not found");
+      }
+    } catch (error) {
+      console.error("Geocoding Error:", error);
+      setAddress("Unable to fetch address");
+    }
+  };
+  
   const getLocation = async () => {
     const permissionGranted = await requestLocationPermission();
     if (!permissionGranted) return undefined;
+  
     try {
       const locResult = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,                
+        accuracy: Location.Accuracy.High, 
       });
+  
+      if (!locResult || !locResult.coords) {
+        throw new Error("Invalid location data received");
+      }
+  
       const { latitude, longitude } = locResult.coords;
       console.log("Fetched location:", latitude, longitude);
-      const addressResponse = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (addressResponse && addressResponse.length > 0) {
-        const addr = addressResponse[0];
-        const formattedAddress = `${addr.name ? addr.name + ", " : ""}${
-          addr.street ? addr.street + ", " : ""
-        }${addr.city ? addr.city + ", " : ""}${
-          addr.region ? addr.region + ", " : ""
-        }${addr.country ? addr.country : ""}`;
-        setAddress(formattedAddress);
-      }
+  
       setLocation({ latitude, longitude });
       setMapKey((prev) => prev + 1);
+  
+      // **Address Fetch Kar Raha Hoon**
+      await getAddressFromCoordinates(latitude, longitude);
+  
       return locResult;
     } catch (error) {
       console.error("Location Error:", error);
@@ -169,13 +200,15 @@ const PunchScreen: React.FC = () => {
         type: "error",
         position: "top",
         text1: "Location Error",
-        text2: "Unable to fetch location.",
+        text2: "Unable to fetch location. Please check GPS settings.",
         visibilityTime: 3000,
         autoHide: true,
       });
       return undefined;
     }
   };
+  
+  
 
   const handleClockIn = async () => {
     if (clockInTime) {
@@ -291,17 +324,31 @@ const PunchScreen: React.FC = () => {
           />
           <View style={styles.footer}>
             <View style={styles.footerItem}>
-              <Feather name="clock" size={scaleSize(20)} color="rgb(0, 41, 87)" />
+              <Feather
+                name="clock"
+                size={scaleSize(20)}
+                color="rgb(0, 41, 87)"
+              />
               <Text style={{ marginTop: 5 }}>{clockInTime || "Punch In"}</Text>
               <Text style={styles.footerText}>Clock In</Text>
             </View>
             <View style={styles.footerItem}>
-              <Feather name="clock" size={scaleSize(20)} color="rgb(0, 41, 87)" />
-              <Text style={{ marginTop: 5 }}>{clockOutTime || "Punch Out"}</Text>
+              <Feather
+                name="clock"
+                size={scaleSize(20)}
+                color="rgb(0, 41, 87)"
+              />
+              <Text style={{ marginTop: 5 }}>
+                {clockOutTime || "Punch Out"}
+              </Text>
               <Text style={styles.footerText}>Clock Out</Text>
             </View>
             <View style={styles.footerItem}>
-              <Feather name="bar-chart-2" size={scaleSize(20)} color="rgb(0, 41, 87)" />
+              <Feather
+                name="bar-chart-2"
+                size={scaleSize(20)}
+                color="rgb(0, 41, 87)"
+              />
               <Text style={{ marginTop: 5 }}>{totalTime || "0h 0m"}</Text>
               <Text style={styles.footerText}>Totals</Text>
             </View>
@@ -309,7 +356,6 @@ const PunchScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-    
       <Modal visible={isMapVisible} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.mapContainer}>
@@ -317,6 +363,7 @@ const PunchScreen: React.FC = () => {
               <>
                 <MapView
                   key={mapKey} // Force re-render on each update
+                  provider={PROVIDER_GOOGLE} // Use Google Maps
                   style={styles.map}
                   region={{
                     latitude: location.latitude,
@@ -374,7 +421,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    
   },
   card: {
     backgroundColor: "#FFFFFF",

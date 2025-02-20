@@ -27,7 +27,6 @@
     "expo-linear-gradient": "~14.0.2",
     "expo-local-authentication": "~15.0.2",
     "expo-location": "18.0.6",
-    "portal": "file:",
     "react": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-native": "^0.76.7",

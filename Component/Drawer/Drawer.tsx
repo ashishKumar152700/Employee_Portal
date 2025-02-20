@@ -18,8 +18,10 @@ import Dashboard from '../../Screen/DashBoard/DashBoard';
 import LoanRequestForm from '../../Screen/LoadRequest/LoanRequestForm';
 import SalaryAdvanceRequestForm from '../../Screen/SalaryAdvance/SalaryAdvanceRequestForm';
 import ReimbursementForm from '../../Screen/Reimbursement/ReimbursementForm';
+import AddEmployeeRequestForm from '../../Screen/AddEmpToTeam/AddEmployeeRequestForm';
+import OvertimeRequestForm from '../../Screen/Overtime/OvertimeRequestForm';
+import ResignationForm from '../../Screen/Resignation/ResignationForm';
 import TaxModule from '../../Screen/TaxModule/TaxModule';
-
 const Drawer = createDrawerNavigator();
 
 const CustomHeader = ({ navigation, title }) => {
@@ -80,11 +82,8 @@ function DrawerNavigator() {
           headerShown: true,
           header: ({ navigation, route }) => (
             <CustomHeader navigation={navigation} title={route.name} />
-            
           ),
-          swipeEdgeWidth: 100,
-          
-        }}
+          swipeEdgeWidth: 100,}}
       >
         <Drawer.Screen name="Attendance" component={BottomTabNavigator} />
         <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} />
@@ -97,6 +96,9 @@ function DrawerNavigator() {
         <Drawer.Screen name="LoanRequest" component={LoanRequestForm} />
         <Drawer.Screen name="SalaryAdvanceRequest" component={SalaryAdvanceRequestForm} />
         <Drawer.Screen name="Reimbursement" component={ReimbursementForm} />
+        <Drawer.Screen name="AddMember" component={AddEmployeeRequestForm} />
+        <Drawer.Screen name="OvertimeRequest" component={OvertimeRequestForm} />
+        <Drawer.Screen name="SeparationRequest" component={ResignationForm} />
         <Drawer.Screen name="TaxModule" component={TaxModule} />
 
       </Drawer.Navigator>

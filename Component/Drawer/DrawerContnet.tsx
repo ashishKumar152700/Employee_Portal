@@ -130,6 +130,30 @@ export const CustomDrawerContent = (props: any) => {
           <Text style={styles.submenuButtonText}>Tax Module</Text>
         </TouchableOpacity>
       
+        <TouchableOpacity
+          style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("AddMember")}
+        >
+          <MaterialIcons name="add" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>Add a Member</Text>
+        </TouchableOpacity>
+      
+        <TouchableOpacity
+          style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("OvertimeRequest")}
+        >
+          <MaterialIcons name="lock-clock" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>Overtime Request</Text>
+        </TouchableOpacity>
+      
+        <TouchableOpacity
+          style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("SeparationRequest")}
+        >
+          <MaterialIcons name="skip-next" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>Separation Request</Text>
+        </TouchableOpacity>
+      
 
       </DrawerContentScrollView>
       

@@ -9,6 +9,9 @@ export type RootStackParamList = {
   loanHistory:undefined;
   salaryAdHistory:undefined;
   reimburseHistory:undefined;
+  overtimeHistory:undefined;
+  addMemberHistory : undefined;
+  resignHistory:undefined;
   Login:undefined;
   MyLeaveScreen:undefined
 };

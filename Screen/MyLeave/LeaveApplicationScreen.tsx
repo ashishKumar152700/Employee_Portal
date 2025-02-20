@@ -85,9 +85,6 @@ type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MyLeav
 
   const managerDetailsSelector = useSelector((state:any) => state.managerInfo ) ;
 
-   
-
-
   useFocusEffect(
     useCallback(() => {
       resetForm();
