@@ -121,6 +121,14 @@ export const CustomDrawerContent = (props: any) => {
           <MaterialIcons name="receipt" size={24} color="#555" style={styles.iconStyle} />
           <Text style={styles.submenuButtonText}>Reimbursement</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.submenuButton}
+          onPress={() => props.navigation.navigate("TaxModule")}
+        >
+          <MaterialIcons name="money" size={24} color="#555" style={styles.iconStyle} />
+          <Text style={styles.submenuButtonText}>Tax Module</Text>
+        </TouchableOpacity>
       
         <TouchableOpacity
           style={styles.submenuButton}

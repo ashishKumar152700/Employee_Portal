@@ -11,14 +11,14 @@ function BottomNavForAsset() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: 'rgb(0, 41, 87)',
+          backgroundColor: 'white', // Dark blue background
           height: 66,
           paddingBottom: 8,
           flexDirection: 'row',
           position: 'absolute',
         },
-        tabBarActiveTintColor: '#ff9f43',
-        tabBarInactiveTintColor: '#fff',
+        tabBarActiveTintColor: 'rgb(0, 41, 87)', // Theme-consistent dark blue
+        tabBarInactiveTintColor: 'grey',  // Default white color for inactive tabs
       }}
     >
       <Tab.Screen 
