@@ -38,7 +38,7 @@ const AddEmployeeRequestForm: React.FC = () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollView}>
         <Text style={styles.title}>Add Employee Request</Text>
-        
+
         <TextInput
           label="Designation"
           value={designation}
@@ -149,93 +149,3 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
 });
-
-// import React, { useState } from "react";
-// import { View, Text, Button, StyleSheet, ScrollView } from "react-native";
-// import { FAB, TextInput } from "react-native-paper";
-// import { useNavigation } from "@react-navigation/native";
-// import { useSelector } from "react-redux";
-// import { StackNavigationProp } from "@react-navigation/stack";
-// import { RootStackParamList } from "../../Global/Types";
-
-// const AddEmployeeRequestForm: React.FC = () => {
-//   const [employeeName, setEmployeeName] = useState("");
-//   const [designation, setDesignation] = useState("");
-//   const [justification, setJustification] = useState("");
-//   const navigation = useNavigation();
-
-//   type addMemberHistory = StackNavigationProp<RootStackParamList, 'addMemberHistory'>;
-
-//   const handleSubmit = () => {
-//     console.log("Employee Name:", employeeName);
-//     console.log("Designation:", designation);
-//     console.log("Justification:", justification);
-//   };
-
-//   const HistoryPress = () => {
-//     navigation.navigate('addMemberHistory');
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       <ScrollView contentContainerStyle={styles.scrollView}>
-//         <Text style={styles.title}>Add Employee Request</Text>
-
-//         <TextInput
-//           label="Employee Name"
-//           value={employeeName}
-//           onChangeText={setEmployeeName}
-//           style={styles.input}
-//           mode="outlined"
-//         />
-//         <TextInput
-//           label="Designation"
-//           value={designation}
-//           onChangeText={setDesignation}
-//           style={styles.input}
-//           mode="outlined"
-//         />
-//         <TextInput
-//           label="Justification"
-//           value={justification}
-//           onChangeText={setJustification}
-//           style={styles.input}
-//           mode="outlined"
-//           multiline
-//         />
-
-//         <Button title="Submit" onPress={handleSubmit} color="rgb(0, 41, 87)" />
-//       </ScrollView>
-
-//       <FAB
-//         style={styles.fab}
-//         icon="currency-usd"
-//         label="Requests"
-//         color="white"
-//         onPress={HistoryPress}
-//       />
-//     </View>
-//   );
-// };
-
-// export default AddEmployeeRequestForm ;
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: "white" },
-//   scrollView: { padding: 20, paddingBottom: 100 },
-//   title: {
-//     fontSize: 28,
-//     fontWeight: "600",
-//     color: "rgb(0, 41, 87)",
-//     marginBottom: 30,
-//     textAlign: "center",
-//   },
-//   input: { marginBottom: 20, backgroundColor: "white" },
-//   fab: {
-//     position: 'absolute',
-//     bottom: 20,
-//     right: 20,
-//     backgroundColor: 'rgb(0, 41, 87)',
-//     borderRadius: 50,
-//   },
-// });
