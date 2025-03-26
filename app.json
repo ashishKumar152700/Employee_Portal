@@ -26,20 +26,27 @@
     "plugins": [
       [
         "expo-build-properties",
-        
         {
           "android": {
             "usesCleartextTraffic": true,
             "enableProguardInReleaseBuilds": true
           }
-        }
+        }                                       
       ]
     ],
     "extra": {
+      "googleApiKey": "AIzaSyBTuDT9OJLrhj4XrIhOvUkdg2x54gSYEwU",
+      "geoapifyApiKey": "7cd11e341261405fb6cbf695ac66fb74",
       "eas": {
         "projectId": "1fbc41dd-e388-48ed-93b5-b94c522fb277"
       }
     },
-    "owner": "sudhir-tbk9"
+    "owner": "sudhir-tbk9",
+    "ios": {
+      "bundleIdentifier": "com.sudhirtbk9.essp202",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
   }
 }

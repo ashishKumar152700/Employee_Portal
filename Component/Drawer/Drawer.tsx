@@ -86,7 +86,7 @@ function DrawerNavigator() {
           swipeEdgeWidth: 100,}}
       >
         <Drawer.Screen name="Attendance" component={BottomTabNavigator} />
-        <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} />
+        <Drawer.Screen name="MyLeaves" component={BottomTabNavLeave} />
         <Drawer.Screen name="Timesheet" component={CalendarListScreen} />
         <Drawer.Screen name="AssetModule" component={BottomNavForAsset} />
         <Drawer.Screen name="MyTickets" component={MyTickets} />

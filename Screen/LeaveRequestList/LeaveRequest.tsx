@@ -11,6 +11,7 @@ import { Swipeable, GestureHandlerRootView } from "react-native-gesture-handler"
 import { useSelector } from "react-redux";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { managerLeaveRequestClass } from "../../Services/LeaveRequest/LeaveRequest.service";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const LeaveRequest = () => {
   const userDetails = useSelector((state: any) => state.userDetails);
@@ -88,10 +89,13 @@ const LeaveRequest = () => {
   );
 
   const renderItem = ({ item }) => (
+    
     <Swipeable
       renderRightActions={() => renderRightActions(item.id)}
       overshootFriction={8}
     >
+      {/* <Text>{(item.leavestart)}</Text> */}
+      
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Icon name="person" size={24} color="#0056b3" />
@@ -124,25 +128,29 @@ const LeaveRequest = () => {
   );
   
 
-  const formatDate = (date) => {
-    if (!date) return "Invalid Date";
-    const [day, month, year] = date.split("/");
+  const formatDate = (dateString) => {
+    if (!dateString || typeof dateString !== "string") return "Invalid Date";
+  
+    // Convert ISO Date (2025-03-20T00:00:00.000Z) to JS Date object
+    const date = new Date(dateString);
+  
+    // Validate the date
+    if (isNaN(date.getTime())) return "Invalid Date";
+  
+    // Month names array
     const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
-    return `${parseInt(day)} ${months[parseInt(month) - 1]}, ${year}`;
+  
+    // Extract day, month, and year
+    const day = date.getUTCDate(); // Get day
+    const month = months[date.getUTCMonth()]; // Get month name
+    const year = date.getUTCFullYear(); // Get year
+  
+    return `${day} ${month},${year}`;
   };
+  
 
   if (loading) {
     return (
@@ -151,8 +159,10 @@ const LeaveRequest = () => {
       </View>
     );
   }
+  
 
   return (
+    
     <GestureHandlerRootView style={styles.container}>
       {leaveRequests.length > 0 ? (
         <FlatList
@@ -163,8 +173,9 @@ const LeaveRequest = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No leave requests available.</Text>
-        </View>
+        <MaterialCommunityIcons name="calendar-remove" size={50} color="#999" />
+        <Text style={styles.emptyText}>No leave requests available.</Text>
+      </View>
       )}
     </GestureHandlerRootView>
   );
@@ -245,10 +256,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 50,
   },
   emptyText: {
     fontSize: 16,
-    color: "#888",
+    color: "#777",
+    marginTop: 10,
+    fontWeight: "500",
   },
 });
 

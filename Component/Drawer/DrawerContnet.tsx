@@ -66,7 +66,7 @@ export const CustomDrawerContent = (props: any) => {
 
         <TouchableOpacity
           style={styles.submenuButton}
-          onPress={() => props.navigation.navigate("MyLeaveScreen")}
+          onPress={() => props.navigation.navigate("MyLeaves")}
         >
           <MaterialIcons name="assignment" size={24} color="#555" style={styles.iconStyle} />
           <Text style={styles.submenuButtonText}>My Leaves</Text>

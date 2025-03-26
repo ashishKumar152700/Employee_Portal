@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, SafeAreaView, StyleSheet } from "react-native";
+import { View, Text, SafeAreaView, StyleSheet, Dimensions } from "react-native";
 import * as Progress from "react-native-progress";
 import { useDispatch, useSelector } from "react-redux";
 import { getLeaves } from "../../Services/Leave/Leave.service";
@@ -7,6 +7,8 @@ import { FAB } from "react-native-paper";
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../Global/Types';
 import { StackNavigationProp } from '@react-navigation/stack';
+const { height } = Dimensions.get("window");
+
 
 export default function MyLeaveScreen() {
   const [leaveDetails, setLeaveDetails] = useState(null);
@@ -42,9 +44,11 @@ export default function MyLeaveScreen() {
   
   return (
     <SafeAreaView style={styles.container}>
+      
       <View style={styles.cardDiv}>
        
         <View style={styles.balanceCard}>
+          
           <Progress.Circle
             size={130}
             progress={leaveProgress(paidleave + casualLeaves + sickLeaves + optionalLeave)}
@@ -137,20 +141,17 @@ export default function MyLeaveScreen() {
               borderWidth={0}
             />
             <Text style={styles.leaveTypeLabel}>Optional Leave</Text>
-
           </View>
-           
-
-        
       </View>
-
-              <FAB
+      <FAB
           style={styles.fab}
           icon="history"
           label="Leave History"
           onPress={handleLeaveHistoryPress}
           color="white"
         />
+
+          
 
     </SafeAreaView>
   );
@@ -167,11 +168,11 @@ const styles = StyleSheet.create({
   },
   cardDiv: {
     alignItems: "center",
-    paddingTop: 20,
+    paddingTop: 10,
   },
   balanceCard: {
     alignItems: "center",
-    marginBottom: 10,
+    // marginBottom: 10,
   },
   balanceText: {
     marginTop: 12,
@@ -220,9 +221,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   fab: {
+  
     position: "absolute",
     right: 16,
-    bottom: 86,
+    bottom: height > 800 ? 83 : 70,
     backgroundColor: "rgb(0, 41, 87)",
 
   },

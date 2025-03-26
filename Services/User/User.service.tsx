@@ -49,39 +49,92 @@ export async function getUser() {
   }
 }
 
+// export async function changePassword(
+//   oldPassword: string,
+//   newPassword: string,
+//   confirmpassword: string
+// ): Promise<string> {
+//   console.log("[DEBUG] changePassword: Function invoked");
+
+//   try {
+//     const accessToken = await AsyncStorage.getItem("token");
+//     console.log("[DEBUG] AccessToken:", accessToken);
+
+//     if (!accessToken) {
+//       throw new Error("User is not authenticated. Please log in again.");
+//     }
+
+//     const payload = { oldpassword :oldPassword, newpassword: newPassword, confirmpassword };
+//     console.log("[DEBUG] Payload to be sent:", payload);
+
+
+//     const headers = {
+//       "Content-Type": "application/json",
+//       Authorization: `Bearer ${accessToken}`,
+//     };
+//     console.log("[DEBUG] Headers:", headers);
+
+//     const response = await axios.post(
+//       `${baseUrl}/api/v1/auth/changepassword`,
+//       payload,
+//       { headers : headers }
+//     );
+
+//     console.log("[DEBUG] Response Data:", response.data);
+
+//     if (response.data.status === 200) {
+//       console.log("[DEBUG] Password change success:", response.data.message);
+//       return response.data.message || "Password updated successfully!";
+//     } else {
+//       console.error("[DEBUG] API returned error status:", response.data);
+//       throw new Error(response.data.message || "Failed to update password.");
+//     }
+//   } catch (error: any) {
+//     console.error("[DEBUG] Error during password change:", error);
+
+//     const errorMessage =
+//       error.response?.data?.message || "Something went wrong. Please try again.";
+//     console.error("[DEBUG] Extracted Error Message:", errorMessage);
+
+//     throw new Error(errorMessage);
+//   }
+// }
+
+
+ 
 export async function changePassword(
   oldPassword: string,
   newPassword: string,
   confirmpassword: string
 ): Promise<string> {
   console.log("[DEBUG] changePassword: Function invoked");
-
+ 
   try {
     const accessToken = await AsyncStorage.getItem("token");
     console.log("[DEBUG] AccessToken:", accessToken);
-
+ 
     if (!accessToken) {
       throw new Error("User is not authenticated. Please log in again.");
     }
-
+ 
     const payload = { oldpassword :oldPassword, newpassword: newPassword, confirmpassword };
     console.log("[DEBUG] Payload to be sent:", payload);
-
-
+ 
+ 
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     };
     console.log("[DEBUG] Headers:", headers);
-
+ 
     const response = await axios.post(
       `${baseUrl}/api/v1/auth/changepassword`,
       payload,
       { headers : headers }
     );
-
+ 
     console.log("[DEBUG] Response Data:", response.data);
-
+ 
     if (response.data.status === 200) {
       console.log("[DEBUG] Password change success:", response.data.message);
       return response.data.message || "Password updated successfully!";
@@ -91,11 +144,13 @@ export async function changePassword(
     }
   } catch (error: any) {
     console.error("[DEBUG] Error during password change:", error);
-
+ 
     const errorMessage =
       error.response?.data?.message || "Something went wrong. Please try again.";
     console.error("[DEBUG] Extracted Error Message:", errorMessage);
-
+ 
     throw new Error(errorMessage);
   }
 }
+ 
+ 

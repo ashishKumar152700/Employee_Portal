@@ -9,26 +9,37 @@ import {
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { leaveHistoryPending } from "../../Services/Leave/Leave.service";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const Tab = createBottomTabNavigator();
 
 // Format only the applied date to "26 Jan 2025"
-const formatAppliedDate = (dateString) => {
+const formatAppliedDate = (dateString, showTime = false) => {
   const date = new Date(dateString);
-  // If the date is invalid, return the original string
   if (isNaN(date.getTime())) return dateString;
-  const options = {
-    day: "numeric" as const,
-    month: "short" as const,
-    year: "numeric" as const,
-  };
-  return date.toLocaleDateString("en-GB", options);
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+
+  let formattedDate = `${day}-${month}-${year}`;
+
+  if (showTime) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    formattedDate += ` ${hours}:${minutes}`;
+  }
+
+  return formattedDate;
 };
+
 
 const LeaveRoute = ({ leaveType }) => {
   const [leaveData, setLeaveData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
 
   useEffect(() => {
     const fetchLeaveData = async () => {
@@ -38,6 +49,8 @@ const LeaveRoute = ({ leaveType }) => {
         const response = await leaveHistoryPending(leaveType);
         if (response.status === 200) {
           setLeaveData(response.data.data);
+          console.log("Leave Data:", response.data.data);
+
         } else {
           setError("Failed to fetch data");
         }
@@ -49,6 +62,8 @@ const LeaveRoute = ({ leaveType }) => {
     };
     fetchLeaveData();
   }, [leaveType]);
+  // console.log("yahi undefined hai kya ",formatAppliedDate(leaveData[0].applydate));
+
 
   if (loading) {
     return (
@@ -61,34 +76,61 @@ const LeaveRoute = ({ leaveType }) => {
   }
 
   return leaveData.length === 0 ? (
+    <View style={styles.emptyContainer}>
+    <MaterialCommunityIcons name="calendar-remove" size={50} color="#999" />
     <Text style={styles.noDataText}>No leave records available</Text>
+  </View>
   ) : (
     <FlatList
       data={leaveData}
       keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item }) => (
-        <View style={styles.itemContainer}>
-          <View style={styles.headerRow}>
-            <Text style={styles.itemText}>• {item.leavetype}</Text>
-            <Text
-              style={[
-                styles.appliedDateText,
-                leaveType === "Pending" && { color: "#ff8600" },
-                leaveType === "Approve" && { color: "green" },
-                leaveType === "Decline" && { color: "red" },
-              ]}
-            >
-              {formatAppliedDate(item.applydate)}
+      renderItem={({ item }) => {
+        const startDate = new Date(item.leavestart);
+        const endDate = new Date(item.leaveend);
+
+        // Days difference nikal rahe hai
+        const timeDiff = endDate.getTime() - startDate.getTime();
+        const dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1; // inclusive
+
+        return (
+          <View style={styles.itemContainer}>
+            <View style={styles.headerRow}>
+              <Text style={styles.itemText}>• {item.leavetype}</Text>
+              <Text
+                style={[
+                  styles.appliedDateText,
+                  item.leavestatus === "Pending" && { color: "#ff8600" },
+                  item.leavestatus === "Approve" && { color: "green" },
+                  item.leavestatus === "Decline" && { color: "red" },
+                ]}
+              >
+                {formatAppliedDate(item.applydate, true)}
+              </Text>
+            </View>
+
+
+            <Text style={styles.durationText}>
+              {item.leavestart === item.leaveend
+                ? `Leave Date: ${formatAppliedDate(item.leavestart)} (${item.leavepart === "full-day" ? "Full Day" : item.leavepart === "first-half" ? "First Half" : "Second Half"})`
+                : `Leave From ${formatAppliedDate(item.leavestart)} to ${formatAppliedDate(item.leaveend)} (${dayDiff} Day${dayDiff > 1 ? "s" : ""})`}
             </Text>
+
+            {/* <Text style={styles.durationText}>Leave Details:</Text> */}
+
+
+            {/* {item.leavestart === item.leaveend && (
+              <Text style={styles.durationText}>
+                Leave Part: {item.leavepart === "full-day" ? "Full Day" : item.leavepart === "first-half" ? "First Half" : "Second Half"}
+              </Text>
+            )} */}
+
+            <Text style={styles.durationText}>Reason: {item.reason}</Text>
           </View>
-          <Text style={styles.durationText}>
-            Applied From {item.leavestart} to {item.leaveend}
-          </Text>
-          <Text style={styles.durationText}>Reason : {item.reason}</Text>
-        </View>
-      )}
+        );
+      }}
       contentContainerStyle={styles.contentContainer}
     />
+
   );
 };
 
@@ -142,10 +184,10 @@ export default function LeaveTabNavigator() {
 
 const styles = StyleSheet.create({
   noDataText: {
-    textAlign: "center",
-    color: "gray",
     fontSize: 16,
-    marginTop: 20,
+    color: "#777",
+    marginTop: 10,
+    fontWeight: "500",
   },
   itemContainer: {
     padding: 15,
@@ -198,4 +240,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginVertical: 20,
   },
+  emptyContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 50,
+  },
+
 });

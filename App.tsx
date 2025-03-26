@@ -15,6 +15,8 @@ import ReimbursementTabNavigator from "./Component/ReimburseScreen/reimburseTabs
 import AddMemberNavigator from "./Component/AddMemberScreen/addMemberTabs";
 import OvertimeNavigator from "./Component/OvertimeScreen/OvertimeTabs";
 import ResignNavigator from "./Component/ResignScreen/ResignTabs";
+import "./config"; 
+
 
 const Stack = createStackNavigator();
 const store = createStore(reducers, applyMiddleware(thunk));

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,8 +16,8 @@ import { punchService } from "../../Services/Punch/Punch.service";
 import { useSelector } from "react-redux";
 import ClockComponent from "./ClockComponent";
 import Toast from "react-native-toast-message";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-
+import { WebView } from "react-native-webview"; // Add WebView import
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 const scaleFont = (size: any) => Math.round(size * (width / 375));
@@ -103,10 +103,15 @@ const PunchScreen: React.FC = () => {
   const [address, setAddress] = useState<string>("");
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [punchType, setPunchType] = useState<"in" | "out" | null>(null);
-  // State variable to force re-render MapView
-  const [mapKey, setMapKey] = useState<number>(0);
 
   const punchInforSelector = useSelector((state: any) => state.punchInfo);
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setIsMapVisible(false); // Close modal when screen is unfocused
+      };
+    }, [])
+  );
 
   useEffect(() => {
     const fetchPunchInfo = async () => {
@@ -121,7 +126,7 @@ const PunchScreen: React.FC = () => {
           setTotalTime(`${hours}h ${minutes}m`);
         }
       } catch (error) {
-        console.error("Error fetching punch irnfo:", error);
+        console.error("Error fetching punch info:", error);
       }
     };
     fetchPunchInfo();
@@ -149,50 +154,53 @@ const PunchScreen: React.FC = () => {
       });
     });
 
-
-  const getAddressFromCoordinates = async (latitude: number, longitude: number) => {
-    try {
-      let response = await Location.reverseGeocodeAsync({ latitude, longitude });
-      console.log("checking log : " , response);
-      
-      if (response.length > 0) {
-        let addressData = response[0];
-        let fullAddress = `${addressData.name ? addressData.name + ", " : ""}${addressData.street ? addressData.street + ", " : ""}${addressData.city ? addressData.city + ", " : ""}${addressData.region ? addressData.region + ", " : ""}${addressData.country}`;
-        
-        console.log("Fetched Address 0.1 : ", response[0].formattedAddress);
-        setAddress(response[0].formattedAddress);
-      } else {
-        console.warn("No address found");
-        setAddress("Address not found");
+    const getAddressFromCoordinates = async (latitude: number, longitude: number) => {
+      try {
+        let response = await Location.reverseGeocodeAsync({ latitude, longitude });
+        console.log("checking log:", response);
+    
+        if (response.length > 0) {
+          let addressData = response[0];
+    
+          let fullAddress =
+            addressData.formattedAddress ||
+            `${addressData.name ? addressData.name + ", " : ""}${
+              addressData.street ? addressData.street + ", " : ""
+            }${addressData.city ? addressData.city + ", " : ""}${
+              addressData.region ? addressData.region + ", " : ""
+            }${addressData.country || ""}`;
+    
+          console.log("Fetched Address:", fullAddress);
+          setAddress(fullAddress);
+        } else {
+          console.warn("No address found");
+          setAddress("Address not found");
+        }
+      } catch (error) {
+        console.error("Geocoding Error:", error);
+        setAddress("Unable to fetch address");
       }
-    } catch (error) {
-      console.error("Geocoding Error:", error);
-      setAddress("Unable to fetch address");
-    }
-  };
-  
+    };
+    
+
   const getLocation = async () => {
     const permissionGranted = await requestLocationPermission();
     if (!permissionGranted) return undefined;
-  
+
     try {
       const locResult = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High, 
+        accuracy: Location.Accuracy.High,
       });
-  
+
       if (!locResult || !locResult.coords) {
         throw new Error("Invalid location data received");
       }
-  
+
       const { latitude, longitude } = locResult.coords;
-      console.log("Fetched location:", latitude, longitude);
-  
       setLocation({ latitude, longitude });
-      setMapKey((prev) => prev + 1);
-  
-      // **Address Fetch Kar Raha Hoon**
+
       await getAddressFromCoordinates(latitude, longitude);
-  
+
       return locResult;
     } catch (error) {
       console.error("Location Error:", error);
@@ -207,8 +215,6 @@ const PunchScreen: React.FC = () => {
       return undefined;
     }
   };
-  
-  
 
   const handleClockIn = async () => {
     if (clockInTime) {
@@ -224,6 +230,7 @@ const PunchScreen: React.FC = () => {
     }
     setIsClockInLoading(true);
     const loc = await getLocation();
+    console.log("Location:", loc);  
     if (loc) {
       setPunchType("in");
       setIsMapVisible(true);
@@ -269,6 +276,7 @@ const PunchScreen: React.FC = () => {
   const handleClockOut = async () => {
     setIsClockOutLoading(true);
     const loc = await getLocation();
+    console.log("Location:", loc);  // Logs the location object
     if (loc) {
       setPunchType("out");
       setIsMapVisible(true);
@@ -298,6 +306,55 @@ const PunchScreen: React.FC = () => {
     }
     setIsClockOutLoading(false);
   };
+
+  // Function to generate Leaflet map HTML
+  const generateMapHTML = (latitude: number, longitude: number) => {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Map</title>
+          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+          <style>
+              #map { 
+                height: 100%; 
+                width: 100%; 
+              }
+              body, html { 
+                height: 100%; 
+                margin: 0; 
+                padding: 0; 
+              }
+          </style>
+      </head>
+      <body>
+          <div id="map"></div>
+          <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+          <script>
+              document.addEventListener("DOMContentLoaded", function() {
+                  var map = L.map('map').setView([${latitude}, ${longitude}], 16);
+                  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                      attribution: '&copy; OpenStreetMap contributors'
+                  }).addTo(map);
+                  L.marker([${latitude}, ${longitude}]).addTo(map)
+                      .bindPopup("Your Punch Location")
+                      .openPopup();
+              });
+          </script>
+      </body>
+      </html>
+    `;
+  };
+  
+
+  let htmlContent: any;
+
+  if (location) {
+    htmlContent = generateMapHTML(location.latitude, location.longitude);
+    // console.log(htmlContent); // Logs the generated HTML
+  }
 
   return (
     <View style={styles.container}>
@@ -357,51 +414,41 @@ const PunchScreen: React.FC = () => {
       </ScrollView>
 
       <Modal visible={isMapVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalContainer}>
-          <View style={styles.mapContainer}>
-            {location ? (
-              <>
-                <MapView
-                  key={mapKey} // Force re-render on each update
-                  provider={PROVIDER_GOOGLE} // Use Google Maps
-                  style={styles.map}
-                  region={{
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                >
-                  <Marker
-                    coordinate={{
-                      latitude: location.latitude,
-                      longitude: location.longitude,
-                    }}
-                    title={`Punch ${punchType?.toUpperCase()}`}
-                  />
-                </MapView>
-                <View style={styles.addressContainer}>
-                  <Text style={styles.addressText}>
-                    {address || "Fetching address..."}
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <ActivityIndicator size="large" color="blue" />
-            )}
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setIsMapVisible(false);
-                setLocation(null);
-                setAddress("");
-              }}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+  <View style={styles.modalContainer}>
+    <View style={styles.mapContainer}>
+      <View style={styles.webviewWrapper}>
+        {location ? (
+          <WebView
+            originWhitelist={["*"]}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            mixedContentMode="always"
+            source={{ html: generateMapHTML(location.latitude, location.longitude) }}
+            style={styles.webview}
+          />
+        ) : (
+          <ActivityIndicator size="large" color="blue" />
+        )}
+      </View>
+      <View style={styles.addressContainer}>
+        <Text style={styles.addressText}>
+          {address || "Fetching address..."}
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => {
+          setIsMapVisible(false);
+          setLocation(null);
+          setAddress("");
+        }}
+      >
+        <Text style={styles.closeButtonText}>Close</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
 
       <Toast />
     </View>
@@ -477,6 +524,24 @@ const styles = StyleSheet.create({
     marginTop: scaleSize(4),
     fontWeight: "bold",
   },
+ 
+  map: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  
+  addressText: {
+    fontSize: scaleFont(14),
+    color: "black",
+    textAlign:"center"
+  },
+
+  closeButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -485,35 +550,27 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     width: "90%",
-    height: "50%",
+    height: "80%",
     backgroundColor: "white",
     borderRadius: 10,
     overflow: "hidden",
-    alignItems: "center",
   },
-  map: {
+  webviewWrapper: {
     flex: 1,
-    width: "100%",
+  },
+  webview: {
+    flex: 1,
   },
   addressContainer: {
     padding: scaleSize(10),
     backgroundColor: "#fff",
-    alignItems: "center",
-  },
-  addressText: {
-    fontSize: scaleFont(14),
-    color: "black",
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
   },
   closeButton: {
     padding: 15,
     backgroundColor: "rgb(0, 41, 87)",
     alignItems: "center",
-    width: "100%",
-  },
-  closeButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });
 
