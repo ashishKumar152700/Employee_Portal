@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  BackHandler,
 } from "react-native";
 import { TextInput } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,10 +36,31 @@ const LoginScreen = () => {
   const [secureTextEntry, setSecureTextEntry] = useState(true);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const dispatch = useDispatch();
+  useEffect(() => {
+    const backAction = () => {
+      return true; // Prevent back navigation
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove(); // Cleanup on unmount
+  }, []);
+  const backAction = () => {
+    Alert.alert("Exit App", "Are you sure you want to exit?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Exit", onPress: () => BackHandler.exitApp() },
+    ]);
+    return true; // Default back action ko override karega
+  };
+  
 
   const togglePasswordVisibility = () => {
     setSecureTextEntry(!secureTextEntry);
   };
+
 
   const handleLogin = async () => {
     if (!employeecode || !password) {
@@ -96,6 +118,7 @@ const LoginScreen = () => {
         <TextInput
           label="Employee Code"
           value={employeecode}
+          keyboardType="number-pad" 
           onChangeText={setEmployeecode}
           style={styles.input}
           mode="outlined"

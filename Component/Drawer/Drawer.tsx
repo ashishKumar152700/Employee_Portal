@@ -78,12 +78,15 @@ function DrawerNavigator() {
       <Drawer.Navigator
         initialRouteName="Attendance"
         drawerContent={(props) => <CustomDrawerContent {...props} />}
-        screenOptions={{
+        screenOptions={({ route }) => ({
           headerShown: true,
-          header: ({ navigation, route }) => (
+          header: ({ navigation }) => (
             <CustomHeader navigation={navigation} title={route.name} />
           ),
-          swipeEdgeWidth: 100,}}
+          swipeEnabled: route.name !== "Login", // Login screen pe swipe disable
+          swipeEdgeWidth: 100,
+        })}
+        
       >
         <Drawer.Screen name="Attendance" component={BottomTabNavigator} />
         <Drawer.Screen name="MyLeaves" component={BottomTabNavLeave} />

@@ -107,11 +107,34 @@ const PunchScreen: React.FC = () => {
   const punchInforSelector = useSelector((state: any) => state.punchInfo);
   useFocusEffect(
     useCallback(() => {
-      return () => {
-        setIsMapVisible(false); // Close modal when screen is unfocused
+      const controller = new AbortController();
+      const fetchPunchInfo = async () => {
+        try {
+          const punchInfo = punchInforSelector;
+          if (punchInfo.length > 0 && punchInfo[0].punchintime) {
+            setClockInTime(punchInfo[0].punchintime);
+            setClockOutTime(punchInfo[0].punchouttime);
+            const totalSeconds = punchInfo[0].duration;
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            setTotalTime(`${hours}h ${minutes}m`);
+          }
+        } catch (error) {
+          if (error.name === "AbortError") {
+            console.log("API request aborted");
+          } else {
+            console.error("Error fetching punch info:", error);
+          }
+        }
       };
-    }, [])
+      fetchPunchInfo();
+  
+      return () => {
+        controller.abort(); // Cancel API request when screen is unfocused
+      };
+    }, [punchInforSelector])
   );
+  
 
   useEffect(() => {
     const fetchPunchInfo = async () => {
@@ -228,50 +251,36 @@ const PunchScreen: React.FC = () => {
       });
       return;
     }
+  
     setIsClockInLoading(true);
     const loc = await getLocation();
-    console.log("Location:", loc);  
     if (loc) {
       setPunchType("in");
       setIsMapVisible(true);
       setClockInDate(new Date());
+  
+      const controller = new AbortController(); // Abort controller instance
       try {
-        const response = await punchService.PunchInApi(loc);
+        const response = await punchService.PunchInApi(loc, { signal: controller.signal });
         if (response.message === "Already Puched In!") {
           setClockInTime(response.data.punchintime);
-          Toast.show({
-            type: "info",
-            position: "top",
-            text1: "Info",
-            text2: response.message,
-            visibilityTime: 3000,
-            autoHide: true,
-          });
+          Toast.show({ type: "info", text1: "Info", text2: response.message });
         } else {
           setClockInTime(response.data.punchintime);
-          Toast.show({
-            type: "success",
-            position: "top",
-            text1: "Success",
-            text2: response.message,
-            visibilityTime: 3000,
-            autoHide: true,
-          });
+          Toast.show({ type: "success", text1: "Success", text2: response.message });
         }
       } catch (error) {
-        console.error("Punch In Error:", error);
-        Toast.show({
-          type: "error",
-          position: "top",
-          text1: "Error",
-          text2: "An error occurred while clocking in.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
+        if (error.name !== "AbortError") {
+          console.error("Punch In Error:", error);
+          Toast.show({ type: "error", text1: "Error", text2: "An error occurred while clocking in." });
+        }
       }
+  
+      return () => controller.abort(); // Cancel API request when screen is unfocused
     }
     setIsClockInLoading(false);
   };
+  
 
   const handleClockOut = async () => {
     setIsClockOutLoading(true);

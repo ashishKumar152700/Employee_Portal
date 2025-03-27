@@ -31,7 +31,10 @@ export default function App() {
             <Stack.Screen
               name="Login"
               component={LoginScreen}
-              options={{ headerShown: false }}
+              options={{ headerShown: false ,
+                gestureEnabled: false,
+
+              }}
             />
             <Stack.Screen
               name="Main"
