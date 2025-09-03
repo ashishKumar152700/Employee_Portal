@@ -16,11 +16,8 @@ import { punchService } from "../../Services/Punch/Punch.service";
 import { useDispatch, useSelector } from "react-redux";
 import ClockComponent from "./ClockComponent";
 import Toast from "react-native-toast-message";
-import { WebView } from "react-native-webview"; // Add WebView import
-<<<<<<< HEAD
+import { WebView } from "react-native-webview";
 import { RefreshControl } from "react-native";
-=======
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
 
 const { width } = Dimensions.get("window");
 const scaleFont = (size: any) => Math.round(size * (width / 375));
@@ -106,11 +103,7 @@ const PunchScreen: React.FC = () => {
   const [address, setAddress] = useState("");
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [punchType, setPunchType] = useState<"in" | "out" | null>(null);
-<<<<<<< HEAD
   const [refreshing, setRefreshing] = useState(false);
-=======
-
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
   const punchInforSelector = useSelector((state: any) => state.punchInfo);
 
   const dispatch = useDispatch();
@@ -144,16 +137,11 @@ const PunchScreen: React.FC = () => {
           const minutes = punch.duration % 60;
           setTotalTime(`${hours}h ${minutes}m`);
         }
-<<<<<<< HEAD
       } else {
         // Reset states if no punch data
         setClockInTime(null);
         setClockOutTime(null);
         setTotalTime(null);
-=======
-      } catch (error) {
-        console.error("Error fetching punch info:", error);
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
       }
     } catch (error) {
       console.error("❌ Error fetching today's punch:", error);
@@ -183,10 +171,6 @@ const PunchScreen: React.FC = () => {
       });
     });
 
-<<<<<<< HEAD
-
-=======
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
   const getAddressFromCoordinates = async (
     latitude: number,
     longitude: number
@@ -198,7 +182,6 @@ const PunchScreen: React.FC = () => {
       });
 
       if (response.length > 0) {
-<<<<<<< HEAD
         const addressValue =
           response[0].formattedAddress || `${latitude}, ${longitude}`;
         setAddress(addressValue);
@@ -207,11 +190,6 @@ const PunchScreen: React.FC = () => {
         const fallback = `${latitude}, ${longitude}`;
         setAddress(fallback);
         return fallback;
-=======
-        setAddress(response[0].formattedAddress || "Address not found");
-      } else {
-        setAddress("Address not found");
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
       }
     } catch (error) {
       console.error("Geocoding Error:", error);
@@ -221,22 +199,14 @@ const PunchScreen: React.FC = () => {
     }
   };
 
-<<<<<<< HEAD
 
   const getLocation = async () => {
     const permissionGranted = await requestLocationPermission();
     if (!permissionGranted) return undefined;
-=======
-  const getLocation = async () => {
-    const permissionGranted = await requestLocationPermission();
-    if (!permissionGranted) return undefined;
-
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
     try {
       const locResult = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-<<<<<<< HEAD
       if (!locResult || !locResult.coords) {
         throw new Error("Invalid location data received");
       }
@@ -250,19 +220,6 @@ const PunchScreen: React.FC = () => {
       );
 
       return { location: locResult, address: resolvedAddress };
-=======
-
-      if (!locResult || !locResult.coords) {
-        throw new Error("Invalid location data received");
-      }
-
-      const { latitude, longitude } = locResult.coords;
-      setLocation({ latitude, longitude });
-
-      await getAddressFromCoordinates(latitude, longitude);
-
-      return locResult;
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
     } catch (error) {
       console.error("Location Error:", error);
       Toast.show({
@@ -276,11 +233,8 @@ const PunchScreen: React.FC = () => {
       return undefined;
     }
   };
-<<<<<<< HEAD
 
   const isClockInDisabled = todayPunch && todayPunch.punchintime;
-=======
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
 
   const handleClockIn = async () => {
     const latestPunch = await punchService.GetTodayPunchApi();
@@ -442,20 +396,12 @@ const PunchScreen: React.FC = () => {
       </html>
     `;
   };
-<<<<<<< HEAD
-=======
-  
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
 
   let htmlContent: any;
 
   if (location) {
     htmlContent = generateMapHTML(location.latitude, location.longitude);
-<<<<<<< HEAD
     
-=======
-    // console.log(htmlContent); // Logs the generated HTML
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
   }
 
   return (
@@ -522,7 +468,6 @@ const PunchScreen: React.FC = () => {
       </ScrollView>
 
       <Modal visible={isMapVisible} animationType="slide" transparent={true}>
-<<<<<<< HEAD
         <View style={styles.modalContainer}>
           <View style={styles.mapContainer}>
             <View style={styles.webviewWrapper}>
@@ -563,43 +508,6 @@ const PunchScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-=======
-  <View style={styles.modalContainer}>
-    <View style={styles.mapContainer}>
-      <View style={styles.webviewWrapper}>
-        {location ? (
-          <WebView
-            originWhitelist={["*"]}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={true}
-            mixedContentMode="always"
-            source={{ html: generateMapHTML(location.latitude, location.longitude) }}
-            style={styles.webview}
-          />
-        ) : (
-          <ActivityIndicator size="large" color="blue" />
-        )}
-      </View>
-      <View style={styles.addressContainer}>
-        <Text style={styles.addressText}>
-          {address || "Fetching address..."}
-        </Text>
-      </View>
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={() => {
-          setIsMapVisible(false);
-          setLocation(null);
-          setAddress("");
-        }}
-      >
-        <Text style={styles.closeButtonText}>Close</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
 
       <Toast />
     </View>
@@ -675,29 +583,16 @@ const styles = StyleSheet.create({
     marginTop: scaleSize(4),
     fontWeight: "bold",
   },
-<<<<<<< HEAD
-
-=======
- 
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
   map: {
     flex: 1,
     width: "100%",
     height: "100%",
   },
-<<<<<<< HEAD
 
   addressText: {
     fontSize: scaleFont(14),
     color: "black",
     textAlign: "center",
-=======
-  
-  addressText: {
-    fontSize: scaleFont(14),
-    color: "black",
-    textAlign:"center"
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
   },
 
   closeButtonText: {
