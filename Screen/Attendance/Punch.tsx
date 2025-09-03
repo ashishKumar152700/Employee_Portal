@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { punchService } from "../../Services/Punch/Punch.service";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import ClockComponent from "./ClockComponent";
 import Toast from "react-native-toast-message";
-import { WebView } from "react-native-webview"; // Add WebView import
+import { WebView } from "react-native-webview";
+import { RefreshControl } from "react-native";
 
 const { width } = Dimensions.get("window");
 const scaleFont = (size: any) => Math.round(size * (width / 375));
@@ -87,42 +88,66 @@ const ClockButton: React.FC<ClockButtonProps> = ({
     </View>
   );
 };
-
 const PunchScreen: React.FC = () => {
   const [clockInTime, setClockInTime] = useState<string | null>(null);
   const [clockOutTime, setClockOutTime] = useState<string | null>(null);
   const [totalTime, setTotalTime] = useState<string | null>(null);
-  const [clockInDate, setClockInDate] = useState<Date | null>(null);
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
+  const [todayPunch, setTodayPunch] = useState<any>(null); // ✅ Critical state
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [address, setAddress] = useState<string>("");
+
+  const [address, setAddress] = useState("");
   const [isMapVisible, setIsMapVisible] = useState(false);
   const [punchType, setPunchType] = useState<"in" | "out" | null>(null);
-
+  const [refreshing, setRefreshing] = useState(false);
   const punchInforSelector = useSelector((state: any) => state.punchInfo);
 
+  const dispatch = useDispatch();
+
   useEffect(() => {
-    const fetchPunchInfo = async () => {
-      try {
-        const punchInfo = punchInforSelector;
-        if (punchInfo.length > 0 && punchInfo[0].punchintime) {
-          setClockInTime(punchInfo[0].punchintime);
-          setClockOutTime(punchInfo[0].punchouttime);
-          const totalSeconds = punchInfo[0].duration;
-          const hours = Math.floor(totalSeconds / 3600);
-          const minutes = Math.floor((totalSeconds % 3600) / 60);
+    fetchTodayPunch();
+  }, []);
+
+  // Add this function
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchTodayPunch();
+    setRefreshing(false);
+  }, []);
+
+  // Update the fetchTodayPunch function
+  const fetchTodayPunch = async () => {
+    try {
+      console.log("🔄 Fetching today's punch data...");
+      const punch = await punchService.GetTodayPunchAndUpdateRedux(dispatch);
+      console.log("📋UI Today Punch Fetched:", punch);
+
+      setTodayPunch(punch);
+
+      if (punch) {
+        setClockInTime(punch.punchintime);
+        setClockOutTime(punch.punchouttime);
+
+        if (punch.duration) {
+          const hours = Math.floor(punch.duration / 60);
+          const minutes = punch.duration % 60;
           setTotalTime(`${hours}h ${minutes}m`);
         }
-      } catch (error) {
-        console.error("Error fetching punch info:", error);
+      } else {
+        // Reset states if no punch data
+        setClockInTime(null);
+        setClockOutTime(null);
+        setTotalTime(null);
       }
-    };
-    fetchPunchInfo();
-  }, [punchInforSelector]);
+    } catch (error) {
+      console.error("❌ Error fetching today's punch:", error);
+      setTodayPunch(null);
+    }
+  };
 
   const requestLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -157,35 +182,44 @@ const PunchScreen: React.FC = () => {
       });
 
       if (response.length > 0) {
-        setAddress(response[0].formattedAddress || "Address not found");
+        const addressValue =
+          response[0].formattedAddress || `${latitude}, ${longitude}`;
+        setAddress(addressValue);
+        return addressValue; // Return the resolved address
       } else {
-        setAddress("Address not found");
+        const fallback = `${latitude}, ${longitude}`;
+        setAddress(fallback);
+        return fallback;
       }
     } catch (error) {
       console.error("Geocoding Error:", error);
-      setAddress("Unable to fetch address");
+      const fallback = `${latitude}, ${longitude}`;
+      setAddress(fallback);
+      return fallback;
     }
   };
+
 
   const getLocation = async () => {
     const permissionGranted = await requestLocationPermission();
     if (!permissionGranted) return undefined;
-
     try {
       const locResult = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-
       if (!locResult || !locResult.coords) {
         throw new Error("Invalid location data received");
       }
-
       const { latitude, longitude } = locResult.coords;
       setLocation({ latitude, longitude });
 
-      await getAddressFromCoordinates(latitude, longitude);
+      // Wait for address resolution and return both location and address
+      const resolvedAddress = await getAddressFromCoordinates(
+        latitude,
+        longitude
+      );
 
-      return locResult;
+      return { location: locResult, address: resolvedAddress };
     } catch (error) {
       console.error("Location Error:", error);
       Toast.show({
@@ -200,93 +234,126 @@ const PunchScreen: React.FC = () => {
     }
   };
 
+  const isClockInDisabled = todayPunch && todayPunch.punchintime;
+
   const handleClockIn = async () => {
-    if (clockInTime) {
+    const latestPunch = await punchService.GetTodayPunchApi();
+    if (latestPunch && latestPunch.punchintime && !latestPunch.punchouttime) {
       Toast.show({
         type: "info",
-        position: "top",
         text1: "Already Punched In",
-        text2: "You have already punched in.",
-        visibilityTime: 6000,
-        autoHide: true,
+        text2: "You have already punched in today. You can punch out.",
       });
       return;
     }
+
     setIsClockInLoading(true);
-    const loc = await getLocation();
-    if (loc) {
+    try {
+      const result = await getLocation();
+      if (!result?.location?.coords) return;
+      // Open existing modal UI (unchanged)
+
+      const { location: loc, address: resolvedAddress } = result;
       setPunchType("in");
       setIsMapVisible(true);
-      setClockInDate(new Date());
-      try {
-        const response = await punchService.PunchInApi(loc);
-        if (response.message === "Already Puched In!") {
-          setClockInTime(response.data.punchintime);
-          Toast.show({
-            type: "info",
-            position: "top",
-            text1: "Info",
-            text2: response.message,
-            visibilityTime: 3000,
-            autoHide: true,
-          });
-        } else {
-          setClockInTime(response.data.punchintime);
-          Toast.show({
-            type: "success",
-            position: "top",
-            text1: "Success",
-            text2: response.message,
-            visibilityTime: 3000,
-            autoHide: true,
-          });
-        }
-      } catch (error) {
-        console.error("Punch In Error:", error);
-        Toast.show({
-          type: "error",
-          position: "top",
-          text1: "Error",
-          text2: "An error occurred while clocking in.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-      }
+
+      console.log("Punch In will send address:", address);
+
+      console.log("Punch In will send address:", resolvedAddress);
+      const response = await punchService.PunchInApi(loc, resolvedAddress);
+
+      const newPunchTime =
+        response.data?.punchintime || new Date().toLocaleTimeString();
+      setClockInTime(newPunchTime);
+      setTodayPunch((prev: any) => ({
+        ...(prev || {}),
+        punchintime: newPunchTime,
+        punchouttime: null,
+      }));
+
+      Toast.show({
+        type: "success",
+        position: "top",
+        text1: "Success",
+        text2: response.message || "Punch recorded successfully",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+    } catch (error) {
+      console.error("Punch In Error:", error);
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Error",
+        text2: "An error occurred while punching in.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+    } finally {
+      setIsClockInLoading(false);
     }
-    setIsClockInLoading(false);
   };
 
   const handleClockOut = async () => {
+    const latestPunch = await punchService.GetTodayPunchApi();
+    if (!latestPunch || !latestPunch.punchintime) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Please punch in first",
+      });
+      return;
+    }
+
     setIsClockOutLoading(true);
-    const loc = await getLocation();
-    if (loc) {
+    try {
+      const result = await getLocation();
+      if (!result?.location?.coords) return;
+
+      const { location: loc, address: resolvedAddress } = result;
       setPunchType("out");
       setIsMapVisible(true);
-      try {
-        const response = await punchService.PunchOutApi(loc);
-        setTotalTime(response.formattedDuration);
-        setClockOutTime(response.punchouttime);
-        Toast.show({
-          type: "success",
-          position: "top",
-          text1: "Success",
-          text2: response.punchOutMessage,
-          visibilityTime: 6000,
-          autoHide: true,
-        });
-      } catch (error) {
-        console.error("Punch Out Error:", error);
-        Toast.show({
-          type: "error",
-          position: "top",
-          text1: "Error",
-          text2: "An error occurred while clocking out.",
-          visibilityTime: 3000,
-          autoHide: true,
-        });
+
+      console.log("Punch Out will send address:", resolvedAddress);
+      const response = await punchService.PunchOutApi(loc, resolvedAddress);
+
+      const newPunchOutTime =
+        response.data?.punchouttime || new Date().toLocaleTimeString();
+      setClockOutTime(newPunchOutTime);
+
+      if (response.data?.duration != null) {
+        const hours = Math.floor(response.data.duration / 60);
+        const minutes = response.data.duration % 60;
+        setTotalTime(`${hours}h ${minutes}m`);
       }
+
+      setTodayPunch((prev: any) => ({
+        ...(prev || {}),
+        punchouttime: newPunchOutTime,
+        duration: response.data?.duration ?? prev?.duration,
+      }));
+
+      Toast.show({
+        type: "success",
+        position: "top",
+        text1: "Success",
+        text2: response.message || "Punch recorded successfully",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+    } catch (error) {
+      console.error("Punch Out Error:", error);
+      Toast.show({
+        type: "error",
+        position: "top",
+        text1: "Error",
+        text2: "An error occurred while punching out.",
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+    } finally {
+      setIsClockOutLoading(false);
     }
-    setIsClockOutLoading(false);
   };
 
   // Function to generate Leaflet map HTML
@@ -329,18 +396,22 @@ const PunchScreen: React.FC = () => {
       </html>
     `;
   };
-  
 
   let htmlContent: any;
 
   if (location) {
     htmlContent = generateMapHTML(location.latitude, location.longitude);
-    // console.log(htmlContent); // Logs the generated HTML
+    
   }
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.card}>
           <ClockComponent />
           <ClockButton
@@ -349,7 +420,8 @@ const PunchScreen: React.FC = () => {
             type="in"
             onPress={handleClockIn}
             isLoading={isClockInLoading}
-            disabled={!!clockInTime}
+            // disabled={!!clockInTime}
+            disabled={isClockInDisabled}
           />
         </View>
 
@@ -396,41 +468,46 @@ const PunchScreen: React.FC = () => {
       </ScrollView>
 
       <Modal visible={isMapVisible} animationType="slide" transparent={true}>
-  <View style={styles.modalContainer}>
-    <View style={styles.mapContainer}>
-      <View style={styles.webviewWrapper}>
-        {location ? (
-          <WebView
-            originWhitelist={["*"]}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={true}
-            mixedContentMode="always"
-            source={{ html: generateMapHTML(location.latitude, location.longitude) }}
-            style={styles.webview}
-          />
-        ) : (
-          <ActivityIndicator size="large" color="blue" />
-        )}
-      </View>
-      <View style={styles.addressContainer}>
-        <Text style={styles.addressText}>
-          {address || "Fetching address..."}
-        </Text>
-      </View>
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={() => {
-          setIsMapVisible(false);
-          setLocation(null);
-          setAddress("");
-        }}
-      >
-        <Text style={styles.closeButtonText}>Close</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+        <View style={styles.modalContainer}>
+          <View style={styles.mapContainer}>
+            <View style={styles.webviewWrapper}>
+              {location ? (
+                <WebView
+                  originWhitelist={["*"]}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  startInLoadingState={true}
+                  mixedContentMode="always"
+                  source={{
+                    html: generateMapHTML(
+                      location.latitude,
+                      location.longitude
+                    ),
+                  }}
+                  style={styles.webview}
+                />
+              ) : (
+                <ActivityIndicator size="large" color="blue" />
+              )}
+            </View>
+            <View style={styles.addressContainer}>
+              <Text style={styles.addressText}>
+                {address || "Fetching address..."}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setIsMapVisible(false);
+                setLocation(null);
+                setAddress("");
+              }}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Toast />
     </View>
@@ -506,17 +583,16 @@ const styles = StyleSheet.create({
     marginTop: scaleSize(4),
     fontWeight: "bold",
   },
- 
   map: {
     flex: 1,
     width: "100%",
     height: "100%",
   },
-  
+
   addressText: {
     fontSize: scaleFont(14),
     color: "black",
-    textAlign:"center"
+    textAlign: "center",
   },
 
   closeButtonText: {

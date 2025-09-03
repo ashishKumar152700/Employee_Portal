@@ -1,19 +1,26 @@
-const getAll = {
+const initialState = {
   punchInfo: [],
-  userDetails : {},
+  userDetails: {},
   leaveDetails: {},
-  managerInfo:[],
-  calendarData : [],
-
+  managerInfo: [],
+  calendarData: [],
+  todayPunch: null, // Add todayPunch to store current day's punch data
 };
 
-
-const reducers = (state = getAll, action: any) => {
-  let {type} : any = action;
-  switch (type) {
-    case String(type): 
-    return { ...state , [`${type}`] : action.payload}
-
+const reducers = (state = initialState, action: any) => {
+  switch (action.type) {
+    case "punchInfo":
+      return { ...state, punchInfo: action.payload };
+    case "userDetails":
+      return { ...state, userDetails: action.payload };
+    case "leaveDetails":
+      return { ...state, leaveDetails: action.payload };
+    case "managerInfo":
+      return { ...state, managerInfo: action.payload };
+    case "calendarData":
+      return { ...state, calendarData: action.payload };
+    case "todayPunch": 
+      return { ...state, todayPunch: action.payload };
     default:
       return state;
   }

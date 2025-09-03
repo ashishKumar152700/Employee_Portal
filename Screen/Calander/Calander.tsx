@@ -1,577 +1,1601 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { Agenda } from 'react-native-calendars';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Card } from 'react-native-paper';
-import { calendarservice } from '../../Services/Calendar/Calendar.service';
-import { useDispatch } from 'react-redux';
-import { differenceInSeconds } from 'date-fns';
-import { format } from 'date-fns';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+} from "react-native";
+import { CalendarList } from "react-native-calendars";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { Card, Badge, Divider } from "react-native-paper";
+import { calendarservice } from "../../Services/Calendar/Calendar.service";
+import { useDispatch } from "react-redux";
+import {
+  differenceInSeconds,
+  format,
+  parseISO,
+  isValid,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+} from "date-fns";
+import { RefreshControl } from "react-native";
+import { useSelector } from "react-redux";
+import { Image } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
+if (Platform.OS === "android") {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 type Item = {
-  punchInTime?: string;   // Renamed to match the response field
-  punchOutTime?: string;  // Renamed to match the response field
-  punchDate?: string;     // Optional: Store the date (if needed)
-  totalTime?: string;
-  duration?: number;      // Duration (in seconds or other unit)
-  outActualAddress?: string;  // Optional: The actual address (if needed)
-  outMocked?: boolean;        // Optional: A flag for mocked data
+  punchInTime?: string | null;
+  punchOutTime?: string | null;
+  punchDate?: string;
+  duration?: number;
+  outactualaddress?: string;
+  inactualaddress?: string;
+  outmocked?: boolean;
+  status?: string;
+  leavestatus?: string;
+  indevice?: any;
+  outdevice?: any;
 };
 
-
+const todayISO = new Date().toISOString().split("T")[0];
 const currentYear = new Date().getFullYear();
 const minDate = `${currentYear}-01-01`;
-const todayDate = new Date();
-const maxDate = todayDate.toISOString().split('T')[0];
-
 
 const Schedule: React.FC = () => {
-  const [items, setItems] = useState<{ [key: string]: Item[] }>({});
-  const [selectedDate, setSelectedDate] = useState<string>(maxDate);
-
+  const [items, setItems] = useState<Record<string, Item[]>>({});
+  const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
+  const [selectedDate, setSelectedDate] = useState<string>(todayISO);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [calendarCollapsed, setCalendarCollapsed] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const todayPunch = useSelector((state: any) => state.todayPunch);
   const dispatch = useDispatch();
 
+  const mobileIcon = require("../../assets/device/mobile.png");
+  const biometricIcon = require("../../assets/device/biometric.png");
+
   useEffect(() => {
-    Icon.loadFont();
-  }, []);
-
-
-  const fetchCurrentDateData = useCallback(async () => {
-    const todayDate = new Date();
-    const formattedTodayDate = formatDate(todayDate.toISOString());
-
-    try {
-      const response = await calendarservice.CalendarGet(
-        formattedTodayDate,
-        selectedDate,
-        dispatch
-      );
-
-      if (response.data.length === 0) {
-        // If no data, show absent card for selected date
-        const absentData = {
-          [formattedTodayDate]: [
-            { punchInTime: null, punchOutTime: null, punchDate: formattedTodayDate },
-          ],
-        };
-        setItems(absentData); // Set the absent data for today
-      } else {
-        const groupedItems: { [key: string]: Item[] } = {};
-        response.data.forEach((item: any) => {
-          const punchDate = item.punchdate.split('T')[0];
-          if (!groupedItems[punchDate]) {
-            groupedItems[punchDate] = [];
-          }
-          groupedItems[punchDate].push({
-            punchInTime: item.punchintime,
-            punchOutTime: item.punchouttime,
-            punchDate: item.punchdate,
-            duration: item.duration,
-            outActualAddress: item.outactualaddress,
-            outMocked: item.outmocked,
-          });
-        });
-        setItems(groupedItems); // Set the fetched data
-      }
-    } catch (error) {
-      // console.error('Error fetching current date data:', error instanceof Error ? error.message : error);
+    if (todayPunch && todayPunch.punchdate) {
+      const dayISO = todayPunch.punchdate.split("T")[0];
+      setItems((prev) => ({
+        ...prev,
+        [dayISO]: [todayPunch],
+      }));
     }
-  }, [dispatch, selectedDate]);
+  }, [todayPunch]);
 
-  useEffect(() => {
-    setSelectedDate(maxDate);
-    setItems({});
-    fetchCurrentDateData(); // Fetch data for the current date when the component mounts
-  }, []);
+   
 
-    const loadItems = useCallback(
-    async (day: any) => {
-      const newItems: { [key: string]: Item[] } = {};
 
-      for (let i = -15; i <= 0; i++) {
-        const time = day.timestamp + i * 24 * 60 * 60 * 1000;
-        const strTime = timeToString(time);
-
-        if (strTime >= minDate && strTime <= maxDate && !items[strTime]) {
-          const response = await calendarservice.CalendarGet(strTime, strTime, dispatch);
-          if (response.data.length === 0) {
-            // Show absent card for this day
-            newItems[strTime] = [
-              { punchInTime: null, punchOutTime: null, punchDate: strTime },
-            ];
-          } else {
-            response.data.forEach((item: any) => {
-              const punchDate = item.punchdate.split('T')[0];
-              if (!newItems[punchDate]) {
-                newItems[punchDate] = [];
-              }
-              newItems[punchDate].push({
-                punchInTime: item.punchintime,
-                punchOutTime: item.punchouttime,
-                punchDate: item.punchdate,
-                duration: item.duration,
-                outActualAddress: item.outactualaddress,
-                outMocked: item.outmocked,
-              });
-            });
-          }
-        }
-      }
-
-      setItems((prevItems) => ({ ...prevItems, ...newItems }));
-    },
-    [dispatch, items]
-  );
-
-  const formatDate = (dateString: string) => {
+  /* ---------- Helper functions ---------- */
+  const isoToDisplay = (iso: string) => {
     try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid date format");
-      }
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-      const day = String(date.getDate()).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch (error) {
-      console.error("Error formatting date:", dateString, error);
+      const date = parseISO(iso);
+      return isValid(date) ? format(date, "dd/MM/yyyy") : "Invalid Date";
+    } catch {
       return "Invalid Date";
     }
   };
 
-  const handleDayPress = useCallback(
-    async (day: { dateString: string }) => {
-      const formattedDate = formatDate(day.dateString);
-      setSelectedDate(format(new Date(formattedDate), 'dd/MM/yyyy'));
-    
-      
-      
-      try {
-        // console.log("SelectedDate in ui from calendar : " , formattedDate);
-        
-        const response = await calendarservice.CalendarGet(formattedDate, formattedDate, dispatch);
+  const calcDuration = (
+    dateISO: string,
+    inT?: string | null,
+    outT?: string | null
+  ) => {
+    if (!inT || !outT) return "--h --m --s";
+    const base = dateISO;
+    const into = parseISO(`${base}T${inT}`);
+    const outo = parseISO(`${base}T${outT}`);
+    if (!isValid(into) || !isValid(outo)) return "--h --m --s";
 
-        const groupedItems: { [key: string]: Item[] } = {};
-        response.data.forEach((item: any) => {
-          const punchDate = item.punchdate.split('T')[0];
-          if (!groupedItems[punchDate]) {
-            groupedItems[punchDate] = [];
-          }
-          groupedItems[punchDate].push({
-            punchInTime: item.punchintime,
-            punchOutTime: item.punchouttime,
-            punchDate: item.punchdate,
-            duration: item.duration,
-            outActualAddress: item.outactualaddress,
-            outMocked: item.outmocked,
+    const sec = differenceInSeconds(outo, into);
+    if (sec < 0) return "--h --m --s";
+
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
+
+  /* ---------- Core data fetch ---------- */
+  // Update the fetchRange function to handle errors more gracefully
+  const fetchRange = useCallback(
+    async (fromISO: string, toISO: string) => {
+      try {
+        const data = await calendarservice.CalendarGet(
+          fromISO,
+          toISO,
+          dispatch
+        );
+        const grouped: Record<string, Item[]> = {};
+
+        (data?.data ?? data).forEach((row: any) => {
+          const dayISO = row.punchdate
+            ? row.punchdate.split("T")[0]
+            : new Date().toISOString().split("T")[0];
+          if (!grouped[dayISO]) grouped[dayISO] = [];
+
+          grouped[dayISO].push({
+            punchInTime: row.punchintime || "",
+            punchOutTime: row.punchouttime || "",
+            punchDate: row.punchdate,
+            duration: row.duration,
+            outactualaddress: row.outactualaddress,
+            inactualaddress: row.inactualaddress,
+            outmocked: row.outmocked,
+            status: row.status,
+            leavestatus: row.leavestatus,
+            indevice: row.indevice, 
+            outdevice: row.outdevice,
           });
         });
 
-        setItems((prevItems) => ({ ...prevItems, ...groupedItems }));
-      } catch (error) {
-        console.error('Error fetching data for selected day:', error instanceof Error ? error.message : error);
+        const start = parseISO(fromISO);
+        const end = parseISO(toISO);
+        for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+          const iso = d.toISOString().split("T")[0];
+          if (!grouped[iso]) {
+            grouped[iso] = [
+              {
+                punchInTime: null,
+                punchOutTime: null,
+                punchDate: iso,
+                status: "Absent",
+              },
+            ];
+          }
+        }
+        setItems((prev) => ({ ...prev, ...grouped }));
+      } catch (e) {
+        console.error("fetchRange error:", e);
       }
     },
     [dispatch]
   );
 
-  const renderItem = useCallback(
-    (item: Item) => {
-      const formattedDate = item.punchDate
-        ? item.punchDate.split('T')[0].split('-').reverse().join('/')
-        : 'Date Missing';
+  /* ---------- Load data for month ---------- */
+  const loadItemsForMonth = useCallback(
+    async (monthDate: Date, force = false) => {
+      const monthKey = format(monthDate, "yyyy-MM");
+      if (!force && loadedMonths.has(monthKey)) return;
 
-        
-      const convertDurationToHours = (punchDate: string, punchInTime: string, punchOutTime: string) => {
-        try {
-          const inTime = new Date(`${punchDate.split('T')[0]}T${punchInTime}`);
-          const outTime = new Date(`${punchDate.split('T')[0]}T${punchOutTime}`);
-          const durationSeconds = differenceInSeconds(outTime, inTime);
-          return `${Math.floor(durationSeconds / 3600)}h ${Math.floor((durationSeconds % 3600) / 60)}m ${durationSeconds % 60}s`;
-        } catch (error) {
-          console.error('Error calculating duration:', error);
-          return 'Invalid Duration';
-        }
+      const fromISO = startOfMonth(monthDate).toISOString().split("T")[0];
+      const endOfMonthISO = endOfMonth(monthDate).toISOString().split("T")[0];
+      const toISO = endOfMonthISO > todayISO ? todayISO : endOfMonthISO;
+
+      await fetchRange(fromISO, toISO);
+      setLoadedMonths((prev) => new Set(prev).add(monthKey));
+    },
+    [loadedMonths, fetchRange]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const today = new Date();
+      loadItemsForMonth(today, true);
+    }, [loadItemsForMonth])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+
+    // Force reload current month and today's data
+    const today = new Date();
+    const todayISO = format(today, 'yyyy-MM-dd');
+    
+    // Fetch today's data specifically
+    await fetchRange(todayISO, todayISO);
+    
+    // Also refresh any other loaded months
+    const monthsToRefresh = Array.from(loadedMonths);
+    for (const monthKey of monthsToRefresh) {
+      const [year, month] = monthKey.split('-');
+      const monthDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      await loadItemsForMonth(monthDate, true); // Add force parameter
+    }
+
+    setRefreshing(false);
+  }, [loadItemsForMonth, loadedMonths, fetchRange]);
+
+  /* ---------- Handle day press ---------- */
+  const onDayPress = useCallback(
+    async (day: { dateString: string }) => {
+      setSelectedDate(day.dateString);
+
+      // Collapse calendar after selection
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCalendarCollapsed(true);
+
+      // Fetch data for the range from selected date to today if not already loaded
+      const datesToLoad = eachDayOfInterval({
+        start: parseISO(day.dateString),
+        end: new Date(),
+      }).map((date) => format(date, "yyyy-MM-dd"));
+
+      const missingDates = datesToLoad.filter((date) => !items[date]);
+
+      if (missingDates.length > 0) {
+        await fetchRange(
+          missingDates[0],
+          missingDates[missingDates.length - 1]
+        );
+      }
+    },
+    [items, fetchRange]
+  );
+
+  /* ---------- Toggle calendar visibility ---------- */
+  const toggleCalendar = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCalendarCollapsed(!calendarCollapsed);
+  }, [calendarCollapsed]);
+
+  /* ---------- Toggle location visibility ---------- */
+  const toggleExpanded = useCallback((date: string) => {
+    setExpandedCards((prev) => ({
+      ...prev,
+      [date]: !prev[date],
+    }));
+  }, []);
+
+  /* ---------- Get dates from selected date to today ---------- */
+  const dateRange = useMemo(() => {
+    if (!selectedDate) return [];
+
+    const startDate = parseISO(selectedDate);
+    const endDate = new Date();
+
+    return eachDayOfInterval({ start: startDate, end: endDate })
+      .map((date) => format(date, "yyyy-MM-dd"))
+      .reverse(); // Show most recent first
+  }, [selectedDate]);
+
+  /* ---------- Marked dates for calendar ---------- */
+  const markedDates = useMemo(() => {
+    const marks: Record<string, any> = {};
+
+    Object.keys(items).forEach((date) => {
+      const dayItems = items[date];
+      const hasPunch = dayItems.some((item) => item.punchInTime);
+      const isLeave = dayItems.some((item) => item.leavestatus);
+      const isPartial = dayItems.some(
+        (item) => item.punchInTime && !item.punchOutTime
+      );
+
+      marks[date] = {
+        selected: date === selectedDate,
+        selectedColor: "#002957",
+        disabled: date > todayISO,
       };
 
+      if (hasPunch) {
+        marks[date].marked = true;
+        marks[date].dotColor = isPartial ? "#FFA500" : "#4CAF50";
+      } else if (isLeave) {
+        marks[date].marked = true;
+        marks[date].dotColor = "#9C27B0";
+      } else if (date <= todayISO) {
+        marks[date].marked = true;
+        marks[date].dotColor = "#F44336";
+      }
+    });
 
-      // If punchInTime is missing, show "Absent" card
-      if (!item.punchInTime) {
+    return marks;
+  }, [items, selectedDate]);
+
+  /* ---------- Render card for a specific date ---------- */
+  const renderDateCard = useCallback(
+    (date: string) => {
+      const dayItems = items[date] || [];
+      if (dayItems.length === 0) return null;
+
+      const item = dayItems[0];
+      const disp = isoToDisplay(date);
+      const isExpanded = expandedCards[date];
+      const isToday = date === todayISO;
+      const isLeave = item.leavestatus;
+
+      if (isLeave) {
         return (
-          <Card style={styles.card}>
-            <Card.Content>
-              <View style={styles.cardContent}>
-                <Text style={styles.absentText}>
-                  {formattedDate} - Absent
-                </Text>
+          <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
+            <Card.Content style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.date}>{disp}</Text>
+                <Badge style={styles.leaveBadge}>
+                  {item.leavestatus} Leave
+                </Badge>
+              </View>
+              <View style={styles.leaveContainer}>
+                <Icon name="calendar-check" size={24} color="#9C27B0" />
+                <Text style={styles.leaveText}>{item.status}</Text>
               </View>
             </Card.Content>
           </Card>
         );
       }
-      if (item.punchInTime && !item.punchOutTime) {
+
+      if (!item.punchInTime) {
         return (
-          <Card style={styles.card}>
-          <Card.Content>
-            <View style={styles.cardContent}>
-              <Text style={styles.presentText}>{formattedDate}</Text>
-              <View style={styles.row}>
-                <View style={styles.iconWithText}>
-                  <Icon name="clock-in" size={24} color="rgb(0, 41, 87)" />
-                  <Text style={styles.timeText}>{item.punchInTime}</Text>
-                </View>
-                <View style={styles.iconWithText}>
-                  <Icon name="clock-out" size={24} color="rgb(0, 41, 87)" />
-                  <Text style={styles.dintPOText}>Didn't punch out</Text>
-                </View>
-                <View style={styles.iconWithText}>
-                  <Icon name="clock" size={24} color="rgb(0, 41, 87)" />
-                  <Text style={styles.timeText}>-- : -- : --</Text>
-                </View>
+          <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
+            <Card.Content style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.date}>{disp}</Text>
+                <Badge style={styles.absentBadge}>Absent</Badge>
               </View>
-            </View>
-          </Card.Content>
-        </Card>
+              <View style={styles.absentContainer}>
+                <Icon name="calendar-remove" size={24} color="#FF9800" />
+                <Text style={styles.absentText}>No attendance record</Text>
+              </View>
+            </Card.Content>
+          </Card>
         );
       }
 
-
-
+      const isPartial = !item.punchOutTime;
       return (
-        <Card style={styles.card}>
-          <Card.Content>
-            <View style={styles.cardContent}>
-              <Text style={styles.presentText}>{formattedDate}</Text>
-              <View style={styles.row}>
-                <View style={styles.iconWithText}>
-                  <Icon name="clock-in" size={24} color="rgb(0, 41, 87)" />
-                  <Text style={styles.timeText}>{item.punchInTime}</Text>
+        <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
+          <Card.Content style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.date}>{disp}</Text>
+              <Badge
+                style={isPartial ? styles.partialBadge : styles.presentBadge}
+              >
+                {isPartial ? "Partial" : item.status || "Present"}
+              </Badge>
+            </View>
+
+            <View style={styles.timesContainer}>
+              <View style={styles.timeBlock}>
+                <View style={styles.timeHeader}>
+                  <Icon name="clock-in" size={20} color="#002957" />
+                  <Text style={styles.timeLabel}>Punch In</Text>
                 </View>
-                <View style={styles.iconWithText}>
-                  <Icon name="clock-out" size={24} color="rgb(0, 41, 87)" />
-                  <Text style={styles.timeText}>{item.punchOutTime}</Text>
+                <Text style={styles.timeValue}>{item.punchInTime}</Text>
+              </View>
+
+              <View style={styles.timeSeparator}>
+                <View style={styles.timeLine} />
+              </View>
+
+              <View style={styles.timeBlock}>
+                <View style={styles.timeHeader}>
+                  <Icon name="clock-out" size={20} color="#002957" />
+                  <Text style={styles.timeLabel}>Punch Out</Text>
                 </View>
-                <View style={styles.iconWithText}>
-                  <Icon name="clock" size={24} color="rgb(0, 41, 87)" />
-                  <Text style={styles.timeText}>
-                    {convertDurationToHours(item.punchDate, item.punchInTime, item.punchOutTime)}
-                  </Text>
-                </View>
+                <Text
+                  style={[styles.timeValue, isPartial && styles.partialText]}
+                >
+                  {item.punchOutTime}
+                </Text>
               </View>
             </View>
+
+            <View style={styles.durationContainer}>
+              <Icon name="timer" size={20} color="#002957" />
+              <Text style={styles.durationText}>
+                {isPartial
+                  ? ""
+                  : calcDuration(date, item.punchInTime, item.punchOutTime)}
+              </Text>
+            </View>
+
+            {/* Location Toggle */}
+            {item.outactualaddress && (
+              <TouchableOpacity
+                style={styles.locationToggle}
+                onPress={() => toggleExpanded(date)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.locationToggleText}>
+                  {isExpanded ? "Hide Punch Address" : "Show Punch Address"}
+                </Text>
+                <Icon
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={22}
+                  color="#002957"
+                />
+              </TouchableOpacity>
+            )}
+
+            {isExpanded && (
+              <Animated.View style={styles.locationDetails}>
+                <Divider style={styles.divider} />
+
+                {/* Punch In */}
+                <View style={styles.locationSection}>
+                  <View style={styles.locationHeader}>
+                    <Icon name="map-marker" size={18} color="#002957" />
+                    <Text style={styles.locationTitle}>Punch In</Text>
+                   
+                  </View>
+                  <View style={styles.addressWithDevice}>
+                  <Text style={styles.locationText}>
+                    {item.inactualaddress || "No address available"}
+                  </Text>
+                   <Image
+                      source={
+                        item.indevice?.toLowerCase() === "mobile"
+                          ? mobileIcon
+                          : biometricIcon
+                      }
+                      style={styles.deviceIconSmall}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </View>
+
+                <Divider style={styles.divider} />
+
+                {/* Punch Out */}
+                <View style={styles.locationSection}>
+                  <View style={styles.locationHeader}>
+                    <Icon name="map-marker" size={18} color="#002957" />
+                    <Text style={styles.locationTitle}>Punch Out</Text>
+                  
+                  </View>
+                  <View style={styles.addressWithDevice}>
+                  <Text style={styles.locationText}>
+                    {item.outactualaddress || "No address available"}
+                  </Text>
+                    <Image
+                      source={
+                        item.outdevice?.toLowerCase() === "mobile"
+                          ? mobileIcon
+                          : biometricIcon
+                      }
+                      style={styles.deviceIconSmall}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </View>
+              </Animated.View>
+            )}
           </Card.Content>
         </Card>
       );
     },
-    []
+    [items, expandedCards, toggleExpanded]
   );
 
+  /* ---------- Initial load ---------- */
+  useEffect(() => {
+    // Load current month initially
+    loadItemsForMonth(new Date());
+  }, []);
 
-  const calPast = () => {
-    const previousMonths = new Date().getMonth();
-    return previousMonths;
-  }
-
+  /* ---------- Component ---------- */
   return (
     <View style={styles.container}>
-      <Agenda
-        items={items}
-        loadItemsForMonth={loadItems}
-        selected={maxDate}
-        renderItem={renderItem}
-        onDayPress={handleDayPress}
-        minDate={minDate}
-        maxDate={maxDate}
-        showClosingKnob={true}
-        pastScrollRange={calPast()}
-        futureScrollRange={0}
-        theme={{
-          agendaDayTextColor: 'rgb(0, 41, 87)',
-          agendaDayNumColor: 'rgb(0, 41, 87)',
-          agendaTodayColor: 'green',
-          agendaKnobColor: 'rgb(0, 41, 87)',
-          backgroundColor: '#f8f8f8',
-          calendarBackground: 'white',
-        }}
-      />
+      {/* Calendar Header with Toggle */}
+      <TouchableOpacity
+        style={styles.calendarHeader}
+        onPress={toggleCalendar}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.calendarHeaderText}>Calendar</Text>
+        <Icon
+          name={calendarCollapsed ? "chevron-down" : "chevron-up"}
+          size={24}
+          color="#002957"
+        />
+      </TouchableOpacity>
+
+      {/* Collapsible Calendar */}
+      {!calendarCollapsed && (
+        <Animated.View style={styles.calendarContainer}>
+          <CalendarList
+            current={todayISO}
+            minDate={minDate}
+            maxDate={todayISO}
+            onDayPress={onDayPress}
+            markedDates={markedDates}
+            onVisibleMonthsChange={(months) => {
+              months.forEach((month) =>
+                loadItemsForMonth(new Date(month.dateString))
+              );
+            }}
+            horizontal
+            pagingEnabled
+            theme={{
+              calendarBackground: "#ffffff",
+              textSectionTitleColor: "#002957",
+              selectedDayBackgroundColor: "#002957",
+              selectedDayTextColor: "#ffffff",
+              todayTextColor: "#002957",
+              dayTextColor: "#2d4150",
+              textDisabledColor: "#d9e1e8",
+              dotColor: "#002957",
+              selectedDotColor: "#ffffff",
+              arrowColor: "#002957",
+              monthTextColor: "#002957",
+              textDayFontWeight: "300",
+              textMonthFontWeight: "bold",
+              textDayHeaderFontWeight: "500",
+              textDayFontSize: 14,
+              textMonthFontSize: 16,
+              textDayHeaderFontSize: 14,
+            }}
+          />
+        </Animated.View>
+      )}
+
+      <View style={styles.detailsContainer}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Attendance from {isoToDisplay(selectedDate)} to Today
+          </Text>
+          <Text style={styles.datesCount}>
+            {dateRange.length} day{dateRange.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+
+        <ScrollView
+          style={styles.cardsContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {dateRange.map((date) => renderDateCard(date))}
+        </ScrollView>
+      </View>
     </View>
   );
 };
 
-
-const timeToString = (time: number) => {
-  const date = new Date(time);
-  return date.toISOString().split('T')[0];
-};
-
-
+/* ---------- Styles ---------- */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "fff",
-    marginBottom:80,
-    
+    backgroundColor: "#f5f7fa",
+    marginBottom: 55,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  calendarHeaderText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#002957",
+  },
+  calendarContainer: {
+    backgroundColor: "#fff",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  detailsContainer: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#f5f7fa",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#002957",
+    flex: 1,
+  },
+  datesCount: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#607D8B",
+    backgroundColor: "#E3F2FD",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  cardsContainer: {
+    flex: 1,
   },
   card: {
-    marginRight: 15,
-    marginTop: 15,
-    marginBottom: 10,
-    backgroundColor: '#ffffff',
-    
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    marginBottom: 12,
+  },
+  todayCard: {
+    borderWidth: 1,
+    borderColor: "#002957",
   },
   cardContent: {
-    flexDirection: 'column',
-    justifyContent: 'space-around',
-    // marginBottom: 5,
+    padding: 16,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-    // marginBottom: 20,
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eef2f6",
   },
-  iconWithText: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  timeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    marginTop: 5,
-  },
-  dintPOText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'maroon',
-    marginTop: 5,
-  },
-  presentText: {
-    color: 'black',
+  date: {
     fontSize: 16,
+    fontWeight: "600",
+    color: "#002957",
+  },
+  absentBadge: {
+    backgroundColor: "#FFF3E0",
+    color: "#FF9800",
+  },
+  presentBadge: {
+    backgroundColor: "#E8F5E9",
+    color: "#4CAF50",
+  },
+  partialBadge: {
+    backgroundColor: "#FFF8E1",
+    color: "#FFC107",
+  },
+  leaveBadge: {
+    backgroundColor: "#F3E5F5",
+    color: "#9C27B0",
+  },
+  absentContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
   },
   absentText: {
-    color: 'orange',
-    fontSize: 20,
-    marginBottom: 10,
-    fontWeight:'600',
-    paddingTop:5
+    fontSize: 16,
+    color: "#FF9800",
+    marginLeft: 10,
+  },
+  leaveContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+  },
+  leaveText: {
+    fontSize: 16,
+    color: "#9C27B0",
+    marginLeft: 10,
+  },
+  timesContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  timeBlock: {
+    alignItems: "center",
+    flex: 1,
+  },
+  timeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  timeLabel: {
+    fontSize: 14,
+    color: "#002957",
+    marginLeft: 6,
+    fontWeight: "500",
+  },
+  timeValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#002957",
+  },
+  timeSeparator: {
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timeLine: {
+    height: 2,
+    width: 20,
+    backgroundColor: "#002957",
+    borderRadius: 1,
+  },
+  durationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    backgroundColor: "#f0f5ff",
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  durationText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#002957",
+    marginLeft: 10,
+  },
+  partialText: {
+    color: "#FFC107",
+  },
+  locationToggle: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  locationToggleText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#002957",
+  },
+  locationDetails: {
+    // marginTop: 8,
+  },
+  divider: {
+    marginVertical: 8,
+    backgroundColor: "#e0e0e0",
+  },
+  locationSection: {
+    marginBottom: 6,
+  },
+  locationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    // marginBottom: 4,
+  },
+  locationTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#002957",
+    marginLeft: 6,
+  },
+  locationText: {
+    fontSize: 14,
+    color: "#546E7A",
+    marginLeft: 24,
+     width: 200,
+    height: 90,
+  },
+  mockedBadge: {
+    backgroundColor: "#FFEBEE",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: "flex-start",
+    marginLeft: 24,
+  },
+  mockedText: {
+    fontSize: 12,
+    color: "#F44336",
+  },
+  deviceIconSmall: {
+    width: 120,
+    height: 120,
+    // marginLeft: 8,
+  },
+  addressWithDevice: {
+    flexDirection: "row",
+    alignItems: "flex-end",
   },
 });
 
 export default Schedule;
-
-
-// import React, { useState, useEffect, useCallback } from "react";
-// import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
-// import { ExpandableCalendar, CalendarProvider, LocaleConfig } from "react-native-calendars";
-// import Icon from "react-native-vector-icons/MaterialIcons";
-// import { format } from "date-fns";
+// import React, { useState, useEffect, useCallback, useMemo } from "react";
+// import {
+//   View,
+//   StyleSheet,
+//   Text,
+//   TouchableOpacity,
+//   ScrollView,
+//   Animated,
+//   LayoutAnimation,
+//   Platform,
+//   UIManager,
+// } from "react-native";
+// import { CalendarList } from "react-native-calendars";
+// import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+// import { Card, Badge, Divider } from "react-native-paper";
 // import { calendarservice } from "../../Services/Calendar/Calendar.service";
-// // import { calendarservice } from "../../Services/Calendar/Calendar.service";
- 
-// // Configure the calendar locale
-// LocaleConfig.locales["en"] = {
-//   monthNames: [
-//     "January", "February", "March", "April", "May", "June",
-//     "July", "August", "September", "October", "November", "December"
-//   ],
-//   monthNamesShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-//   dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-//   dayNamesShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-//   today: "Today",
-// };
-// LocaleConfig.defaultLocale = "en";
- 
-// const ExpandableCalendarDemo = () => {
-//   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]); // Default: today
-//   const [punchData, setPunchData] = useState<Record<string, any>>({});
-//   const [loading, setLoading] = useState<boolean>(false);
- 
-//   const todayDate = new Date().toISOString().split("T")[0]; // Get today's date
- 
-//   // Fetch data from selected date to current date
-//   const fetchPunchData = useCallback(async () => {
-//     const formattedTodayDate = format(new Date(), "yyyy-MM-dd"); // Format today’s date
-//     setLoading(true);
- 
-//     try {
-//       const response = await calendarservice.CalendarGet(selectedDate, formattedTodayDate, () => {}); // Call API
-//       console.log("API Response:", response);
- 
-//       const responseData = response?.data || response; // Ensure correct data structure
-//       console.log("Processed Response:", responseData);
- 
-//       if (!responseData || responseData.length === 0) {
-//         setPunchData({ [selectedDate]: [{ punchInTime: null, punchOutTime: null, punchDate: selectedDate }] });
-//         return;
-//       }
- 
-//       const groupedItems: { [key: string]: any[] } = {};
-//       responseData.forEach((item: any) => {
-//         const punchDate = item.punchdate.split("T")[0];
-//         if (!groupedItems[punchDate]) groupedItems[punchDate] = [];
- 
-//         groupedItems[punchDate].push({
-//           punchInTime: item.punchintime,
-//           punchOutTime: item.punchouttime,
-//           duration: item.duration,
-//           outActualAddress: item.outactualaddress,
-//           outMocked: item.outmocked,
-//         });
-//       });
- 
-//       setPunchData(groupedItems);
-//     } catch (error) {
-//       console.error("Fetch error:", error);
-//       Alert.alert("Error", "Failed to fetch punch data");
-//     } finally {
-//       setLoading(false);
-//     }
-//   }, [selectedDate]);
- 
-//   useEffect(() => {
-//     fetchPunchData();
-//   }, [selectedDate]);
- 
-//   // Function to disable future dates
-//   const disableFutureDates = (date: string) => {
-//     return date > todayDate ? { disabled: true, disableTouchEvent: true } : {};
-//   };
- 
-//   // Marked dates for the calendar
-//   const markedDates = Object.keys(punchData).reduce((acc, date) => {
-//     acc[date] = { marked: true, dotColor: "blue" };
-//     return acc;
-//   }, {} as Record<string, any>);
- 
-//   markedDates[selectedDate] = {
-//     selected: true,
-//     selectedColor: "blue",
-//     selectedTextColor: "white",
-//   };
- 
-//   // Disable all future dates
-//   const daysInMonth = 31; // Adjust based on month
-//   for (let i = 0; i < daysInMonth; i++) {
-//     const date = new Date();
-//     date.setDate(date.getDate() + i);
-//     const futureDate = date.toISOString().split("T")[0];
- 
-//     if (futureDate > todayDate) {
-//       markedDates[futureDate] = disableFutureDates(futureDate);
-//     }
+// import { useDispatch } from "react-redux";
+// import {
+//   differenceInSeconds,
+//   format,
+//   parseISO,
+//   isValid,
+//   startOfMonth,
+//   endOfMonth,
+//   eachDayOfInterval,
+// } from "date-fns";
+// import { RefreshControl } from "react-native";
+// import { useSelector } from "react-redux";
+// import { Image } from "react-native";
+
+// if (Platform.OS === "android") {
+//   if (UIManager.setLayoutAnimationEnabledExperimental) {
+//     UIManager.setLayoutAnimationEnabledExperimental(true);
 //   }
- 
-//   const formatDuration = (seconds: number) => {
-//     if (!seconds || seconds < 0) return "N/A"; // Handle invalid values
-//     const hours = Math.floor(seconds / 3600);
-//     const minutes = Math.floor((seconds % 3600) / 60);
-//     return `${hours}h ${minutes}m`;
+// }
+
+// type Item = {
+//   punchInTime?: string | null;
+//   punchOutTime?: string | null;
+//   punchDate?: string;
+//   duration?: number;
+//   outactualaddress?: string;
+//   inactualaddress?: string;
+//   outmocked?: boolean;
+//   status?: string;
+//   leavestatus?: string;
+//   indevice?: any;
+//   outdevice?: any;
+// };
+
+// const todayISO = new Date().toISOString().split("T")[0];
+// const currentYear = new Date().getFullYear();
+// const minDate = `${currentYear}-01-01`;
+
+// const Schedule: React.FC = () => {
+//   const [items, setItems] = useState<Record<string, Item[]>>({});
+//   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
+//   const [selectedDate, setSelectedDate] = useState<string>(todayISO);
+//   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
+//     {}
+//   );
+//   const [calendarCollapsed, setCalendarCollapsed] = useState<boolean>(true);
+//   const [refreshing, setRefreshing] = useState(false);
+//   const todayPunch = useSelector((state: any) => state.todayPunch);
+//   const dispatch = useDispatch();
+
+//   const mobileIcon = require("../../assets/device/mobile.png");
+//   const biometricIcon = require("../../assets/device/biometric.png");
+
+//   useEffect(() => {
+//     if (todayPunch && todayPunch.punchdate) {
+//       const dayISO = todayPunch.punchdate.split("T")[0];
+//       setItems((prev) => ({
+//         ...prev,
+//         [dayISO]: [todayPunch],
+//       }));
+//     }
+//   }, [todayPunch]);
+
+//   /* ---------- Helper functions ---------- */
+//   const isoToDisplay = (iso: string) => {
+//     try {
+//       const date = parseISO(iso);
+//       return isValid(date) ? format(date, "dd/MM/yyyy") : "Invalid Date";
+//     } catch {
+//       return "Invalid Date";
+//     }
 //   };
- 
-//   return (
-//     <CalendarProvider date={selectedDate}>
-//       <ExpandableCalendar
-//         selected={selectedDate}
-//         onDayPress={(day) => {
-//           if (!markedDates[day.dateString]?.disabled) {
-//             setSelectedDate(day.dateString);
-//           } else {
-//             Alert.alert("Invalid Selection", "You cannot select a future date.");
+
+//   const calcDuration = (
+//     dateISO: string,
+//     inT?: string | null,
+//     outT?: string | null
+//   ) => {
+//     if (!inT || !outT) return "--h --m --s";
+//     const base = dateISO;
+//     const into = parseISO(`${base}T${inT}`);
+//     const outo = parseISO(`${base}T${outT}`);
+//     if (!isValid(into) || !isValid(outo)) return "--h --m --s";
+
+//     const sec = differenceInSeconds(outo, into);
+//     if (sec < 0) return "--h --m --s";
+
+//     const h = Math.floor(sec / 3600);
+//     const m = Math.floor((sec % 3600) / 60);
+//     const s = sec % 60;
+//     return `${h}h ${m}m ${s}s`;
+//   };
+
+//   /* ---------- Core data fetch ---------- */
+//   // Update the fetchRange function to handle errors more gracefully
+//   const fetchRange = useCallback(
+//     async (fromISO: string, toISO: string) => {
+//       try {
+//         const data = await calendarservice.CalendarGet(
+//           fromISO,
+//           toISO,
+//           dispatch
+//         );
+//         const grouped: Record<string, Item[]> = {};
+
+//         (data?.data ?? data).forEach((row: any) => {
+//           const dayISO = row.punchdate
+//             ? row.punchdate.split("T")[0]
+//             : new Date().toISOString().split("T")[0];
+//           if (!grouped[dayISO]) grouped[dayISO] = [];
+
+//           grouped[dayISO].push({
+//             punchInTime: row.punchintime || "",
+//             punchOutTime: row.punchouttime || "",
+//             punchDate: row.punchdate,
+//             duration: row.duration,
+//             outactualaddress: row.outactualaddress,
+//             inactualaddress: row.inactualaddress,
+//             outmocked: row.outmocked,
+//             status: row.status,
+//             leavestatus: row.leavestatus,
+//             indevice: row.indevice, 
+//             outdevice: row.outdevice,
+//           });
+//         });
+
+//         const start = parseISO(fromISO);
+//         const end = parseISO(toISO);
+//         for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+//           const iso = d.toISOString().split("T")[0];
+//           if (!grouped[iso]) {
+//             grouped[iso] = [
+//               {
+//                 punchInTime: null,
+//                 punchOutTime: null,
+//                 punchDate: iso,
+//                 status: "Absent",
+//               },
+//             ];
 //           }
-//         }}
-//         markedDates={markedDates}
-//       />
-//       <ScrollView style={styles.eventList}>
-//         {loading ? (
-//           <ActivityIndicator size="large" color="rgb(0,47,81)" style={styles.loader} />
-//         ) : punchData[selectedDate] ? (
-//           punchData[selectedDate].map((data: any, index: number) => (
-//             <View key={index} style={styles.card}>
+//         }
+//         setItems((prev) => ({ ...prev, ...grouped }));
+//       } catch (e) {
+//         console.error("fetchRange error:", e);
+//       }
+//     },
+//     [dispatch]
+//   );
+
+//   /* ---------- Load data for month ---------- */
+//   const loadItemsForMonth = useCallback(
+//     async (monthDate: Date) => {
+//       const monthKey = format(monthDate, "yyyy-MM");
+//       if (loadedMonths.has(monthKey)) return;
+
+//       const fromISO = startOfMonth(monthDate).toISOString().split("T")[0];
+//       const endOfMonthISO = endOfMonth(monthDate).toISOString().split("T")[0];
+//       const toISO = endOfMonthISO > todayISO ? todayISO : endOfMonthISO;
+
+//       await fetchRange(fromISO, toISO);
+//       setLoadedMonths((prev) => new Set(prev).add(monthKey));
+//     },
+//     [loadedMonths, fetchRange]
+//   );
+
+//   const onRefresh = useCallback(async () => {
+//     setRefreshing(true);
+
+
+//     // Refresh data for all loaded months
+//     const monthsToRefresh = Array.from(loadedMonths).map((monthKey) => {
+//       const [year, month] = monthKey.split("-");
+//       return new Date(parseInt(year), parseInt(month) - 1, 1);
+//     });
+
+//     // Also refresh the current month if not already loaded
+//     const currentMonth = new Date();
+//     const currentMonthKey = format(currentMonth, "yyyy-MM");
+//     if (!loadedMonths.has(currentMonthKey)) {
+//       monthsToRefresh.push(currentMonth);
+//     }
+
+//     // Refresh each month
+//     for (const month of monthsToRefresh) {
+//       await loadItemsForMonth(month);
+//     }
+
+//     setRefreshing(false);
+//   }, [loadItemsForMonth, loadedMonths,todayPunch]);
+
+//   /* ---------- Handle day press ---------- */
+//   const onDayPress = useCallback(
+//     async (day: { dateString: string }) => {
+//       setSelectedDate(day.dateString);
+
+//       // Collapse calendar after selection
+//       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+//       setCalendarCollapsed(true);
+
+//       // Fetch data for the range from selected date to today if not already loaded
+//       const datesToLoad = eachDayOfInterval({
+//         start: parseISO(day.dateString),
+//         end: new Date(),
+//       }).map((date) => format(date, "yyyy-MM-dd"));
+
+//       const missingDates = datesToLoad.filter((date) => !items[date]);
+
+//       if (missingDates.length > 0) {
+//         await fetchRange(
+//           missingDates[0],
+//           missingDates[missingDates.length - 1]
+//         );
+//       }
+//     },
+//     [items, fetchRange]
+//   );
+
+//   /* ---------- Toggle calendar visibility ---------- */
+//   const toggleCalendar = useCallback(() => {
+//     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+//     setCalendarCollapsed(!calendarCollapsed);
+//   }, [calendarCollapsed]);
+
+//   /* ---------- Toggle location visibility ---------- */
+//   const toggleExpanded = useCallback((date: string) => {
+//     setExpandedCards((prev) => ({
+//       ...prev,
+//       [date]: !prev[date],
+//     }));
+//   }, []);
+
+//   /* ---------- Get dates from selected date to today ---------- */
+//   const dateRange = useMemo(() => {
+//     if (!selectedDate) return [];
+
+//     const startDate = parseISO(selectedDate);
+//     const endDate = new Date();
+
+//     return eachDayOfInterval({ start: startDate, end: endDate })
+//       .map((date) => format(date, "yyyy-MM-dd"))
+//       .reverse(); // Show most recent first
+//   }, [selectedDate]);
+
+//   /* ---------- Marked dates for calendar ---------- */
+//   const markedDates = useMemo(() => {
+//     const marks: Record<string, any> = {};
+
+//     Object.keys(items).forEach((date) => {
+//       const dayItems = items[date];
+//       const hasPunch = dayItems.some((item) => item.punchInTime);
+//       const isLeave = dayItems.some((item) => item.leavestatus);
+//       const isPartial = dayItems.some(
+//         (item) => item.punchInTime && !item.punchOutTime
+//       );
+
+//       marks[date] = {
+//         selected: date === selectedDate,
+//         selectedColor: "#002957",
+//         disabled: date > todayISO,
+//       };
+
+//       if (hasPunch) {
+//         marks[date].marked = true;
+//         marks[date].dotColor = isPartial ? "#FFA500" : "#4CAF50";
+//       } else if (isLeave) {
+//         marks[date].marked = true;
+//         marks[date].dotColor = "#9C27B0";
+//       } else if (date <= todayISO) {
+//         marks[date].marked = true;
+//         marks[date].dotColor = "#F44336";
+//       }
+//     });
+
+//     return marks;
+//   }, [items, selectedDate]);
+
+//   /* ---------- Render card for a specific date ---------- */
+//   const renderDateCard = useCallback(
+//     (date: string) => {
+//       const dayItems = items[date] || [];
+//       if (dayItems.length === 0) return null;
+
+//       const item = dayItems[0];
+//       const disp = isoToDisplay(date);
+//       const isExpanded = expandedCards[date];
+//       const isToday = date === todayISO;
+//       const isLeave = item.leavestatus;
+
+//       if (isLeave) {
+//         return (
+//           <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
+//             <Card.Content style={styles.cardContent}>
 //               <View style={styles.cardHeader}>
-//                 <Icon name="access-time" size={24} color="yellowgreen" style={styles.icon} />
-//                 <Text style={styles.cardTitle}>Work Details for {selectedDate}</Text>
+//                 <Text style={styles.date}>{disp}</Text>
+//                 <Badge style={styles.leaveBadge}>
+//                   {item.leavestatus} Leave
+//                 </Badge>
 //               </View>
-//               <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-//                 <View style={styles.row}>
-//                   <Icon name="fingerprint" size={20} color="green" style={styles.rowIcon} />
-//                   <Text> {data.punchInTime || "N/A"}</Text>
+//               <View style={styles.leaveContainer}>
+//                 <Icon name="calendar-check" size={24} color="#9C27B0" />
+//                 <Text style={styles.leaveText}>{item.status}</Text>
+//               </View>
+//             </Card.Content>
+//           </Card>
+//         );
+//       }
+
+//       if (!item.punchInTime) {
+//         return (
+//           <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
+//             <Card.Content style={styles.cardContent}>
+//               <View style={styles.cardHeader}>
+//                 <Text style={styles.date}>{disp}</Text>
+//                 <Badge style={styles.absentBadge}>Absent</Badge>
+//               </View>
+//               <View style={styles.absentContainer}>
+//                 <Icon name="calendar-remove" size={24} color="#FF9800" />
+//                 <Text style={styles.absentText}>No attendance record</Text>
+//               </View>
+//             </Card.Content>
+//           </Card>
+//         );
+//       }
+
+//       const isPartial = !item.punchOutTime;
+//       return (
+//         <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
+//           <Card.Content style={styles.cardContent}>
+//             <View style={styles.cardHeader}>
+//               <Text style={styles.date}>{disp}</Text>
+//               <Badge
+//                 style={isPartial ? styles.partialBadge : styles.presentBadge}
+//               >
+//                 {isPartial ? "Partial" : item.status || "Present"}
+//               </Badge>
+//             </View>
+
+//             <View style={styles.timesContainer}>
+//               <View style={styles.timeBlock}>
+//                 <View style={styles.timeHeader}>
+//                   <Icon name="clock-in" size={20} color="#002957" />
+//                   <Text style={styles.timeLabel}>Punch In</Text>
 //                 </View>
-//                 <View style={styles.row}>
-//                   <Icon name="fingerprint" size={20} color="red" style={styles.rowIcon} />
-//                   <Text>{data.punchOutTime || "N/A"}</Text>
+//                 <Text style={styles.timeValue}>{item.punchInTime}</Text>
+//               </View>
+
+//               <View style={styles.timeSeparator}>
+//                 <View style={styles.timeLine} />
+//               </View>
+
+//               <View style={styles.timeBlock}>
+//                 <View style={styles.timeHeader}>
+//                   <Icon name="clock-out" size={20} color="#002957" />
+//                   <Text style={styles.timeLabel}>Punch Out</Text>
 //                 </View>
-//                 <View style={styles.row}>
-//                   <Icon name="schedule" size={20} color="purple" style={styles.rowIcon} />
-//                    <Text>{formatDuration(data.duration)}</Text>
-//                 </View>
+//                 <Text
+//                   style={[styles.timeValue, isPartial && styles.partialText]}
+//                 >
+//                   {item.punchOutTime}
+//                 </Text>
 //               </View>
 //             </View>
-//           ))
-//         ) : (
-//           <View style={styles.noDataContainer}>
-//             <Text style={styles.noDataText}>No data for this day</Text>
-//           </View>
-//         )}
-//       </ScrollView>
-//     </CalendarProvider>
+
+//             <View style={styles.durationContainer}>
+//               <Icon name="timer" size={20} color="#002957" />
+//               <Text style={styles.durationText}>
+//                 {isPartial
+//                   ? ""
+//                   : calcDuration(date, item.punchInTime, item.punchOutTime)}
+//               </Text>
+//             </View>
+
+//             {/* Location Toggle */}
+//             {item.outactualaddress && (
+//               <TouchableOpacity
+//                 style={styles.locationToggle}
+//                 onPress={() => toggleExpanded(date)}
+//                 activeOpacity={0.7}
+//               >
+//                 <Text style={styles.locationToggleText}>
+//                   {isExpanded ? "Hide Punch Address" : "Show Punch Address"}
+//                 </Text>
+//                 <Icon
+//                   name={isExpanded ? "chevron-up" : "chevron-down"}
+//                   size={22}
+//                   color="#002957"
+//                 />
+//               </TouchableOpacity>
+//             )}
+
+//             {isExpanded && (
+//               <Animated.View style={styles.locationDetails}>
+//                 <Divider style={styles.divider} />
+
+//                 {/* Punch In */}
+//                 <View style={styles.locationSection}>
+//                   <View style={styles.locationHeader}>
+//                     <Icon name="map-marker" size={18} color="#002957" />
+//                     <Text style={styles.locationTitle}>Punch In</Text>
+                   
+//                   </View>
+//                   <View style={styles.addressWithDevice}>
+//                   <Text style={styles.locationText}>
+//                     {item.inactualaddress || "No address available"}
+//                   </Text>
+//                    <Image
+//                       source={
+//                         item.indevice?.toLowerCase() === "mobile"
+//                           ? mobileIcon
+//                           : biometricIcon
+//                       }
+//                       style={styles.deviceIconSmall}
+//                       resizeMode="contain"
+//                     />
+//                   </View>
+//                 </View>
+
+//                 <Divider style={styles.divider} />
+
+//                 {/* Punch Out */}
+//                 <View style={styles.locationSection}>
+//                   <View style={styles.locationHeader}>
+//                     <Icon name="map-marker" size={18} color="#002957" />
+//                     <Text style={styles.locationTitle}>Punch Out</Text>
+                  
+//                   </View>
+//                   <View style={styles.addressWithDevice}>
+//                   <Text style={styles.locationText}>
+//                     {item.outactualaddress || "No address available"}
+//                   </Text>
+//                     <Image
+//                       source={
+//                         item.outdevice?.toLowerCase() === "mobile"
+//                           ? mobileIcon
+//                           : biometricIcon
+//                       }
+//                       style={styles.deviceIconSmall}
+//                       resizeMode="contain"
+//                     />
+//                   </View>
+//                 </View>
+//               </Animated.View>
+//             )}
+//           </Card.Content>
+//         </Card>
+//       );
+//     },
+//     [items, expandedCards, toggleExpanded]
+//   );
+
+//   /* ---------- Initial load ---------- */
+//   useEffect(() => {
+//     // Load current month initially
+//     loadItemsForMonth(new Date());
+//   }, []);
+
+//   /* ---------- Component ---------- */
+//   return (
+//     <View style={styles.container}>
+//       {/* Calendar Header with Toggle */}
+//       <TouchableOpacity
+//         style={styles.calendarHeader}
+//         onPress={toggleCalendar}
+//         activeOpacity={0.7}
+//       >
+//         <Text style={styles.calendarHeaderText}>Calendar</Text>
+//         <Icon
+//           name={calendarCollapsed ? "chevron-down" : "chevron-up"}
+//           size={24}
+//           color="#002957"
+//         />
+//       </TouchableOpacity>
+
+//       {/* Collapsible Calendar */}
+//       {!calendarCollapsed && (
+//         <Animated.View style={styles.calendarContainer}>
+//           <CalendarList
+//             current={todayISO}
+//             minDate={minDate}
+//             maxDate={todayISO}
+//             onDayPress={onDayPress}
+//             markedDates={markedDates}
+//             onVisibleMonthsChange={(months) => {
+//               months.forEach((month) =>
+//                 loadItemsForMonth(new Date(month.dateString))
+//               );
+//             }}
+//             horizontal
+//             pagingEnabled
+//             theme={{
+//               calendarBackground: "#ffffff",
+//               textSectionTitleColor: "#002957",
+//               selectedDayBackgroundColor: "#002957",
+//               selectedDayTextColor: "#ffffff",
+//               todayTextColor: "#002957",
+//               dayTextColor: "#2d4150",
+//               textDisabledColor: "#d9e1e8",
+//               dotColor: "#002957",
+//               selectedDotColor: "#ffffff",
+//               arrowColor: "#002957",
+//               monthTextColor: "#002957",
+//               textDayFontWeight: "300",
+//               textMonthFontWeight: "bold",
+//               textDayHeaderFontWeight: "500",
+//               textDayFontSize: 14,
+//               textMonthFontSize: 16,
+//               textDayHeaderFontSize: 14,
+//             }}
+//           />
+//         </Animated.View>
+//       )}
+
+//       <View style={styles.detailsContainer}>
+//         <View style={styles.sectionHeader}>
+//           <Text style={styles.sectionTitle}>
+//             Attendance from {isoToDisplay(selectedDate)} to Today
+//           </Text>
+//           <Text style={styles.datesCount}>
+//             {dateRange.length} day{dateRange.length !== 1 ? "s" : ""}
+//           </Text>
+//         </View>
+
+//         <ScrollView
+//           style={styles.cardsContainer}
+//           showsVerticalScrollIndicator={false}
+//           refreshControl={
+//             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+//           }
+//         >
+//           {dateRange.map((date) => renderDateCard(date))}
+//         </ScrollView>
+//       </View>
+//     </View>
 //   );
 // };
- 
+
+// /* ---------- Styles ---------- */
 // const styles = StyleSheet.create({
-//   eventList: {
-//     marginTop: 20,
-//     padding: 10,
+//   container: {
+//     flex: 1,
+//     backgroundColor: "#f5f7fa",
+//     marginBottom: 55,
 //   },
-//   loader: {
-//     marginTop: 20,
-//   },
-//   card: {
+//   calendarHeader: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     padding: 16,
 //     backgroundColor: "#fff",
-//     padding: 15,
-//     marginBottom: 15,
-//     borderRadius: 10,
+//     borderBottomWidth: 1,
+//     borderBottomColor: "#e0e0e0",
+//   },
+//   calendarHeaderText: {
+//     fontSize: 18,
+//     fontWeight: "600",
+//     color: "#002957",
+//   },
+//   calendarContainer: {
+//     backgroundColor: "#fff",
+//     elevation: 2,
 //     shadowColor: "#000",
 //     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.2,
-//     shadowRadius: 5,
-//     elevation: 3,
+//     shadowOpacity: 0.1,
+//     shadowRadius: 4,
+//   },
+//   detailsContainer: {
+//     flex: 1,
+//     padding: 16,
+//     backgroundColor: "#f5f7fa",
+//   },
+//   sectionHeader: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     marginBottom: 16,
+//   },
+//   sectionTitle: {
+//     fontSize: 16,
+//     fontWeight: "600",
+//     color: "#002957",
+//     flex: 1,
+//   },
+//   datesCount: {
+//     fontSize: 16,
+//     fontWeight: "500",
+//     color: "#607D8B",
+//     backgroundColor: "#E3F2FD",
+//     paddingHorizontal: 10,
+//     paddingVertical: 4,
+//     borderRadius: 12,
+//   },
+//   cardsContainer: {
+//     flex: 1,
+//   },
+//   card: {
+//     borderRadius: 12,
+//     backgroundColor: "#fff",
+//     elevation: 2,
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 1 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 3,
+//     marginBottom: 12,
+//   },
+//   todayCard: {
+//     borderWidth: 1,
+//     borderColor: "#002957",
+//   },
+//   cardContent: {
+//     padding: 16,
 //   },
 //   cardHeader: {
 //     flexDirection: "row",
+//     justifyContent: "space-between",
 //     alignItems: "center",
-//     marginBottom: 10,
+//     marginBottom: 16,
+//     paddingBottom: 12,
+//     borderBottomWidth: 1,
+//     borderBottomColor: "#eef2f6",
 //   },
-//   icon: {
-//     marginRight: 10,
-//   },
-//   cardTitle: {
+//   date: {
 //     fontSize: 16,
-//     fontWeight: "bold",
+//     fontWeight: "600",
+//     color: "#002957",
 //   },
-//   row: {
-//     flexDirection: "column",
-//     alignItems: "center",
-//     marginBottom: 8,
-//     gap: 8,
+//   absentBadge: {
+//     backgroundColor: "#FFF3E0",
+//     color: "#FF9800",
 //   },
-//   rowIcon: {
-//     marginRight: 10,
+//   presentBadge: {
+//     backgroundColor: "#E8F5E9",
+//     color: "#4CAF50",
 //   },
-//   noDataContainer: {
+//   partialBadge: {
+//     backgroundColor: "#FFF8E1",
+//     color: "#FFC107",
+//   },
+//   leaveBadge: {
+//     backgroundColor: "#F3E5F5",
+//     color: "#9C27B0",
+//   },
+//   absentContainer: {
+//     flexDirection: "row",
 //     alignItems: "center",
 //     justifyContent: "center",
-//     padding: 20,
+//     paddingVertical: 20,
 //   },
-//   noDataText: {
+//   absentText: {
 //     fontSize: 16,
-//     fontStyle: "italic",
-//     color: "#777",
+//     color: "#FF9800",
+//     marginLeft: 10,
+//   },
+//   leaveContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 20,
+//   },
+//   leaveText: {
+//     fontSize: 16,
+//     color: "#9C27B0",
+//     marginLeft: 10,
+//   },
+//   timesContainer: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     marginBottom: 16,
+//   },
+//   timeBlock: {
+//     alignItems: "center",
+//     flex: 1,
+//   },
+//   timeHeader: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     marginBottom: 8,
+//   },
+//   timeLabel: {
+//     fontSize: 14,
+//     color: "#002957",
+//     marginLeft: 6,
+//     fontWeight: "500",
+//   },
+//   timeValue: {
+//     fontSize: 16,
+//     fontWeight: "600",
+//     color: "#002957",
+//   },
+//   timeSeparator: {
+//     width: 40,
+//     alignItems: "center",
+//     justifyContent: "center",
+//   },
+//   timeLine: {
+//     height: 2,
+//     width: 20,
+//     backgroundColor: "#002957",
+//     borderRadius: 1,
+//   },
+//   durationContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     padding: 12,
+//     backgroundColor: "#f0f5ff",
+//     borderRadius: 8,
+//     marginBottom: 12,
+//   },
+//   durationText: {
+//     fontSize: 16,
+//     fontWeight: "600",
+//     color: "#002957",
+//     marginLeft: 10,
+//   },
+//   partialText: {
+//     color: "#FFC107",
+//   },
+//   locationToggle: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     paddingVertical: 8,
+//   },
+//   locationToggleText: {
+//     fontSize: 14,
+//     fontWeight: "500",
+//     color: "#002957",
+//   },
+//   locationDetails: {
+//     // marginTop: 8,
+//   },
+//   divider: {
+//     marginVertical: 8,
+//     backgroundColor: "#e0e0e0",
+//   },
+//   locationSection: {
+//     marginBottom: 6,
+//   },
+//   locationHeader: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     // marginBottom: 4,
+//   },
+//   locationTitle: {
+//     fontSize: 16,
+//     fontWeight: "600",
+//     color: "#002957",
+//     marginLeft: 6,
+//   },
+//   locationText: {
+//     fontSize: 14,
+//     color: "#546E7A",
+//     marginLeft: 24,
+//      width: 200,
+//     height: 90,
+//   },
+//   mockedBadge: {
+//     backgroundColor: "#FFEBEE",
+//     paddingHorizontal: 8,
+//     paddingVertical: 4,
+//     borderRadius: 4,
+//     alignSelf: "flex-start",
+//     marginLeft: 24,
+//   },
+//   mockedText: {
+//     fontSize: 12,
+//     color: "#F44336",
+//   },
+//   deviceIconSmall: {
+//     width: 120,
+//     height: 120,
+//     // marginLeft: 8,
+//   },
+//   addressWithDevice: {
+//     flexDirection: "row",
+//     alignItems: "flex-end",
 //   },
 // });
- 
-// export default ExpandableCalendarDemo;
+
+// export default Schedule;

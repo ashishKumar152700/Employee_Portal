@@ -22,6 +22,7 @@ import AddEmployeeRequestForm from '../../Screen/AddEmpToTeam/AddEmployeeRequest
 import OvertimeRequestForm from '../../Screen/Overtime/OvertimeRequestForm';
 import ResignationForm from '../../Screen/Resignation/ResignationForm';
 import TaxModule from '../../Screen/TaxModule/TaxModule';
+import { StatusBar } from 'react-native';
 const Drawer = createDrawerNavigator();
 
 const CustomHeader = ({ navigation, title }) => {
@@ -31,10 +32,12 @@ const CustomHeader = ({ navigation, title }) => {
         <Ionicons name="menu" size={28} color="white" />
       </TouchableOpacity>
 
-      <Image
+    <Image
+        source={require("../../assets/RktLogo.jpg")}
         style={styles.logo}
-        source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Logo_TV_2015.png' }}
+        resizeMode="contain"
       />
+      
       <Text style={styles.headerText}>{title}</Text>
 
       <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
@@ -74,7 +77,8 @@ function DrawerNavigator() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+        <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
       <Drawer.Navigator
         initialRouteName="Attendance"
         drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -102,42 +106,97 @@ function DrawerNavigator() {
         <Drawer.Screen name="TaxModule" component={TaxModule} />
 
       </Drawer.Navigator>
-    </View>
+    </>
   );
 }
 
+// const styles = StyleSheet.create({
+//   headerContainer: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     justifyContent: 'space-between',
+//     backgroundColor: 'rgb(0, 41, 87)',
+//     paddingHorizontal: 16,
+//     paddingVertical: 10,
+//     elevation: 4,
+//   },
+//   logo: {
+//     width: 40,
+//     height: 40,
+//     marginHorizontal: 20,
+//     backgroundColor: 'white',
+//   },
+//   headerText: {
+//     color: 'white',
+//     fontSize: 20,
+//     fontWeight: 'bold',
+//     flex: 1,
+//   },
+//   loaderContainer: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     backgroundColor: 'white',
+//   },
+//   loadingText: {
+//     marginTop: 10,
+//     fontSize: 16,
+//     color: 'rgb(0, 41, 87)',
+//   },
+// });
+
+
 const styles = StyleSheet.create({
   headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgb(0, 41, 87)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgb(0, 41, 87)",
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    elevation: 4,
+    paddingVertical: 12,
+    elevation: 8,
+    shadowColor: 'rgb(0, 41, 87)',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    height: 60,
+  },
+  menuButton: {
+    padding: 8,
+    marginRight: 8,
+    borderRadius: 20,
   },
   logo: {
-    width: 40,
-    height: 40,
-    marginHorizontal: 20,
-    backgroundColor: 'white',
+    width: 80,
+    height: 35,
+    marginHorizontal: 12,
+    backgroundColor: "white",
+    borderRadius: 4,
   },
   headerText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
     flex: 1,
+    marginLeft: 8,
+  },
+  profileButton: {
+    padding: 4,
+    borderRadius: 20,
   },
   loaderContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    color: 'rgb(0, 41, 87)',
+    color: "rgb(0, 41, 87)",
+    fontWeight: "500",
   },
 });
 

@@ -30,7 +30,6 @@ export async function getUser() {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log("resp @@@@@ : " , response);
     
     return response.data.data;
   } catch (error) {
