@@ -29,10 +29,7 @@
     "expo-linear-gradient": "~14.0.2",
     "expo-local-authentication": "~15.0.2",
     "expo-location": "~18.0.7",
-<<<<<<< HEAD
     "lottie-react-native": "^7.3.2",
-=======
->>>>>>> e53dec96b7fe168bd388e94af028df6d94d63e31
     "react": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-native": "^0.76.7",
