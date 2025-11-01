@@ -22,7 +22,6 @@ class LoginServices {
         await AsyncStorage.setItem("user", JSON.stringify(user));
         await AsyncStorage.setItem("userId", JSON.stringify(user.id));
 
-        // ✅ CRITICAL FIX: Store employeeCode as string
         await AsyncStorage.setItem("employeeCode", String(user.employeecode));
 
         await dispatch({ type: "userDetails", payload: response.data.data });

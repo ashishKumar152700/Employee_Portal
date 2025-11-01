@@ -18,10 +18,11 @@ import { format } from "date-fns";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { submitLeaveApplication } from "../../Services/Leave/Leave.service";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../Global/Types';
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../../Global/Types";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { ActivityIndicator } from "react-native";
 
 const leaveTypes = {
   Casual: "Casual Leave",
@@ -31,22 +32,38 @@ const leaveTypes = {
 };
 
 const LeaveApplicationScreen: React.FC = () => {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [leaveType, setLeaveType] = useState<string>(leaveTypes.Casual);
   const [selectedOption, setSelectedOption] = useState<string>("full-day");
   const [reason, setReason] = useState<string>("");
   const [approverId, setApproverId] = useState<number>(0);
   const [applicationDate] = useState<string>(new Date().toISOString());
   const [totalDays, setTotalDays] = useState<number>(1);
-  const [isCalendarModalVisible, setIsCalendarModalVisible] = useState<boolean>(false);
+  const [isCalendarModalVisible, setIsCalendarModalVisible] =
+    useState<boolean>(false);
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [userDOJ, setUserDOJ] = useState<Date | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MyLeaveScreen'>;
+  type LoginScreenNavigationProp = StackNavigationProp<
+    RootStackParamList,
+    "MyLeaveScreen"
+  >;
 
   const leave_Details = useSelector((state: any) => state.leaveDetails);
-  const managerDetailsSelector = useSelector((state:any) => state.managerInfo);
+  const managerDetailsSelector = useSelector((state: any) => state.managerInfo);
+
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    type: "info", // 'success', 'error', 'warning', 'info'
+    buttons: null as any,
+  });
+
+  const [loaderVisible, setLoaderVisible] = useState(false);
+  const [loaderMessage, setLoaderMessage] = useState("");
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -69,18 +86,67 @@ const LeaveApplicationScreen: React.FC = () => {
     setApproverId(0);
     setTotalDays(0);
     setSelectedOption("full-day");
+
+     setAlertVisible(false);
   };
 
   useEffect(() => {
     getUserDetails();
   }, []);
 
+  // Get leave data to check balances
+  const getLeaveBalances = () => {
+    if (!leave_Details || Object.keys(leave_Details).length === 0) {
+      return {
+        casualleave: 0,
+        sickleave: 0,
+        optionalleave: 0,
+        paidleave: 0,
+      };
+    }
+    return leave_Details;
+  };
+
+  const leaveBalances = getLeaveBalances();
+
+  // Check if leave type is available
+  const isLeaveTypeAvailable = (type: string) => {
+    switch (type) {
+      case leaveTypes.Casual:
+        return (leaveBalances.casualleave || 0) > 0;
+      case leaveTypes.Sick:
+        return (leaveBalances.sickleave || 0) > 0;
+      case leaveTypes.Optional:
+        return (leaveBalances.optionalleave || 0) > 0;
+      case leaveTypes.Paid:
+        return (leaveBalances.paidleave || 0) > 0;
+      default:
+        return true;
+    }
+  };
+
+  // Get available leave count for a type
+  const getAvailableLeaves = (type: string) => {
+    switch (type) {
+      case leaveTypes.Casual:
+        return leaveBalances.casualleave || 0;
+      case leaveTypes.Sick:
+        return leaveBalances.sickleave || 0;
+      case leaveTypes.Optional:
+        return leaveBalances.optionalleave || 0;
+      case leaveTypes.Paid:
+        return leaveBalances.paidleave || 0;
+      default:
+        return 0;
+    }
+  };
+
   async function getUserDetails() {
     try {
       const userDetailsString = await AsyncStorage.getItem("user");
       if (userDetailsString) {
         const userDetails = JSON.parse(userDetailsString);
-        const joiningDate = new Date(userDetails.joiningdate); 
+        const joiningDate = new Date(userDetails.joiningdate);
         setUserDOJ(joiningDate);
       }
     } catch (error) {
@@ -94,13 +160,210 @@ const LeaveApplicationScreen: React.FC = () => {
     }, [])
   );
 
+  const CustomAlert = ({
+    visible,
+    title,
+    message,
+    type,
+    onClose,
+    buttons,
+  }: any) => {
+    if (!visible) return null;
+
+    const getBackgroundColor = () => {
+      switch (type) {
+        case "success":
+          return "#28a745";
+        case "error":
+          return "#dc3545";
+        case "warning":
+          return "#ffc107";
+        default:
+          return "#002957";
+      }
+    };
+
+    const getIcon = () => {
+      switch (type) {
+        case "success":
+          return "check-circle";
+        case "error":
+          return "error";
+        case "warning":
+          return "warning";
+        default:
+          return "info";
+      }
+    };
+
+    return (
+      <Modal transparent visible={visible} animationType="fade">
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertContainer}>
+            <View
+              style={[
+                styles.alertHeader,
+                { backgroundColor: getBackgroundColor() },
+              ]}
+            >
+              <Icon name={getIcon()} size={24} color="#fff" />
+              <Text style={styles.alertTitle}>{title}</Text>
+            </View>
+            <View style={styles.alertBody}>
+              <Text style={styles.alertMessage}>{message}</Text>
+            </View>
+            <View style={styles.alertFooter}>
+              {buttons ? (
+                buttons.map((button: any, index: number) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.alertButton,
+                      button.style === "cancel" && styles.alertButtonCancel,
+                    ]}
+                    onPress={button.onPress}
+                  >
+                    <Text
+                      style={[
+                        styles.alertButtonText,
+                        button.style === "cancel" &&
+                          styles.alertButtonCancelText,
+                      ]}
+                    >
+                      {button.text}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <TouchableOpacity style={styles.alertButton} onPress={onClose}>
+                  <Text style={styles.alertButtonText}>OK</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  // Custom Loading Component
+  const CustomLoader = ({ visible, message }: any) => {
+    if (!visible) return null;
+
+    return (
+      <Modal transparent visible={visible} animationType="fade">
+        <View style={styles.loaderOverlay}>
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#002957" />
+            <Text style={styles.loaderText}>{message || "Submitting..."}</Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  // const handleApplyLeave = async () => {
+  //   if (!selectedStartDate) {
+  //     Alert.alert("Error", "Please select a start date.");
+  //     return;
+  //   }
+  //   if (!reason.trim()) {
+  //     Alert.alert("Error", "Reason for leave is required.");
+  //     return;
+  //   }
+
+  //   // Check if selected leave type has available leaves
+  //   if (!isLeaveTypeAvailable(leaveType)) {
+  //     Alert.alert(
+  //       "No Leaves Available",
+  //       `You have no ${leaveType} leaves remaining. Please select another leave type.`,
+  //       [{ text: "OK", style: "default" }]
+  //     );
+  //     return;
+  //   }
+
+  //   const leaveApplication = {
+  //     leavetype: leaveType,
+  //     leavestart: selectedStartDate
+  //       ? format(selectedStartDate, "dd/MM/yyyy")
+  //       : "",
+  //     leaveend: selectedEndDate
+  //       ? format(selectedEndDate, "dd/MM/yyyy")
+  //       : format(selectedStartDate, "dd/MM/yyyy"),
+  //     leavepart: selectedOption,
+  //     reason: reason.trim(),
+  //     approver: managerDetailsSelector.id,
+  //   };
+
+  //   console.log("Leave Application:", leaveApplication);
+
+  //   setIsLoading(true);
+
+  //   try {
+  //     const response = await submitLeaveApplication(leaveApplication);
+  //     if (response.status === 200) {
+  //       Alert.alert(
+  //         "Success!",
+  //         response.message || "Leave application submitted successfully!",
+  //         [
+  //           {
+  //             text: "OK",
+  //             style: "default",
+  //             onPress: () => {
+  //               resetForm();
+  //               navigation.navigate("MyLeaveScreen");
+  //             },
+  //           },
+  //         ]
+  //       );
+  //     } else {
+  //       Alert.alert(
+  //         "Error",
+  //         response.message || "Failed to submit leave application."
+  //       );
+  //     }
+  //   } catch (error) {
+  //     Alert.alert(
+  //       "Error",
+  //       "An error occurred while submitting the leave application."
+  //     );
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   const handleApplyLeave = async () => {
     if (!selectedStartDate) {
-      Alert.alert("Error", "Please select a start date.");
+      setAlertConfig({
+        title: "Missing Information",
+        message: "Please select a start date.",
+        type: "warning",
+        buttons: null,
+      });
+      setAlertVisible(true);
       return;
     }
+
     if (!reason.trim()) {
-      Alert.alert("Error", "Reason for leave is required.");
+      setAlertConfig({
+        title: "Missing Information",
+        message: "Reason for leave is required.",
+        type: "warning",
+        buttons: null,
+      });
+      setAlertVisible(true);
+      return;
+    }
+
+    // Check if selected leave type has available leaves
+    if (!isLeaveTypeAvailable(leaveType)) {
+      setAlertConfig({
+        title: "No Leaves Available",
+        message: `You have no ${leaveType} leaves remaining. Please select another leave type.`,
+        type: "warning",
+        buttons: null,
+      });
+      setAlertVisible(true);
       return;
     }
 
@@ -116,29 +379,61 @@ const LeaveApplicationScreen: React.FC = () => {
       reason: reason.trim(),
       approver: managerDetailsSelector.id,
     };
-    
+
     console.log("Leave Application:", leaveApplication);
+
+    // Show loader
+    setLoaderMessage("Submitting your leave application...");
+    setLoaderVisible(true);
 
     try {
       const response = await submitLeaveApplication(leaveApplication);
       if (response.status === 200) {
-        Alert.alert(
-          "Success",
-          response.message || "Leave application submitted successfully!"
-        );
-        resetForm();
-        navigation.navigate('MyLeaveScreen');
+        setLoaderVisible(false); // Hide loader first
+
+        // Show success alert
+        setAlertConfig({
+          title: "Success!",
+          message:
+            response.message || "Leave application submitted successfully!",
+          type: "success",
+          buttons: [
+            // {
+            //   text: "View My Leaves",
+            //   onPress: () => {
+            //     resetForm();
+            //     navigation.navigate("MyLeaveScreen");
+            //   },
+            // },
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: () => {
+                resetForm();
+              },
+            },
+          ],
+        });
+        setAlertVisible(true);
       } else {
-        Alert.alert(
-          "Error",
-          response.message || "Failed to submit leave application."
-        );
+        setLoaderVisible(false);
+        setAlertConfig({
+          title: "Submission Failed",
+          message: response.message || "Failed to submit leave application.",
+          type: "error",
+          buttons: null,
+        });
+        setAlertVisible(true);
       }
     } catch (error) {
-      Alert.alert(
-        "Error",
-        "An error occurred while submitting the leave application."
-      );
+      setLoaderVisible(false);
+      setAlertConfig({
+        title: "Error",
+        message: "An error occurred while submitting the leave application.",
+        type: "error",
+        buttons: null,
+      });
+      setAlertVisible(true);
     }
   };
 
@@ -177,9 +472,12 @@ const LeaveApplicationScreen: React.FC = () => {
 
   const showDateRange = () => {
     if (!selectedStartDate) return "Select Dates";
-    
+
     if (selectedEndDate) {
-      return `${format(selectedStartDate, "dd-MM-yyyy")} to ${format(selectedEndDate, "dd-MM-yyyy")}`;
+      return `${format(selectedStartDate, "dd-MM-yyyy")} to ${format(
+        selectedEndDate,
+        "dd-MM-yyyy"
+      )}`;
     } else {
       return format(selectedStartDate, "dd-MM-yyyy");
     }
@@ -187,9 +485,12 @@ const LeaveApplicationScreen: React.FC = () => {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.header}>Apply for Leave</Text>
-        
+
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
@@ -222,16 +523,27 @@ const LeaveApplicationScreen: React.FC = () => {
                     if (userDOJ) {
                       const dojDate = new Date(userDOJ);
                       const appDate = new Date(applicationDate);
-                      
+
                       const diffInMonths =
                         (appDate.getFullYear() - dojDate.getFullYear()) * 12 +
                         (appDate.getMonth() - dojDate.getMonth());
-              
+
+                      // if (diffInMonths < 6) {
+                      //   Alert.alert(
+                      //     "Not Eligible",
+                      //     "You are not eligible to get paid leave since you are in your probation period."
+                      //   );
+                      //   return;
+                      // }
                       if (diffInMonths < 6) {
-                        Alert.alert(
-                          "Not Eligible",
-                          "You are not eligible to get paid leave since you are in your probation period."
-                        );
+                        setAlertConfig({
+                          title: "Not Eligible",
+                          message:
+                            "You are not eligible to get paid leave since you are in your probation period.",
+                          type: "warning",
+                          buttons: null,
+                        });
+                        setAlertVisible(true);
                         return;
                       }
                     } else {
@@ -245,10 +557,13 @@ const LeaveApplicationScreen: React.FC = () => {
                   setLeaveType(leaveTypes[label]);
                 }}
               >
-                <Text style={[
-                  styles.radioButtonText,
-                  leaveType === leaveTypes[label] && styles.radioButtonTextSelected
-                ]}>
+                <Text
+                  style={[
+                    styles.radioButtonText,
+                    leaveType === leaveTypes[label] &&
+                      styles.radioButtonTextSelected,
+                  ]}
+                >
                   {label}
                 </Text>
               </TouchableOpacity>
@@ -263,9 +578,7 @@ const LeaveApplicationScreen: React.FC = () => {
             style={styles.dateButton}
           >
             <Icon name="event" size={20} color="#002957" />
-            <Text style={styles.dateButtonText}>
-              {showDateRange()}
-            </Text>
+            <Text style={styles.dateButtonText}>{showDateRange()}</Text>
             <Icon name="keyboard-arrow-down" size={24} color="#002957" />
           </TouchableOpacity>
 
@@ -292,7 +605,7 @@ const LeaveApplicationScreen: React.FC = () => {
           {totalDays > 0 && (
             <View style={styles.daysContainer}>
               <Text style={styles.daysText}>
-                {totalDays} day{totalDays !== 1 ? 's' : ''} selected
+                {totalDays} day{totalDays !== 1 ? "s" : ""} selected
               </Text>
             </View>
           )}
@@ -310,8 +623,28 @@ const LeaveApplicationScreen: React.FC = () => {
           />
         </View>
 
-        <TouchableOpacity onPress={handleApplyLeave} style={styles.submitButton}>
+        {/* <TouchableOpacity onPress={handleApplyLeave} style={styles.submitButton}>
           <Text style={styles.submitButtonText}>Submit Leave Application</Text>
+        </TouchableOpacity> */}
+
+        <TouchableOpacity
+          onPress={handleApplyLeave}
+          style={[
+            styles.submitButton,
+            isLoading && styles.submitButtonDisabled,
+          ]}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.submitButtonText}>Submitting...</Text>
+            </View>
+          ) : (
+            <Text style={styles.submitButtonText}>
+              Submit Leave Application
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
 
@@ -325,14 +658,14 @@ const LeaveApplicationScreen: React.FC = () => {
           <View style={styles.calendarContainer}>
             <View style={styles.calendarHeader}>
               <Text style={styles.calendarTitle}>Select Date Range</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setIsCalendarModalVisible(false)}
                 style={styles.closeCalendarButton}
               >
                 <Icon name="close" size={24} color="#002957" />
               </TouchableOpacity>
             </View>
-            
+
             <CalendarPicker
               todayBackgroundColor={"#e9f0f7"}
               minDate={new Date()}
@@ -344,7 +677,7 @@ const LeaveApplicationScreen: React.FC = () => {
               selectedStartDate={selectedStartDate}
               selectedEndDate={selectedEndDate}
             />
-            
+
             <TouchableOpacity
               onPress={handleConfirmDates}
               style={styles.confirmButton}
@@ -354,6 +687,17 @@ const LeaveApplicationScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertVisible(false)}
+      />
+
+      <CustomLoader visible={loaderVisible} message={loaderMessage} />
     </Animated.View>
   );
 };
@@ -361,52 +705,52 @@ const LeaveApplicationScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
   },
   scrollContainer: {
     padding: 16,
   },
   header: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#002957',
+    fontWeight: "bold",
+    color: "#002957",
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   infoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   infoItem: {
     flex: 1,
   },
   infoLabel: {
     fontSize: 14,
-    color: '#6c757d',
+    color: "#6c757d",
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#002957',
+    fontWeight: "600",
+    color: "#002957",
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -414,52 +758,52 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#002957',
+    fontWeight: "600",
+    color: "#002957",
     marginBottom: 14,
   },
   radioButtonContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   radioButton: {
-    width: '48%',
+    width: "48%",
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
     marginBottom: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioButtonSelected: {
-    backgroundColor: '#e9f0f7',
-    borderColor: '#002957',
+    backgroundColor: "#e9f0f7",
+    borderColor: "#002957",
   },
   radioButtonText: {
     fontSize: 14,
-    color: '#495057',
-    fontWeight: '500',
+    color: "#495057",
+    fontWeight: "500",
   },
   radioButtonTextSelected: {
-    color: '#002957',
-    fontWeight: '600',
+    color: "#002957",
+    fontWeight: "600",
   },
   dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f8f9fa',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f8f9fa",
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
   },
   dateButtonText: {
     fontSize: 16,
-    color: '#002957',
-    fontWeight: '500',
+    color: "#002957",
+    fontWeight: "500",
     flex: 1,
     marginHorizontal: 12,
   },
@@ -468,9 +812,9 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
     borderRadius: 12,
-    overflow: 'visible',
+    overflow: "visible",
   },
   picker: {
     height: 55,
@@ -479,541 +823,198 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#e9f0f7',
+    backgroundColor: "#e9f0f7",
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   daysText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#002957',
+    fontWeight: "600",
+    color: "#002957",
   },
   textInput: {
     height: 80,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
     borderRadius: 12,
     padding: 14,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
     fontSize: 14,
   },
   submitButton: {
-    backgroundColor: '#002957',
+    backgroundColor: "#002957",
     padding: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 95,
   },
   submitButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   calendarContainer: {
-    width: '95%',
-    backgroundColor: '#fff',
+    width: "95%",
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 14,
   },
   calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   calendarTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#002957',
+    fontWeight: "600",
+    color: "#002957",
   },
   closeCalendarButton: {
     padding: 4,
   },
   confirmButton: {
-    backgroundColor: '#002957',
+    backgroundColor: "#002957",
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   confirmButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
+  },
+  radioButtonDisabled: {
+    backgroundColor: "#f8f9fa",
+    borderColor: "#dee2e6",
+    opacity: 0.6,
+  },
+  radioButtonContent: {
+    alignItems: "center",
+  },
+  radioButtonTextDisabled: {
+    color: "#6c757d",
+  },
+  leaveCountText: {
+    fontSize: 12,
+    color: "#28a745",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  leaveCountTextDisabled: {
+    color: "#dc3545",
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Alert Styles
+  alertOverlay: {
+    flex: 1,
+     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // backgroundColor: "#002957",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  alertContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    width: "100%",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  alertHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#002957",
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginLeft: 8,
+  },
+  alertBody: {
+    padding: 20,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: "#495057",
+    lineHeight: 22,
+  },
+  alertFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    padding: 5,
+    // borderTopWidth: 1,
+    // borderTopColor: "#002957",
+  },
+  alertButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#002957",
+    borderRadius: 8,
+    marginLeft: 8,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  alertButtonCancel: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#6c757d",
+  },
+  alertButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  alertButtonCancelText: {
+    color: "#6c757d",
+  },
+
+  // Loader Styles
+  loaderOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loaderContainer: {
+    backgroundColor: "#fff",
+    padding: 30,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    minWidth: 200,
+  },
+  loaderText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#002957",
+    fontWeight: "500",
+    textAlign: "center",
   },
 });
 
 export default LeaveApplicationScreen;
-
-// import React, { useState, useCallback, useEffect } from "react";
-// import {
-//   View,
-//   Text,
-//   TextInput,
-//   TouchableOpacity,
-//   StyleSheet,
-//   Alert,
-//   Modal,
-// } from "react-native";
-// import { Picker } from "@react-native-picker/picker";
-// import CalendarPicker from "react-native-calendar-picker";
-// import { useFocusEffect } from "@react-navigation/native";
-// import { format } from "date-fns";
-// import { ScrollView } from "react-native";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import { submitLeaveApplication } from "../../Services/Leave/Leave.service";
-// import { useDispatch, useSelector } from "react-redux";
-// import { useNavigation } from '@react-navigation/native';
-// import { StackNavigationProp } from '@react-navigation/stack';
-// import { RootStackParamList } from '../../Global/Types';
-
-// const leaveTypes = {
-//   Casual: "Casual Leave",
-//   Sick: "Sick Leave",
-//   Optional: "Optional Leave",
-//   Paid: "Paid Leave",
-// };
-
-// const LeaveApplicationScreen: React.FC = () => {
-//   const [leaveType, setLeaveType] = useState<string>(leaveTypes.Casual);
-//   const [showDropdown, setShowDropdown] = useState<boolean>(false);
-//   const [selectedOption, setSelectedOption] = useState<string>("full-day");
-//   const [reason, setReason] = useState<string>("");
-//   const [approverId, setApproverId] = useState<number>(0);
-//   const [applicationDate] = useState<string>(new Date().toISOString());
-//   const [totalDays, setTotalDays] = useState<number>(1);
-//   const [isCalendarModalVisible, setIsCalendarModalVisible] = useState<boolean>(false);
-//   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
-//   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
-//   const [userDOJ, setUserDOJ] = useState<Date | null>(null);
-//   const navigation = useNavigation<LoginScreenNavigationProp>();
-// type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MyLeaveScreen'>;
-
-  
-//   const leave_Details = useSelector((state: any) => state.leaveDetails);
-
-//   useEffect(() => {
-//     console.log("leave_Details updated", leave_Details);
-//   }, [leave_Details]);
-    
-  
-//   const resetForm = () => {
-//     setLeaveType(leaveTypes.Casual);
-//     setSelectedStartDate(null);
-//     setSelectedEndDate(null);
-//     setShowDropdown(false);
-//     setReason("");
-//     setApproverId(0);
-//     setTotalDays(1);
-//     setSelectedOption("full-day");
-//   };
-
-//   useEffect(() => {
-//     getUserDetails();
-//   }, []);
-
- 
-//   async function getUserDetails() {
-    
- 
-//     try {
-//       const userDetailsString = await AsyncStorage.getItem("user");
-
-//       if (userDetailsString) {
-//         const userDetails = JSON.parse(userDetailsString);
-//         const joiningDate = new Date(userDetails.joiningdate); 
-//         setUserDOJ(joiningDate);
-
-//       }
-//     } catch (error) {
-//       console.error("Error retrieving user details:", error);
-//     }
-//   }
-
-//   const managerDetailsSelector = useSelector((state:any) => state.managerInfo ) ;
-
-//   useFocusEffect(
-//     useCallback(() => {
-//       resetForm();
-//     }, [])
-//   );
-
-//   const handleApplyLeave = async () => {
-//     if (!selectedStartDate) {
-//       Alert.alert("Error", "Please select a start date.");
-//       return;
-//     }
-//     if (!reason.trim()) {
-//       Alert.alert("Error", "Reason for leave is required.");
-//       return;
-//     }
-  
-  
-//       const leaveApplication = {
-//         leavetype: leaveType,
-//         leavestart: selectedStartDate
-//           ? format(selectedStartDate, "dd/MM/yyyy")
-//           : "",
-//         leaveend: selectedEndDate
-//           ? format(selectedEndDate, "dd/MM/yyyy")
-//           : format(selectedStartDate, "dd/MM/yyyy"),
-//         leavepart: selectedOption,
-//         reason: reason.trim(),
-//         approver: managerDetailsSelector.id,
-//       };
-      
-//       console.log("Leave Application:", leaveApplication);
-  
-//       try {
-//         const response = await submitLeaveApplication(leaveApplication);
-//         if (response.status === 200) {
-//           Alert.alert(
-//             "Success",
-//             response.message || "Leave application submitted successfully!"
-//           );
-
-//           resetForm();
-//           navigation.navigate('MyLeaveScreen');
-
-//         } else {
-//           Alert.alert(
-//             "Error",
-//             response.message || "Failed to submit leave application."
-//           );
-//         }
-//       } catch (error) {
-//         Alert.alert(
-//           "Error",
-//           "An error occurred while submitting the leave application."
-//         );
-//       }
-    
-//   };
-  
-
-//   const onDateChange = (date: Date) => {
-//     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
-//       setSelectedStartDate(date);
-//       setSelectedEndDate(null);
-//     } else {
-//       setSelectedEndDate(date);
-//     }
-//     calculateTotalDays();
-//   };
-
-//   const calculateTotalDays = () => {
-//     if (selectedStartDate && !selectedEndDate) {
-//       setShowDropdown(leaveType === leaveTypes.Casual || leaveType === leaveTypes.Paid || leaveType === leaveTypes.Sick || leaveType === leaveTypes.Paid );
-//       const leavepart = selectedOption === "full-day" ? 1 : 0.5;
-//       setTotalDays(leavepart);
-//     } else if (selectedStartDate && selectedEndDate) {
-//       const start = new Date(selectedStartDate);
-//       const end = new Date(selectedEndDate);
-//       setShowDropdown(false);
-//       const difference =
-//         Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
-//       setTotalDays(difference < 0 ? 0 : difference);
-//     } else {
-//       setTotalDays(0);
-//       setShowDropdown(false);
-//     }
-//   };
-
-//   React.useEffect(() => {
-//     calculateTotalDays();
-//   }, [selectedStartDate, selectedEndDate, leaveType, selectedOption]);
-
-//   const handleConfirmDates = () => {
-//     setIsCalendarModalVisible(false);
-//   };
-
-//   return (
-//     <ScrollView style={styles.container}>
-//       <Text style={styles.header}>Apply for Leave</Text>
-//       <View style={styles.flexRow}>
-//         <View style={styles.rowItem}>
-//           <Text style={styles.label}>Application Date</Text>
-//           <Text style={styles.dateText}>
-//             {format(new Date(applicationDate), "dd-MM-yyyy")}
-//           </Text>
-//         </View>
-//         <View style={styles.rowItem}>
-//           <Text style={styles.label}>Approver name</Text>
-//           <TextInput
-//             style={styles.textInputApprover}
-//             value={managerDetailsSelector.name}
-//             editable={false}
-//           />
-//         </View>
-//       </View>
-
-//       <Text style={styles.leaveTypeContainer}>Leave Type</Text>
-//       <View style={styles.radioButtonContainer}>
-//         {Object.keys(leaveTypes).map((label) => (
-//           <TouchableOpacity
-//           key={label}
-//           style={[
-//             styles.radioButton,
-//             leaveType === leaveTypes[label] && styles.radioButtonSelected,
-//           ]}
-//           onPress={() => {
-//             if (label === "Paid") {
-//               if (userDOJ) {
-//                 const dojDate = new Date(userDOJ);
-//                 // const dojDate = new Date("2022-10-24T10:28:56.304Z");
-//                 // console.log("DOJDATE TO CHECK : " , dojDate);
-                
-//                 const appDate = new Date(applicationDate);
-                
-//                 const diffInMonths =
-//                   (appDate.getFullYear() - dojDate.getFullYear()) * 12 +
-//                   (appDate.getMonth() - dojDate.getMonth());
-        
-//                 if (diffInMonths < 6) {
-//                   Alert.alert(
-//                     "Not Eligible",
-//                     "You are not eligible to get paid leave since you are in your probation period."
-//                   );
-//                   return;
-//                 }
-//               } else {
-//                 Alert.alert(
-//                   "Error",
-//                   "User date of joining is not available. Please contact admin."
-//                 );
-//                 return;
-//               }
-//             }
-//             setLeaveType(leaveTypes[label]);
-//             setShowDropdown(label === "Casual");
-//           }}
-//         >
-//           <Text style={styles.radioButtonText}>{label}</Text>
-//         </TouchableOpacity>
-        
-//         ))}
-//       </View>
-
-//       <TouchableOpacity
-//         onPress={() => setIsCalendarModalVisible(true)}
-//         style={styles.button}
-//       >
-//         <Text style={styles.buttonText}>
-//           {selectedStartDate
-//             ? `Selected Date: ${format(selectedStartDate, "dd-MM-yyyy")}${
-//                 selectedEndDate
-//                   ? ` to ${format(selectedEndDate, "dd-MM-yyyy")}`
-//                   : ""
-//               }`
-//             : "Select Dates"}
-//         </Text>
-//       </TouchableOpacity>
-
-//       <Modal
-//         visible={isCalendarModalVisible}
-//         transparent={true}
-//         animationType="slide"
-//         onRequestClose={() => setIsCalendarModalVisible(false)}
-//       >
-//         <View style={styles.modalContainer}>
-//           <View style={styles.calendarContainer}>
-//             <CalendarPicker
-//               todayBackgroundColor={"gray"}
-//               minDate={new Date()}
-//               selectedDayTextStyle={{ color: "white" }}
-//               selectedDayStyle={{ backgroundColor: "black" }}
-//               onDateChange={onDateChange}
-//               allowRangeSelection={true}
-//               selectedStartDate={selectedStartDate}
-//               selectedEndDate={selectedEndDate}
-//             />
-//             <TouchableOpacity
-//               onPress={handleConfirmDates}
-//               style={styles.closeButton}
-//             >
-//               <Text style={styles.closeButtonText} >OK</Text>
-//             </TouchableOpacity>
-//           </View>
-//         </View>
-//       </Modal>
-
-//       {showDropdown && (
-//         <>
-//           <Text style={styles.label}>Leave Day Part</Text>
-
-//           <Picker
-//             selectedValue={selectedOption}
-//             style={styles.picker}
-//             onValueChange={(itemValue) => {
-//               setSelectedOption(itemValue);
-//               setTotalDays(itemValue === "full-day" ? 1 : 0.5);
-//             }}
-//           >
-//             <Picker.Item label="Full-day" value="full-day" />
-//             <Picker.Item label="1st Half" value="first-half" />
-//             <Picker.Item label="2nd Half" value="second-half" />
-//           </Picker>
-//         </>
-//       )}
-
-//       <Text style={styles.label}>Reason for Leave *</Text>
-//       <TextInput
-//         style={styles.textInput}
-//         placeholder="Provide a reason (mandatory)"
-//         value={reason}
-//         onChangeText={setReason}
-//       />
-
-//       <TouchableOpacity onPress={handleApplyLeave} style={styles.submitButton}>
-//         <Text style={styles.submitButtonText}>Submit Leave Application</Text>
-//       </TouchableOpacity>
-//     </ScrollView>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 20,
-//     backgroundColor: "#fff",
-//   },
-//   header: {
-//     fontSize: 24,
-//     fontWeight: "bold",
-//     marginBottom: 16,
-//   },
-//   label: {
-//     fontSize: 16,
-//     fontWeight: "600",
-//     marginTop: 15,
-//     marginBottom: 10,
-//   },
-//   leaveTypeContainer: {
-//     fontSize: 16,
-//     fontWeight: "bold",
-//     color: "#333",
-//     marginBottom: 15,
-//   },
-//   radioButtonContainer: {
-//     flexDirection: "row",
-//     flexWrap: "wrap",
-//     justifyContent: "space-between",
-//     marginBottom: 10,
-//   },
-//   radioButton: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     width: "48%",
-//     padding: 12,
-//     borderRadius: 8,
-//     borderWidth: 1,
-//     borderColor: "#ccc",
-//     marginBottom: 10,
-//   },
-//   radioButtonSelected: {
-//     backgroundColor: "#e0f7fa",
-//     borderColor: "#00796b",
-//   },
-//   radioButtonText: {
-//     fontSize: 16,
-//   },
-//   dateText: {
-//     fontSize: 18,
-//     fontWeight: "900",
-//     color: "#D3D3D3",
-
-//     padding: 10,
-//     borderRadius: 8,
-//     borderWidth: 1,
-//     borderColor: "#ccc",
-//     marginBottom: 10,
-//   },
-//   textInput: {
-//     height: 50,
-//     borderColor: "gray",
-//     borderWidth: 1,
-//     borderRadius: 8,
-//     paddingHorizontal: 10,
-//   },
-//   textInputApprover: {
-//     fontSize: 18,
-//     fontWeight: "900",
-//     color: "#D3D3D3",
-//     padding: 10,
-//     borderRadius: 8,
-//     borderWidth: 1,
-//     borderColor: "#ccc",
-//     marginBottom: 10,
-//   },
-
-//   submitButton: {
-//     paddingVertical: 15,
-//     backgroundColor: "rgb(0, 41, 87)",
-//     borderRadius: 8,
-//     marginTop: 25,
-//     marginBottom: 25,
-//   },
-//   submitButtonText: {
-//     fontSize: 16,
-//     fontWeight: "bold",
-//     color: "#fff",
-//     textAlign: "center",
-//   },
-//   flexRow: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//   },
-//   rowItem: {
-//     flex: 0.48,
-//   },
-//   button: {
-//     backgroundColor: "rgb(0, 41, 87)",
-//     padding: 12,
-//     borderRadius: 8,
-//     marginVertical: 15,
-//   },
-//   buttonText: {
-//     color: "#fff",
-    
-//     fontSize: 16,
-//     textAlign: "center",
-//   },
-//   picker: {
-//     height: 50,
-//     width: "100%",
-    
-//   },
-//   modalContainer: {
-//     flex: 1,
-//     backgroundColor: "rgba(0, 0, 0, 0.6)",
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   calendarContainer: {
-//     backgroundColor: "white",
-//     padding: 20,
-//     borderRadius: 8,
-//     width: "96%",
-//   },
-//   closeButton: {
-//     backgroundColor: "rgb(0, 41, 87)",
-//     paddingVertical: 10,
-//     marginTop: 20,
-//     borderRadius: 8,
-//     alignItems: "center",
-//   },
-//   closeButtonText: {
-//     color: "white",
-//     fontSize: 16,
-//   },
-// });
-
-// export default LeaveApplicationScreen;
-

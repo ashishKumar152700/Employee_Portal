@@ -16,7 +16,6 @@ export async function getUser() {
     // console.log(userDetails);
 
     const userId = userDetails.id;
-    // console.log("userId to get id for profile : ", userId);
 
     if (!token) {
       throw new Error("No access token found. Please log in again.");

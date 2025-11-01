@@ -16,7 +16,7 @@ import { punchService } from "../../Services/Punch/Punch.service";
 import { useDispatch, useSelector } from "react-redux";
 import ClockComponent from "./ClockComponent";
 import Toast from "react-native-toast-message";
-import { WebView } from "react-native-webview"; // Add WebView import
+import { WebView } from "react-native-webview"; 
 import { RefreshControl } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -120,34 +120,76 @@ const PunchScreen: React.FC = () => {
   }, []);
 
   // Update the fetchTodayPunch function
+  // const fetchTodayPunch = async () => {
+  //   try {
+  //     console.log("🔄 Fetching today's punch data...");
+  //     const punch = await punchService.GetTodayPunchAndUpdateRedux(dispatch);
+  //     console.log("📋UI Today Punch Fetched:", punch);
+
+  //     setTodayPunch(punch);
+
+  //     if (punch) {
+  //       setClockInTime(punch.punchintime);
+  //       setClockOutTime(punch.punchouttime);
+
+  //       if (punch.duration) {
+  //         const hours = Math.floor(punch.duration / 60);
+  //         const minutes = punch.duration % 60;
+  //         setTotalTime(`${hours}h ${minutes}m`);
+  //       }
+  //     } else {
+  //       // Reset states if no punch data
+  //       setClockInTime(null);
+  //       setClockOutTime(null);
+  //       setTotalTime(null);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching today's punch:", error);
+  //     setTodayPunch(null);
+  //   }
+  // };
+
   const fetchTodayPunch = async () => {
-    try {
-      console.log("🔄 Fetching today's punch data...");
-      const punch = await punchService.GetTodayPunchAndUpdateRedux(dispatch);
-      console.log("📋UI Today Punch Fetched:", punch);
+  try {
+    console.log("🔄 Fetching today's punch data...");
+    const punch = await punchService.GetTodayPunchAndUpdateRedux(dispatch);
+    console.log("📋UI Today Punch Fetched:", punch);
 
-      setTodayPunch(punch);
+    setTodayPunch(punch);
 
-      if (punch) {
-        setClockInTime(punch.punchintime);
-        setClockOutTime(punch.punchouttime);
+    if (punch) {
+      setClockInTime(punch.punchintime);
+      setClockOutTime(punch.punchouttime);
 
-        if (punch.duration) {
-          const hours = Math.floor(punch.duration / 60);
-          const minutes = punch.duration % 60;
-          setTotalTime(`${hours}h ${minutes}m`);
-        }
+      if (punch.duration != null) {
+        const hours = Math.floor(punch.duration / 60);
+        const minutes = punch.duration % 60;
+        setTotalTime(`${hours}h ${minutes}m`);
+      } else if (punch.punchintime && punch.punchouttime) {
+        const punchInTime = new Date(`1970-01-01T${punch.punchintime}`);
+        const punchOutTime = new Date(`1970-01-01T${punch.punchouttime}`);
+        const diffMs = punchOutTime.getTime() - punchInTime.getTime();
+        const duration = Math.round(diffMs / (1000 * 60));
+        
+        const hours = Math.floor(duration / 60);
+        const minutes = duration % 60;
+        setTotalTime(`${hours}h ${minutes}m`);
       } else {
-        // Reset states if no punch data
-        setClockInTime(null);
-        setClockOutTime(null);
-        setTotalTime(null);
+        setTotalTime("0h 0m");
       }
-    } catch (error) {
-      console.error("❌ Error fetching today's punch:", error);
-      setTodayPunch(null);
+    } else {
+      setClockInTime(null);
+      setClockOutTime(null);
+      setTotalTime(null);
     }
-  };
+  } catch (error) {
+    console.error(" Error fetching today's punch:", error);
+    setTodayPunch(null);
+    setClockInTime(null);
+    setClockOutTime(null);
+    setTotalTime(null);
+  }
+};
 
   const requestLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -294,67 +336,144 @@ const PunchScreen: React.FC = () => {
     }
   };
 
+  // const handleClockOut = async () => {
+  //   const latestPunch = await punchService.GetTodayPunchApi();
+  //   if (!latestPunch || !latestPunch.punchintime) {
+  //     Toast.show({
+  //       type: "error",
+  //       text1: "Error",
+  //       text2: "Please punch in first",
+  //     });
+  //     return;
+  //   }
+
+  //   setIsClockOutLoading(true);
+  //   try {
+  //     const result = await getLocation();
+  //     if (!result?.location?.coords) return;
+
+  //     const { location: loc, address: resolvedAddress } = result;
+  //     setPunchType("out");
+  //     setIsMapVisible(true);
+
+  //     console.log("Punch Out will send address:", resolvedAddress);
+  //     const response = await punchService.PunchOutApi(loc, resolvedAddress);
+
+  //     const newPunchOutTime =
+  //       response.data?.punchouttime || new Date().toLocaleTimeString();
+  //     setClockOutTime(newPunchOutTime);
+
+  //     if (response.data?.duration != null) {
+  //       const hours = Math.floor(response.data.duration / 60);
+  //       const minutes = response.data.duration % 60;
+  //       setTotalTime(`${hours}h ${minutes}m`);
+  //     }
+
+  //     setTodayPunch((prev: any) => ({
+  //       ...(prev || {}),
+  //       punchouttime: newPunchOutTime,
+  //       duration: response.data?.duration ?? prev?.duration,
+  //     }));
+
+  //     Toast.show({
+  //       type: "success",
+  //       position: "top",
+  //       text1: "Success",
+  //       text2: response.message || "Punch recorded successfully",
+  //       visibilityTime: 3000,
+  //       autoHide: true,
+  //     });
+  //   } catch (error) {
+  //     console.error("Punch Out Error:", error);
+  //     Toast.show({
+  //       type: "error",
+  //       position: "top",
+  //       text1: "Error",
+  //       text2: "An error occurred while punching out.",
+  //       visibilityTime: 3000,
+  //       autoHide: true,
+  //     });
+  //   } finally {
+  //     setIsClockOutLoading(false);
+  //   }
+  // };
+
   const handleClockOut = async () => {
-    const latestPunch = await punchService.GetTodayPunchApi();
-    if (!latestPunch || !latestPunch.punchintime) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Please punch in first",
-      });
-      return;
+  const latestPunch = await punchService.GetTodayPunchApi();
+  if (!latestPunch || !latestPunch.punchintime) {
+    Toast.show({
+      type: "error",
+      text1: "Error",
+      text2: "Please punch in first",
+    });
+    return;
+  }
+
+  setIsClockOutLoading(true);
+  try {
+    const result = await getLocation();
+    if (!result?.location?.coords) return;
+
+    const { location: loc, address: resolvedAddress } = result;
+    setPunchType("out");
+    setIsMapVisible(true);
+
+    console.log("Punch Out will send address:", resolvedAddress);
+    const response = await punchService.PunchOutApi(loc, resolvedAddress);
+
+    const newPunchOutTime = response.data?.punchouttime || new Date().toLocaleTimeString();
+    setClockOutTime(newPunchOutTime);
+
+    // ✅ FIX: Calculate duration locally as fallback
+    let duration = response.data?.duration;
+    
+    if (duration == null && clockInTime) {
+      // Calculate duration locally if not provided by API
+      const punchInTime = new Date(`1970-01-01T${clockInTime}`);
+      const punchOutTime = new Date(`1970-01-01T${newPunchOutTime}`);
+      const diffMs = punchOutTime.getTime() - punchInTime.getTime();
+      duration = Math.round(diffMs / (1000 * 60)); // Convert to minutes
     }
 
-    setIsClockOutLoading(true);
-    try {
-      const result = await getLocation();
-      if (!result?.location?.coords) return;
-
-      const { location: loc, address: resolvedAddress } = result;
-      setPunchType("out");
-      setIsMapVisible(true);
-
-      console.log("Punch Out will send address:", resolvedAddress);
-      const response = await punchService.PunchOutApi(loc, resolvedAddress);
-
-      const newPunchOutTime =
-        response.data?.punchouttime || new Date().toLocaleTimeString();
-      setClockOutTime(newPunchOutTime);
-
-      if (response.data?.duration != null) {
-        const hours = Math.floor(response.data.duration / 60);
-        const minutes = response.data.duration % 60;
-        setTotalTime(`${hours}h ${minutes}m`);
-      }
-
-      setTodayPunch((prev: any) => ({
-        ...(prev || {}),
-        punchouttime: newPunchOutTime,
-        duration: response.data?.duration ?? prev?.duration,
-      }));
-
-      Toast.show({
-        type: "success",
-        position: "top",
-        text1: "Success",
-        text2: response.message || "Punch recorded successfully",
-        visibilityTime: 3000,
-        autoHide: true,
-      });
-    } catch (error) {
-      console.error("Punch Out Error:", error);
-      Toast.show({
-        type: "error",
-        position: "top",
-        text1: "Error",
-        text2: "An error occurred while punching out.",
-        visibilityTime: 3000,
-        autoHide: true,
-      });
-    } finally {
-      setIsClockOutLoading(false);
+    // ✅ FIX: Always update totalTime when we have duration
+    if (duration != null) {
+      const hours = Math.floor(duration / 60);
+      const minutes = duration % 60;
+      setTotalTime(`${hours}h ${minutes}m`);
     }
-  };
+
+    // ✅ FIX: Update todayPunch with all the new data
+    setTodayPunch((prev: any) => ({
+      ...(prev || {}),
+      punchouttime: newPunchOutTime,
+      duration: duration ?? prev?.duration,
+    }));
+
+    // ✅ FIX: Force refresh the punch data to ensure sync
+    await fetchTodayPunch();
+
+    Toast.show({
+      type: "success",
+      position: "top",
+      text1: "Success",
+      text2: response.message || "Punch recorded successfully",
+      visibilityTime: 3000,
+      autoHide: true,
+    });
+  } catch (error) {
+    console.error("Punch Out Error:", error);
+    Toast.show({
+      type: "error",
+      position: "top",
+      text1: "Error",
+      text2: "An error occurred while punching out.",
+      visibilityTime: 3000,
+      autoHide: true,
+    });
+  } finally {
+    setIsClockOutLoading(false);
+  }
+};
 
   // Function to generate Leaflet map HTML
   const generateMapHTML = (latitude: number, longitude: number) => {

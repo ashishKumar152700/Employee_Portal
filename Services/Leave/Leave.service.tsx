@@ -3,41 +3,49 @@ import axios from "axios";
 import { baseUrl } from "../../Global/Config";
 
 
-  export const getLeaves = async (dispatch: any) => {
-
-    try {
-      const token = await AsyncStorage.getItem("accessToken");
-
-      if (!token) {
-        throw new Error("No access token found. Please log in again.");
-      }
-
-      const response = await axios.get(`${baseUrl}/api/v1/leaves/get`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 200) {
-        console.log("[getLeaves] Fetch successful:", response.data.data);
-        dispatch({ type: "leaveDetails", payload: response.data.data });
-        return response.data;
-      } else {
-        throw new Error(response.data.message || "Failed to fetch leave details");
-      }
-    } catch (error: any) {
-      console.error("[getLeaves] Error occurred:", error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      } else {
-        throw new Error("An error occurred while fetching leave details.");
-      }
-    } finally {
-      console.log("[getLeaves] API call completed.");
+// In your Leave.service.tsx, make sure the getLeaves function is properly implemented
+export const getLeaves = async (dispatch: any) => {
+  try {
+    const token = await AsyncStorage.getItem("accessToken");
+    const user = await AsyncStorage.getItem("user");
+    
+    if (!token) {
+      throw new Error("No access token found. Please log in again.");
     }
-  }
 
-  
+    let url = `${baseUrl}/api/v1/leaves/get`;
+    
+    // If user data is available, get the user ID to pass as parameter
+    if (user) {
+      const userData = JSON.parse(user);
+      url += `?id=${userData.id}`;
+    }
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 200) {
+      console.log("[getLeaves] Fetch successful:", response.data.data);
+      dispatch({ type: "leaveDetails", payload: response.data.data });
+      return response.data;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch leave details");
+    }
+  } catch (error: any) {
+    console.error("[getLeaves] Error occurred:", error);
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error("An error occurred while fetching leave details.");
+    }
+  } finally {
+    console.log("[getLeaves] API call completed.");
+  }
+}
+
 export const submitLeaveApplication = async (leaveDetails : any) => {
 
   console.log("leave details payload : " , leaveDetails);
