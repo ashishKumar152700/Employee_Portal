@@ -3,7 +3,7 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import * as Font from 'expo-font'; // Import expo-font
 import BottomNavForPunchScreen from '../BottomNav/BottomNavForPunchScreen';
-import BottomNavForLeaveScreen from '../BottomNav/BottomNavForLeaveScreen';
+// import BottomNavForLeaveScreen from '../BottomNav/BottomNavForLeaveScreen';
 import CalendarListScreen from '../../Screen/Timesheet/Testing';
 import BottomNavForAsset from '../BottomNav/BottomNavForAsset';
 import MyTickets from '../../Screen/Asset/MyTickets';
@@ -23,6 +23,8 @@ import OvertimeRequestForm from '../../Screen/Overtime/OvertimeRequestForm';
 import ResignationForm from '../../Screen/Resignation/ResignationForm';
 import TaxModule from '../../Screen/TaxModule/TaxModule';
 import { StatusBar } from 'react-native';
+import BottomNavForBiometricCrud from '../BottomNav/BottomNavForBiometricCrud';
+import TimesheetCalendar from '../../Screen/Timesheet/TimesheetCalendar';
 const Drawer = createDrawerNavigator();
 
 const CustomHeader = ({ navigation, title }) => {
@@ -53,7 +55,6 @@ function DrawerNavigator() {
   useEffect(() => {
     async function preloadFonts() {
       try {
-        // Load necessary fonts
         await Font.loadAsync({
           Ionicons: require('react-native-vector-icons/Fonts/Ionicons.ttf'),
           FontAwesome: require('react-native-vector-icons/Fonts/FontAwesome.ttf'),
@@ -91,7 +92,7 @@ function DrawerNavigator() {
       >
         <Drawer.Screen name="Attendance" component={BottomTabNavigator} />
         <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} />
-        <Drawer.Screen name="Timesheet" component={CalendarListScreen} />
+        <Drawer.Screen name="Timesheet" component={TimesheetCalendar} />
         <Drawer.Screen name="AssetModule" component={BottomNavForAsset} />
         <Drawer.Screen name="MyTickets" component={MyTickets} />
         <Drawer.Screen name="LeaveRequest" component={LeaveRequest} />
@@ -104,6 +105,8 @@ function DrawerNavigator() {
         <Drawer.Screen name="OvertimeRequest" component={OvertimeRequestForm} />
         <Drawer.Screen name="SeparationRequest" component={ResignationForm} />
         <Drawer.Screen name="TaxModule" component={TaxModule} />
+        {/* <Drawer.Screen name="BiometricUser" component={BottomNavForBiometricCrud} /> */}
+
 
       </Drawer.Navigator>
     </>

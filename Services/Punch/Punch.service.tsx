@@ -4,6 +4,7 @@ import { baseUrl } from "../../Global/Config";
 import { add } from "date-fns";
 
 class PunchServices {
+  
   async PunchInApi(location: any, address?: string) {
     try {
       const token = await AsyncStorage.getItem("accessToken");
@@ -146,11 +147,8 @@ class PunchServices {
 
       console.log("GetTodayPunch - Response:", response.data);
 
-      // Handle case where first punch is from biometrics (no data initially)
       if (!response.data.data || response.data.data.length === 0) {
-        // If no data, check if there might be a biometric entry with null punchouttime
         try {
-          // Try a different endpoint or approach to get today's punch data
           const fallbackResponse = await axios.get(
             `${baseUrl}/api/v1/punch/today?empCode=${empCode}`,
             {
@@ -178,7 +176,6 @@ class PunchServices {
         error.response?.data || error.message
       );
 
-      // If the list endpoint fails, try the today endpoint
       try {
         const token = await AsyncStorage.getItem("accessToken");
         const empCode = await AsyncStorage.getItem("employeeCode");
