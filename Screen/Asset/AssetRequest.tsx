@@ -27,30 +27,30 @@ const { width } = Dimensions.get('window');
 // Category icon mapping
 const getCategoryIcon = (category: string) => {
   const iconConfig: { [key: string]: { icon: string; color: string; gradient: string[] } } = {
-    'MOUSE': { icon: 'mouse-pointer', color: '#4A90E2', gradient: ['#667eea', '#764ba2'] },
-    'KEYBOARD': { icon: 'keyboard-o', color: '#50C878', gradient: ['#f093fb', '#f5576c'] },
-    'LAPTOP': { icon: 'laptop', color: '#FF6B35', gradient: ['#4facfe', '#00f2fe'] },
-    'MONITOR': { icon: 'desktop', color: '#9B59B6', gradient: ['#43e97b', '#38f9d7'] },
-    'STORAGE DEVICE': { icon: 'hdd-o', color: '#E67E22', gradient: ['#fa709a', '#fee140'] },
-    'HEADPHONE': { icon: 'headphones', color: '#E74C3C', gradient: ['#a8edea', '#fed6e3'] },
-    'BIOMETRIC': { icon: 'fingerprint', color: '#2ECC71', gradient: ['#ff9a9e', '#fecfef'] },
-    'PRINTER': { icon: 'print', color: '#34495E', gradient: ['#ffecd2', '#fcb69f'] },
-    'DOCKSTATION': { icon: 'plug', color: '#8E44AD', gradient: ['#a8caba', '#5d4e75'] },
-    'DOCK STATION': { icon: 'plug', color: '#8E44AD', gradient: ['#a8caba', '#5d4e75'] },
-    'LAPTOP CHARGER': { icon: 'battery-3', color: '#F39C12', gradient: ['#fdbb2d', '#22c1c3'] },
+    'MOUSE': { icon: 'hand-pointer-o', color: '#4A90E2', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']},
+    'KEYBOARD': { icon: 'keyboard-o', color: '#50C878', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'LAPTOP': { icon: 'laptop', color: '#FF6B35', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'MONITOR': { icon: 'desktop', color: '#9B59B6', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'STORAGE DEVICE': { icon: 'hdd-o', color: '#E67E22', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'HEADPHONE': { icon: 'headphones', color: '#E74C3C', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'BIOMETRIC': { icon: 'fingerprint', color: '#2ECC71', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'PRINTER': { icon: 'print', color: '#34495E', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'DOCKSTATION': { icon: 'plug', color: '#8E44AD', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'DOCK STATION': { icon: 'plug', color: '#8E44AD', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'LAPTOP CHARGER': { icon: 'battery-3', color: '#F39C12', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
     'PENDRIVE': { icon: 'usb', color: '#3498DB', gradient: ['#e3ffe7', '#d9e7ff'] },
     'PEN DRIVE': { icon: 'usb', color: '#3498DB', gradient: ['#e3ffe7', '#d9e7ff'] },
-    'SERVER': { icon: 'server', color: '#1ABC9C', gradient: ['#667eea', '#764ba2'] },
+    'SERVER': { icon: 'server', color: '#1ABC9C', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
     'HARDDISK': { icon: 'hdd-o', color: '#7F8C8D', gradient: ['#4facfe', '#00f2fe'] },
     'HARD DISK': { icon: 'hdd-o', color: '#7F8C8D', gradient: ['#4facfe', '#00f2fe'] },
-    'LAPTOP BAG': { icon: 'briefcase', color: '#D35400', gradient: ['#43e97b', '#38f9d7'] },
-    'TIME ATTENDANCE MACHINE': { icon: 'clock-o', color: '#2C3E50', gradient: ['#667eea', '#764ba2'] },
+    'LAPTOP BAG': { icon: 'briefcase', color: '#D35400', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
+    'TIME ATTENDANCE MACHINE': { icon: 'clock-o', color: '#2C3E50', gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)'] },
   };
 
   return iconConfig[category.toUpperCase()] || {
     icon: 'desktop',
     color: '#95A5A6',
-    gradient: ['#667eea', '#764ba2']
+    gradient: ['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']
   };
 };
 
@@ -243,7 +243,7 @@ export default function AssetRequest() {
           <Text style={styles.headerSubtitle}>Select an asset category to raise a request</Text>
         </View>
         
-        <View style={styles.headerButtons}>
+        {/* <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={refreshCategories}
@@ -273,7 +273,7 @@ export default function AssetRequest() {
               )}
             </LinearGradient>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </LinearGradient>
 
       {/* Categories Grid */}
@@ -321,22 +321,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 15,
+    paddingTop: 4,
+    paddingBottom: 12,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
   },
   headerContent: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
     marginTop: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   headerSubtitle: {
     fontSize: 16,
@@ -386,17 +386,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   categoriesContainer: {
-    padding: 20,
-    paddingTop: 30,
+    padding: 15,
+    paddingTop: 20,
   },
   row: {
     justifyContent: 'space-between',
   },
   categoryCard: {
-    width: (width - 60) / 2,
+    width: (width - 50) / 2,
     backgroundColor: 'white',
     borderRadius: 20,
-    marginBottom: 20,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
@@ -405,14 +405,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   categoryHeader: {
-    height: 120,
+    height: 60,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   categoryIcon: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
@@ -434,9 +434,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2c3e50',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     letterSpacing: 0.5,
-    lineHeight: 22,
+    lineHeight: 18,
   },
   actionBadge: {
     flexDirection: 'row',
@@ -516,301 +516,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-
-// // Screen/Ticket/CategorySelection.tsx
-// import React, { useEffect, useState } from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   TouchableOpacity,
-//   FlatList,
-//   Alert,
-//   ActivityIndicator,
-//   Dimensions,
-//   StatusBar,
-// } from 'react-native';
-// import { LinearGradient } from 'expo-linear-gradient';
-// import { FontAwesome } from '@expo/vector-icons';
-// import { useNavigation } from '@react-navigation/native';
-// import { Category, getCategoriesByRole, raiseTicket } from '../../Services/AssetModule/ticketService';
-
-// const { width } = Dimensions.get('window');
-
-// // Category icon mapping based on web version
-// const getCategoryIcon = (category: string) => {
-//   const iconConfig: { [key: string]: { icon: string; color: string; gradient: string[] } } = {
-//     'MOUSE': { icon: 'mouse-pointer', color: '#4A90E2', gradient: ['#667eea', '#764ba2'] },
-//     'KEYBOARD': { icon: 'keyboard-o', color: '#50C878', gradient: ['#f093fb', '#f5576c'] },
-//     'LAPTOP': { icon: 'laptop', color: '#FF6B35', gradient: ['#4facfe', '#00f2fe'] },
-//     'MONITOR': { icon: 'desktop', color: '#9B59B6', gradient: ['#43e97b', '#38f9d7'] },
-//     'STORAGE DEVICE': { icon: 'hdd-o', color: '#E67E22', gradient: ['#fa709a', '#fee140'] },
-//     'HEADPHONE': { icon: 'headphones', color: '#E74C3C', gradient: ['#a8edea', '#fed6e3'] },
-//     'BIOMETRIC': { icon: 'fingerprint', color: '#2ECC71', gradient: ['#ff9a9e', '#fecfef'] },
-//     'PRINTER': { icon: 'print', color: '#34495E', gradient: ['#ffecd2', '#fcb69f'] },
-//     'DOCKSTATION': { icon: 'plug', color: '#8E44AD', gradient: ['#a8caba', '#5d4e75'] },
-//     'DOCK STATION': { icon: 'plug', color: '#8E44AD', gradient: ['#a8caba', '#5d4e75'] },
-//     'LAPTOP CHARGER': { icon: 'battery-3', color: '#F39C12', gradient: ['#fdbb2d', '#22c1c3'] },
-//     'PENDRIVE': { icon: 'usb', color: '#3498DB', gradient: ['#e3ffe7', '#d9e7ff'] },
-//     'PEN DRIVE': { icon: 'usb', color: '#3498DB', gradient: ['#e3ffe7', '#d9e7ff'] },
-//     'SERVER': { icon: 'server', color: '#1ABC9C', gradient: ['#667eea', '#764ba2'] },
-//     'HARDDISK': { icon: 'hdd-o', color: '#7F8C8D', gradient: ['#4facfe', '#00f2fe'] },
-//     'HARD DISK': { icon: 'hdd-o', color: '#7F8C8D', gradient: ['#4facfe', '#00f2fe'] },
-//     'LAPTOP BAG': { icon: 'briefcase', color: '#D35400', gradient: ['#43e97b', '#38f9d7'] },
-//   };
-
-//   return iconConfig[category.toUpperCase()] || {
-//     icon: 'desktop',
-//     color: '#95A5A6',
-//     gradient: ['#667eea', '#764ba2']
-//   };
-// };
-
-// export default function AssetModule() {
-// // export default function CategorySelection() {
-//   const [categories, setCategories] = useState<Category[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [raisingTicket, setRaisingTicket] = useState<string | null>(null);
-//   const navigation = useNavigation();
-
-//   useEffect(() => {
-//     loadCategories();
-//   }, []);
-
-//   const loadCategories = async () => {
-//     setLoading(true);
-//     try {
-//       const categoriesData = await getCategoriesByRole();
-//       setCategories(categoriesData);
-//     } catch (error) {
-//       console.error('Error loading categories:', error);
-//       Alert.alert('Error', 'Failed to load categories. Please try again.');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-
-//   // Update the handleRaiseTicket function in CategorySelection.tsx
-// const handleRaiseTicket = async (category: Category) => {
-//   Alert.alert(
-//     'Raise Ticket',
-//     `Do you want to raise a ticket for ${category.category}?`,
-//     [
-//       { text: 'Cancel', style: 'cancel' },
-//       {
-//         text: 'Yes, Raise Ticket',
-//         style: 'default',
-//         onPress: async () => {
-//           setRaisingTicket(category.category);
-//           try {
-//             const result = await raiseTicket([category.category]);
-//             console.log('✅ [CategorySelection] Ticket raised result:', result);
-            
-//             Alert.alert(
-//               'Success',
-//               'Ticket raised successfully!',
-//               [{ text: 'OK', onPress: () => navigation.navigate('MyTickets') }]
-//             );
-//           } catch (error: any) {
-//             console.error('❌ [CategorySelection] Error raising ticket:', error);
-            
-//             // Check if it's just a JSON parsing error but operation succeeded
-//             if (error.message && error.message.includes('JSON Parse')) {
-//               Alert.alert(
-//                 'Success',
-//                 'Ticket raised successfully!',
-//                 [{ text: 'OK', onPress: () => navigation.navigate('MyTickets') }]
-//               );
-//             } else {
-//               Alert.alert('Error', error.message || 'Failed to raise ticket. Please try again.');
-//             }
-//           } finally {
-//             setRaisingTicket(null);
-//           }
-//         }
-//       }
-//     ]
-//   );
-// };
-
-
-//   const renderCategoryItem = ({ item, index }: { item: Category; index: number }) => {
-//     const iconConfig = getCategoryIcon(item.category);
-//     const isRaising = raisingTicket === item.category;
-
-//     return (
-//       <TouchableOpacity
-//         style={[styles.categoryCard, { animationDelay: index * 100 }]}
-//         onPress={() => !isRaising && handleRaiseTicket(item)}
-//         disabled={isRaising}
-//         activeOpacity={0.8}
-//       >
-//         <LinearGradient
-//           colors={iconConfig.gradient}
-//           style={styles.categoryHeader}
-//           start={{ x: 0, y: 0 }}
-//           end={{ x: 1, y: 1 }}
-//         >
-//           {isRaising ? (
-//             <ActivityIndicator size="large" color="white" />
-//           ) : (
-//             <FontAwesome name={iconConfig.icon} size={45} color="white" />
-//           )}
-//         </LinearGradient>
-
-//         <View style={styles.categoryContent}>
-//           <Text style={styles.categoryTitle}>{item.category}</Text>
-//           <View style={[styles.actionBadge, { backgroundColor: `${iconConfig.color}20` }]}>
-//             <Text style={[styles.actionText, { color: iconConfig.color }]}>
-//               {isRaising ? 'Raising Ticket...' : 'Click to Raise Ticket'}
-//             </Text>
-//           </View>
-//         </View>
-//       </TouchableOpacity>
-//     );
-//   };
-
-//   if (loading) {
-//     return (
-//       <View style={styles.loadingContainer}>
-//         <ActivityIndicator size="large" color="rgb(0, 41, 87)" />
-//         <Text style={styles.loadingText}>Loading Categories...</Text>
-//       </View>
-//     );
-//   }
-
-//   return (
-//     <View style={styles.container}>
-//       <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
-      
-//       {/* Header */}
-//       <View style={styles.header}>
-//         <Text style={styles.headerTitle}>Raise Ticket</Text>
-//         <Text style={styles.headerSubtitle}>Select a category to raise a support ticket</Text>
-        
-//         <TouchableOpacity
-//           style={styles.myTicketsButton}
-//           onPress={() => navigation.navigate('MyTickets')}
-//         >
-//           <FontAwesome name="ticket" size={16} color="white" />
-//           <Text style={styles.myTicketsText}>My Tickets</Text>
-//         </TouchableOpacity>
-//       </View>
-
-//       {/* Categories Grid */}
-//       <FlatList
-//         data={categories}
-//         renderItem={renderCategoryItem}
-//         keyExtractor={(item) => item._id || item.id || item.category}
-//         numColumns={2}
-//         contentContainerStyle={styles.categoriesContainer}
-//         showsVerticalScrollIndicator={false}
-//         columnWrapperStyle={styles.row}
-//       />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#f8fafc',
-//   },
-//   loadingContainer: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     backgroundColor: '#f8fafc',
-//   },
-//   loadingText: {
-//     marginTop: 16,
-//     fontSize: 16,
-//     color: 'rgb(0, 41, 87)',
-//     fontWeight: '600',
-//   },
-//   header: {
-//     backgroundColor: 'rgb(0, 41, 87)',
-//     paddingHorizontal: 20,
-//     paddingTop: 20,
-//     paddingBottom: 30,
-//     borderBottomLeftRadius: 25,
-//     borderBottomRightRadius: 25,
-//   },
-//   headerTitle: {
-//     fontSize: 28,
-//     fontWeight: 'bold',
-//     color: 'white',
-//     marginBottom: 8,
-//   },
-//   headerSubtitle: {
-//     fontSize: 16,
-//     color: 'rgba(255, 255, 255, 0.8)',
-//     marginBottom: 20,
-//   },
-//   myTicketsButton: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     alignSelf: 'flex-end',
-//     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-//     paddingHorizontal: 16,
-//     paddingVertical: 10,
-//     borderRadius: 25,
-//     gap: 8,
-//   },
-//   myTicketsText: {
-//     color: 'white',
-//     fontWeight: '600',
-//     fontSize: 14,
-//   },
-//   categoriesContainer: {
-//     padding: 20,
-//     paddingTop: 30,
-//   },
-//   row: {
-//     justifyContent: 'space-between',
-//   },
-//   categoryCard: {
-//     width: (width - 60) / 2,
-//     backgroundColor: 'white',
-//     borderRadius: 20,
-//     marginBottom: 20,
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 8 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 20,
-//     elevation: 8,
-//     overflow: 'hidden',
-//   },
-//   categoryHeader: {
-//     height: 120,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   categoryContent: {
-//     padding: 20,
-//     alignItems: 'center',
-//   },
-//   categoryTitle: {
-//     fontSize: 16,
-//     fontWeight: '700',
-//     color: '#2c3e50',
-//     textAlign: 'center',
-//     marginBottom: 12,
-//     letterSpacing: 0.5,
-//   },
-//   actionBadge: {
-//     paddingHorizontal: 12,
-//     paddingVertical: 6,
-//     borderRadius: 15,
-//     borderWidth: 1,
-//     borderColor: 'transparent',
-//   },
-//   actionText: {
-//     fontSize: 12,
-//     fontWeight: '600',
-//     textAlign: 'center',
-//   },
-// });
-

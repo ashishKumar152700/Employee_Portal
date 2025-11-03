@@ -47,7 +47,7 @@ const getAuthHeader = async () => {
       'Authorization': `Bearer ${token}`
     };
   } catch (error) {
-    console.error('❌ [Ticket Service] Error getting auth token:', error);
+    console.error('  [Ticket Service] Error getting auth token:', error);
     return {
       'Content-Type': 'application/json',
     };
@@ -60,7 +60,7 @@ const handleApiResponse = async (response: Response, operationName: string) => {
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`❌ [Ticket Service] ${operationName} API error response:`, errorText);
+    console.error(`  [Ticket Service] ${operationName} API error response:`, errorText);
     throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
   }
   
@@ -103,7 +103,7 @@ export const getCategoriesByRole = async (): Promise<Category[]> => {
     
     return itCategories;
   } catch (error) {
-    console.error('❌ [Ticket Service] Error fetching categories:', error);
+    console.error('  [Ticket Service] Error fetching categories:', error);
     throw error;
   }
 };
@@ -126,7 +126,7 @@ export const raiseTicket = async (categories: string[]): Promise<any> => {
     // Return success even if response is non-JSON (since operation succeeded)
     return result.success !== false ? { success: true, message: 'Ticket raised successfully' } : result;
   } catch (error) {
-    console.error('❌ [Ticket Service] Error raising ticket:', error);
+    console.error('  [Ticket Service] Error raising ticket:', error);
     // If the error is just JSON parsing but status was 200, treat as success
     if (error.message && error.message.includes('JSON Parse')) {
       console.log('ℹ️ [Ticket Service] Treating JSON parse error as success for raise ticket');
@@ -153,7 +153,7 @@ export const getMyTickets = async (): Promise<Ticket[]> => {
     
     return tickets;
   } catch (error) {
-    console.error('❌ [Ticket Service] Error fetching my tickets:', error);
+    console.error('  [Ticket Service] Error fetching my tickets:', error);
     throw error;
   }
 };
@@ -161,8 +161,8 @@ export const getMyTickets = async (): Promise<Ticket[]> => {
 // Cancel ticket
 export const cancelTicket = async (ticketId: string): Promise<any> => {
   try {
-    console.log('❌ [Ticket Service] ===== CANCELLING TICKET =====');
-    console.log('❌ [Ticket Service] Ticket ID:', ticketId);
+    console.log('  [Ticket Service] ===== CANCELLING TICKET =====');
+    console.log('  [Ticket Service] Ticket ID:', ticketId);
     
     const headers = await getAuthHeader();
     const response = await fetch(`${baseUrl}/ticket/delete-my-ticket?ticketId=${ticketId}`, {
@@ -175,7 +175,7 @@ export const cancelTicket = async (ticketId: string): Promise<any> => {
     // Return success even if response is non-JSON (since operation succeeded)
     return result.success !== false ? { success: true, message: 'Ticket cancelled successfully' } : result;
   } catch (error) {
-    console.error('❌ [Ticket Service] Error cancelling ticket:', error);
+    console.error('  [Ticket Service] Error cancelling ticket:', error);
     // If the error is just JSON parsing but status was 200, treat as success
     if (error.message && error.message.includes('JSON Parse')) {
       console.log('ℹ️ [Ticket Service] Treating JSON parse error as success for cancel ticket');
