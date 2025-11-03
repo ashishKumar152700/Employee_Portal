@@ -1,25 +1,26 @@
 // Screen/Timesheet/TimesheetCalendar.tsx
+
 import React, { useCallback, useMemo, useState, useEffect } from "react";
-import { 
-  View, 
-  Modal, 
-  Platform, 
-  ActivityIndicator, 
-  Text, 
+import {
+  View,
+  Modal,
+  Platform,
+  ActivityIndicator,
+  Text,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
   Alert,
-  StatusBar 
+  StatusBar
 } from "react-native";
 import { CalendarList } from "react-native-calendars";
 import TimesheetForm from "./Timesheet";
 import { KeyboardAvoidingView } from "react-native";
-import { 
-  TimesheetTask, 
+import {
+  TimesheetTask,
   TaskHourCount,
   MonthlyTaskSummary,
-  getTasksByDate, 
+  getTasksByDate,
   getUserTaskHourCount,
   processHourCountForCalendar,
   clearCache,
@@ -49,6 +50,15 @@ const TimesheetCalendar: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Track the currently visible month on calendar
+  const [currentVisibleMonth, setCurrentVisibleMonth] = useState(() => {
+    const now = new Date();
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1, // Calendar uses 1-based months
+    };
+  });
 
   useEffect(() => {
     console.log("📅 [Calendar] Component mounted, loading hour count data");
@@ -86,6 +96,17 @@ const TimesheetCalendar: React.FC = () => {
       console.error("❌ [Calendar] Error loading hour count data:", error);
     }
   };
+
+  // Handle month change when user swipes calendar
+  const handleMonthChange = useCallback((month: any) => {
+    console.log("📅 [Calendar] ===== MONTH CHANGED =====");
+    console.log("📅 [Calendar] New visible month:", month.year, month.month);
+    
+    setCurrentVisibleMonth({
+      year: month.year,
+      month: month.month,
+    });
+  }, []);
 
   const openTimesheetModal = useCallback(
     async (day: { dateString: string }) => {
@@ -198,23 +219,33 @@ const TimesheetCalendar: React.FC = () => {
     return base;
   }, [selectedDate, hourCountSummary, today]);
 
-  // Calculate totals from hour count data
+  // Calculate totals for the currently visible month
   const monthlyTotals = useMemo(() => {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
+    console.log("📊 [Calendar] Calculating totals for visible month:", currentVisibleMonth.year, currentVisibleMonth.month);
     
+    // Filter data for the currently visible month
     const monthlyData = Object.values(hourCountSummary).filter(summary => {
       const summaryDate = new Date(summary.date);
-      return summaryDate.getMonth() === currentMonth && summaryDate.getFullYear() === currentYear;
+      const summaryYear = summaryDate.getFullYear();
+      const summaryMonth = summaryDate.getMonth() + 1; // Convert to 1-based
+      
+      return summaryYear === currentVisibleMonth.year && 
+             summaryMonth === currentVisibleMonth.month;
     });
     
     const totalHours = monthlyData.reduce((sum, day) => sum + (day.totalMinutes / 60), 0);
     const daysLogged = monthlyData.length;
     const totalTasks = monthlyData.reduce((sum, day) => sum + day.taskCount, 0);
     
+    console.log(`📊 [Calendar] Month ${currentVisibleMonth.month}/${currentVisibleMonth.year} totals:`, {
+      hours: totalHours.toFixed(1),
+      days: daysLogged,
+      tasks: totalTasks,
+      dataPoints: monthlyData.length
+    });
+    
     return { hours: totalHours, days: daysLogged, tasks: totalTasks };
-  }, [hourCountSummary]);
+  }, [hourCountSummary, currentVisibleMonth]);
 
   // Professional Alert Functions
   const showSuccessAlert = (title: string, message: string) => {
@@ -284,7 +315,7 @@ const TimesheetCalendar: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Scrollable Calendar */}
+      {/* Scrollable Calendar with month change handler */}
       <CalendarList
         horizontal={true}
         pagingEnabled={true}
@@ -292,6 +323,7 @@ const TimesheetCalendar: React.FC = () => {
         showScrollIndicator={false}
         markedDates={markedDates}
         onDayPress={openTimesheetModal}
+        onMonthChange={handleMonthChange} // Add this handler
         markingType="dot"
         maxDate={today}
         theme={{
@@ -335,7 +367,7 @@ const TimesheetCalendar: React.FC = () => {
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-            <Text style={styles.legendText}>4 hours</Text>
+            <Text style={styles.legendText}> 4 hours</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: 'orange' }]} />
@@ -344,7 +376,7 @@ const TimesheetCalendar: React.FC = () => {
         </View>
       </View>
 
-      {/* Enhanced Summary Cards */}
+      {/* Enhanced Summary Cards - Now shows visible month data */}
       <View style={styles.summaryContainer}>
         <View style={styles.summaryCard}>
           <FontAwesome name="clock-o" size={20} color="rgb(0, 41, 87)" />
@@ -623,561 +655,4 @@ const styles = StyleSheet.create({
 });
 
 export default TimesheetCalendar;
-
-
-// import React, { useCallback, useMemo, useState, useEffect } from "react";
-// import { 
-//   View, 
-//   Modal, 
-//   Platform, 
-//   ActivityIndicator, 
-//   Text, 
-//   TouchableOpacity,
-//   StyleSheet,
-//   Dimensions,
-//   Alert,
-//   StatusBar 
-// } from "react-native";
-// import { CalendarList } from "react-native-calendars";
-// import TimesheetForm from "./Timesheet";
-// import { KeyboardAvoidingView } from "react-native";
-// import { 
-//   TimesheetTask, 
-//   MonthlyTaskSummary,
-//   getTasksByDate, 
-//   getAllTasksForMonth,
-//   processMonthlyTaskSummary 
-// } from "../../Services/Timesheet/timesheetService";
-// import { FontAwesome } from "@expo/vector-icons";
-
-// const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// interface MarkedDates {
-//   [date: string]: {
-//     selected?: boolean;
-//     selectedColor?: string;
-//     marked?: boolean;
-//     dotColor?: string;
-//     disabled?: boolean;
-//   };
-// }
-
-// const TimesheetCalendar: React.FC = () => {
-//   const today = new Date().toISOString().split("T")[0];
-//   const [selectedDate, setSelectedDate] = useState<string>(today);
-//   const [modalVisible, setModalVisible] = useState(false);
-//   const [tasksByDate, setTasksByDate] = useState<{ [date: string]: TimesheetTask[] }>({});
-//   const [monthlySummary, setMonthlySummary] = useState<{ [date: string]: MonthlyTaskSummary }>({});
-//   const [loading, setLoading] = useState(false);
-//   const [initialLoading, setInitialLoading] = useState(true);
-//   const [monthlyTasks, setMonthlyTasks] = useState<TimesheetTask[]>([]);
-//   const [currentMonth, setCurrentMonth] = useState(new Date());
-
-//   useEffect(() => {
-//     console.log("📅 [Calendar] ===== COMPONENT MOUNTED =====");
-//     console.log("📅 [Calendar] Today's date:", today);
-//     console.log("📅 [Calendar] Current month:", currentMonth.toISOString());
-//     initializeCalendar();
-//   }, []);
-
-//   const initializeCalendar = async () => {
-//     console.log("📅 [Calendar] ===== INITIALIZING CALENDAR =====");
-//     setInitialLoading(true);
-//     try {
-//       await loadMonthlyTasks(currentMonth);
-//       console.log("✅ [Calendar] Initialization complete");
-//     } catch (error) {
-//       console.error("❌ [Calendar] Initialization failed:", error);
-//     } finally {
-//       setInitialLoading(false);
-//     }
-//   };
-
-//   const loadMonthlyTasks = async (date: Date) => {
-//     const year = date.getFullYear();
-//     const month = date.getMonth() + 1;
-    
-//     console.log("📅 [Calendar] ===== LOADING MONTHLY TASKS =====");
-//     console.log("📅 [Calendar] Loading for Year:", year, "Month:", month);
-    
-//     try {
-//       const tasks = await getAllTasksForMonth(year, month);
-//       console.log("📅 [Calendar] Raw tasks received:", tasks.length);
-      
-//       setMonthlyTasks(tasks);
-      
-//       // Process tasks into summary for calendar marking
-//       const summary = processMonthlyTaskSummary(tasks);
-//       setMonthlySummary(summary);
-//       console.log("📅 [Calendar] Monthly summary created for", Object.keys(summary).length, "dates");
-      
-//       // Group tasks by date for detailed view
-//       const groupedTasks: { [date: string]: TimesheetTask[] } = {};
-//       tasks.forEach(task => {
-//         const taskDate = task.taskDate.split('T')[0];
-//         if (!groupedTasks[taskDate]) {
-//           groupedTasks[taskDate] = [];
-//         }
-//         groupedTasks[taskDate].push(task);
-//       });
-      
-//       setTasksByDate(prev => ({ ...prev, ...groupedTasks }));
-//       console.log("✅ [Calendar] Tasks grouped by date for", Object.keys(groupedTasks).length, "dates");
-      
-//       // Log detailed breakdown
-//       Object.keys(groupedTasks).forEach(date => {
-//         const dayTasks = groupedTasks[date];
-//         const totalMinutes = dayTasks.reduce((sum, task) => sum + (task.minutes || 0), 0);
-//         console.log(`📅 [Calendar] Date ${date}: ${dayTasks.length} tasks, ${totalMinutes} minutes (${(totalMinutes/60).toFixed(1)}h)`);
-//       });
-      
-//     } catch (error) {
-//       console.error("❌ [Calendar] Error loading monthly tasks:", error);
-//     }
-//   };
-
-//   const openTimesheetModal = useCallback(
-//     async (day: { dateString: string }) => {
-//       if (day.dateString > today) {
-//         console.log("🚫 [Calendar] Cannot select future date:", day.dateString);
-//         Alert.alert("Invalid Date", "Cannot select future dates for timesheet entry.");
-//         return;
-//       }
-
-//       console.log("📅 [Calendar] ===== OPENING MODAL =====");
-//       console.log("📅 [Calendar] Selected date:", day.dateString);
-      
-//       setSelectedDate(day.dateString);
-//       setModalVisible(true);
-//       setLoading(true);
-
-//       try {
-//         // Check if we already have tasks for this date
-//         const existingTasks = tasksByDate[day.dateString];
-//         if (existingTasks && existingTasks.length > 0) {
-//           console.log("📅 [Calendar] Using cached tasks:", existingTasks.length);
-//           setLoading(false);
-//           return;
-//         }
-        
-//         // Fetch fresh tasks for selected date
-//         const tasks = await getTasksByDate(day.dateString);
-//         console.log("✅ [Calendar] Fresh tasks fetched for date:", tasks.length);
-//         setTasksByDate((prev) => ({ ...prev, [day.dateString]: tasks }));
-//       } catch (error) {
-//         console.error("❌ [Calendar] Error fetching tasks:", error);
-//         setTasksByDate((prev) => ({ ...prev, [day.dateString]: [] }));
-//       } finally {
-//         setLoading(false);
-//       }
-//     },
-//     [today, tasksByDate]
-//   );
-
-//   const refreshDateTasks = useCallback(async () => {
-//     if (!selectedDate) return;
-//     console.log("🔁 [Calendar] ===== REFRESHING TASKS =====");
-//     console.log("🔁 [Calendar] Refreshing for date:", selectedDate);
-    
-//     try {
-//       const tasks = await getTasksByDate(selectedDate);
-//       setTasksByDate((prev) => ({ ...prev, [selectedDate]: tasks }));
-      
-//       // Also refresh the current month to update calendar markers
-//       await loadMonthlyTasks(currentMonth);
-//     } catch (error) {
-//       console.error("❌ [Calendar] Error refreshing tasks:", error);
-//     }
-//   }, [selectedDate, currentMonth]);
-
-//   const handleMonthChange = (month: any) => {
-//     console.log("📅 [Calendar] ===== MONTH CHANGED =====");
-//     console.log("📅 [Calendar] New month:", month.year, month.month);
-    
-//     const newDate = new Date(month.year, month.month - 1);
-//     setCurrentMonth(newDate);
-//     loadMonthlyTasks(newDate);
-//   };
-
-//   const getTaskHoursForDate = (date: string): number => {
-//     const summary = monthlySummary[date];
-//     if (summary) {
-//       return summary.totalMinutes / 60;
-//     }
-    
-//     // Fallback to direct calculation
-//     const dateTasks = tasksByDate[date] || [];
-//     return dateTasks.reduce((total, task) => total + (task.minutes / 60), 0);
-//   };
-
-//   // Build marked dates with enhanced task information
-//   const markedDates: MarkedDates = useMemo(() => {
-//     console.log("📅 [Calendar] ===== BUILDING MARKED DATES =====");
-    
-//     const base: MarkedDates = {};
-    
-//     // Mark selected date
-//     if (selectedDate) {
-//       base[selectedDate] = { 
-//         selected: true, 
-//         selectedColor: "rgb(0, 41, 87)" 
-//       };
-//       console.log("📅 [Calendar] Marked selected date:", selectedDate);
-//     }
-
-//     // Mark dates with tasks using summary data
-//     let markedDatesCount = 0;
-//     Object.keys(monthlySummary).forEach((date) => {
-//       const summary = monthlySummary[date];
-//       if (summary && summary.hasTimesheet) {
-//         const hours = summary.totalMinutes / 60;
-//         let dotColor = "#EF4444"; // Red for < 4 hours
-        
-//         if (hours >= 8) {
-//           dotColor = "#10B981"; // Green for 8+ hours
-//         } else if (hours >= 4) {
-//           dotColor = "#F59E0B"; // Yellow for 4-8 hours
-//         }
-        
-//         base[date] = { 
-//           ...(base[date] || {}), 
-//           marked: true, 
-//           dotColor: dotColor,
-//         };
-        
-//         markedDatesCount++;
-//         console.log(`📅 [Calendar] Marked date ${date}: ${hours.toFixed(1)}h, color: ${dotColor}`);
-//       }
-//     });
-    
-//     console.log("📅 [Calendar] Total marked dates:", markedDatesCount);
-
-//     // Mark today with orange dot
-//     base[today] = { 
-//       ...(base[today] || {}), 
-//       dotColor: "orange" 
-//     };
-//     console.log("📅 [Calendar] Marked today:", today);
-
-//     // Disable future dates
-//     const futureDate = new Date();
-//     let disabledCount = 0;
-//     for (let i = 1; i <= 365; i++) {
-//       const nextDate = new Date(futureDate);
-//       nextDate.setDate(futureDate.getDate() + i);
-//       const futureDateString = nextDate.toISOString().split("T")[0];
-//       if (futureDateString > today) {
-//         base[futureDateString] = { 
-//           disabled: true,
-//         };
-//         disabledCount++;
-//       }
-//     }
-    
-//     console.log("📅 [Calendar] Disabled future dates count:", disabledCount);
-//     console.log("📅 [Calendar] Total base object keys:", Object.keys(base).length);
-
-//     return base;
-//   }, [selectedDate, monthlySummary, today]);
-
-//   // Calculate monthly totals
-//   const monthlyTotals = useMemo(() => {
-//     const totalHours = Object.values(monthlySummary)
-//       .reduce((sum, day) => sum + (day.totalMinutes / 60), 0);
-//     const daysLogged = Object.keys(monthlySummary).length;
-//     const totalTasks = Object.values(monthlySummary)
-//       .reduce((sum, day) => sum + day.taskCount, 0);
-    
-//     console.log("📊 [Calendar] Monthly totals - Hours:", totalHours.toFixed(1), "Days:", daysLogged, "Tasks:", totalTasks);
-    
-//     return {
-//       hours: totalHours,
-//       days: daysLogged,
-//       tasks: totalTasks
-//     };
-//   }, [monthlySummary]);
-
-//   if (initialLoading) {
-//     return (
-//       <View style={styles.loadingContainer}>
-//         <ActivityIndicator size="large" color="rgb(0, 41, 87)" />
-//         <Text style={styles.loadingText}>Loading Calendar...</Text>
-//         <Text style={styles.loadingSubText}>Fetching timesheet data...</Text>
-//       </View>
-//     );
-//   }
-
-//   return (
-//     <View style={styles.container}>
-//       <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
-      
-//       {/* Calendar Header */}
-//       <View style={styles.header}>
-//         <Text style={styles.headerTitle}>Timesheet Calendar</Text>
-//         <Text style={styles.headerSubtitle}>
-//           Tap any date to add/view tasks • Dots show hours logged
-//         </Text>
-//       </View>
-
-//       {/* Scrollable Calendar */}
-//       <CalendarList
-//         horizontal={true}
-//         pagingEnabled={true}
-//         scrollEnabled={true}
-//         showScrollIndicator={false}
-//         markedDates={markedDates}
-//         onDayPress={openTimesheetModal}
-//         onMonthChange={handleMonthChange}
-//         markingType="dot"
-//         maxDate={today}
-//         theme={{
-//           calendarBackground: '#ffffff',
-//           textSectionTitleColor: 'rgb(0, 41, 87)',
-//           selectedDayBackgroundColor: 'rgb(0, 41, 87)',
-//           selectedDayTextColor: '#ffffff',
-//           todayTextColor: '#FF6B35',
-//           dayTextColor: '#2d4150',
-//           textDisabledColor: '#9CA3AF',
-//           dotColor: 'rgb(0, 41, 87)',
-//           selectedDotColor: '#ffffff',
-//           arrowColor: 'rgb(0, 41, 87)',
-//           monthTextColor: 'rgb(0, 41, 87)',
-//           textDayFontFamily: 'System',
-//           textMonthFontFamily: 'System',
-//           textDayHeaderFontFamily: 'System',
-//           textDayFontWeight: '500',
-//           textMonthFontWeight: 'bold',
-//           textDayHeaderFontWeight: '600',
-//           textDayFontSize: 16,
-//           textMonthFontSize: 18,
-//           textDayHeaderFontSize: 14,
-//         }}
-//         style={styles.calendar}
-//         calendarHeight={350}
-//       />
-
-//       {/* Legend */}
-//       <View style={styles.legend}>
-//         <View style={styles.legendItem}>
-//           <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-//           <Text style={styles.legendText}>8+ hours</Text>
-//         </View>
-//         <View style={styles.legendItem}>
-//           <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
-//           <Text style={styles.legendText}>4-8 hours</Text>
-//         </View>
-//         <View style={styles.legendItem}>
-//           <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-//           <Text style={styles.legendText}> 4 hours</Text>
-//         </View>
-//         <View style={styles.legendItem}>
-//           <View style={[styles.legendDot, { backgroundColor: 'orange' }]} />
-//           <Text style={styles.legendText}>Today</Text>
-//         </View>
-//       </View>
-
-//       {/* Enhanced Summary Bar */}
-//       <View style={styles.summaryBar}>
-//         <View style={styles.summaryItem}>
-//           <Text style={styles.summaryLabel}>Month Hours</Text>
-//           <Text style={styles.summaryValue}>{monthlyTotals.hours.toFixed(1)}h</Text>
-//         </View>
-//         <View style={styles.summaryDivider} />
-//         <View style={styles.summaryItem}>
-//           <Text style={styles.summaryLabel}>Days Logged</Text>
-//           <Text style={styles.summaryValue}>{monthlyTotals.days}</Text>
-//         </View>
-//         <View style={styles.summaryDivider} />
-//         <View style={styles.summaryItem}>
-//           <Text style={styles.summaryLabel}>Total Tasks</Text>
-//           <Text style={styles.summaryValue}>{monthlyTotals.tasks}</Text>
-//         </View>
-//       </View>
-
-//       {/* Modal for timesheet form */}
-//       <Modal
-//         animationType="slide"
-//         transparent={false}
-//         visible={modalVisible}
-//         onRequestClose={() => setModalVisible(false)}
-//       >
-//         <KeyboardAvoidingView 
-//           style={styles.modalContainer}
-//           behavior={Platform.OS === "ios" ? "padding" : "height"}
-//         >
-//           <View style={styles.modalHeader}>
-//             <View style={styles.modalHeaderLeft}>
-//               <Text style={styles.modalTitle}>
-//                 {new Date(selectedDate).toLocaleDateString('en-US', {
-//                   weekday: 'short',
-//                   month: 'short', 
-//                   day: 'numeric',
-//                   year: 'numeric'
-//                 })}
-//               </Text>
-//               {monthlySummary[selectedDate] && (
-//                 <Text style={styles.modalSubtitle}>
-//                   {(monthlySummary[selectedDate].totalMinutes / 60).toFixed(1)}h logged
-//                 </Text>
-//               )}
-//             </View>
-//             <TouchableOpacity
-//               onPress={() => {
-//                 console.log("❌ [Calendar] Closing modal for:", selectedDate);
-//                 setModalVisible(false);
-//               }}
-//               style={styles.closeButton}
-//             >
-//               <FontAwesome name="times" size={24} color="#EF4444" />
-//             </TouchableOpacity>
-//           </View>
-
-//           {loading ? (
-//             <View style={styles.loadingContainer}>
-//               <ActivityIndicator size="large" color="rgb(0, 41, 87)" />
-//               <Text style={styles.loadingText}>Loading tasks...</Text>
-//             </View>
-//           ) : (
-//             <TimesheetForm
-//               selectedDate={selectedDate}
-//               onTasksUpdated={refreshDateTasks}
-//               closeModal={() => setModalVisible(false)}
-//             />
-//           )}
-//         </KeyboardAvoidingView>
-//       </Modal>
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#f8fafc',
-//   },
-//   header: {
-//     paddingHorizontal: 20,
-//     paddingVertical: 16,
-//     backgroundColor: '#ffffff',
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#e5e7eb',
-//   },
-//   headerTitle: {
-//     fontSize: 24,
-//     fontWeight: 'bold',
-//     color: 'rgb(0, 41, 87)',
-//     marginBottom: 4,
-//   },
-//   headerSubtitle: {
-//     fontSize: 14,
-//     color: '#6B7280',
-//   },
-//   calendar: {
-//     height: 350,
-//   },
-//   legend: {
-//     flexDirection: 'row',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     paddingVertical: 12,
-//     paddingHorizontal: 20,
-//     backgroundColor: '#ffffff',
-//     borderTopWidth: 1,
-//     borderTopColor: '#e5e7eb',
-//     gap: 15,
-//   },
-//   legendItem: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     gap: 4,
-//   },
-//   legendDot: {
-//     width: 10,
-//     height: 10,
-//     borderRadius: 5,
-//   },
-//   legendText: {
-//     fontSize: 11,
-//     color: '#6B7280',
-//   },
-//   summaryBar: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-around',
-//     alignItems: 'center',
-//     paddingVertical: 16,
-//     paddingHorizontal: 20,
-//     backgroundColor: 'rgb(0, 41, 87)',
-//   },
-//   summaryItem: {
-//     alignItems: 'center',
-//     flex: 1,
-//   },
-//   summaryLabel: {
-//     color: '#ffffff',
-//     fontSize: 12,
-//     opacity: 0.8,
-//     marginBottom: 4,
-//   },
-//   summaryValue: {
-//     color: '#ffffff',
-//     fontWeight: 'bold',
-//     fontSize: 16,
-//   },
-//   summaryDivider: {
-//     width: 1,
-//     height: 30,
-//     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-//   },
-//   modalContainer: {
-//     flex: 1,
-//     backgroundColor: '#ffffff',
-//   },
-//   modalHeader: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     alignItems: 'center',
-//     paddingHorizontal: 20,
-//     paddingVertical: 16,
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#e5e7eb',
-//     backgroundColor: '#f8fafc',
-//   },
-//   modalHeaderLeft: {
-//     flex: 1,
-//   },
-//   modalTitle: {
-//     fontSize: 20,
-//     fontWeight: 'bold',
-//     color: 'rgb(0, 41, 87)',
-//   },
-//   modalSubtitle: {
-//     fontSize: 14,
-//     color: '#6B7280',
-//     marginTop: 2,
-//   },
-//   closeButton: {
-//     padding: 8,
-//     backgroundColor: '#fee2e2',
-//     borderRadius: 20,
-//   },
-//   loadingContainer: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     backgroundColor: '#f8fafc',
-//   },
-//   loadingText: {
-//     marginTop: 10,
-//     fontSize: 16,
-//     color: 'rgb(0, 41, 87)',
-//     fontWeight: '600',
-//   },
-//   loadingSubText: {
-//     marginTop: 5,
-//     fontSize: 14,
-//     color: '#6B7280',
-//   },
-// });
-
-// export default TimesheetCalendar;
 

@@ -83,6 +83,19 @@ const normalizeTask = (apiTask: any): TimesheetTask => {
   };
 };
 
+// Add this to your timesheetService.ts
+export const clearAllCache = () => {
+  // If you have a cache Map in your service
+  if (typeof cache !== 'undefined' && cache.clear) {
+    cache.clear();
+    console.log('🗑️ [Service] All cache cleared');
+  }
+  
+  // Clear any other in-memory data structures you might have
+  console.log('✅ [Service] Cache cleanup completed');
+};
+
+
 // Helper function to get auth headers
 const getAuthHeader = async () => {
   try {
