@@ -7,7 +7,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
-import { baseUrl } from "../../Global/Config";
+import { baseUrl } from "../../Global/Config"; 
+ import { clearAllCache } from '../../Services/Timesheet/timesheetService'; // Import the cache clearing function
+
 
 export const CustomDrawerContent = (props: any) => {
   const [submenuVisible, setSubmenuVisible] = useState({
@@ -197,19 +199,67 @@ export const CustomDrawerContent = (props: any) => {
     );
   };
 
-  const handleLogout = async () => {
-    console.log("Logging out...");
-    try {
-      await AsyncStorage.clear();
-      console.log("Local storage cleared");
-      // Clear Redux state
-      dispatch({ type: "userDetails", payload: {} });
-      dispatch({ type: "managerInfo", payload: {} });
-      // Navigation will be handled automatically by the conditional rendering in App.tsx
-    } catch (e) {
-      console.error("Failed to clear local storage:", e);
-    }
-  };
+  // const handleLogout = async () => {
+  //   console.log("Logging out...");
+  //   try {
+  //     await AsyncStorage.clear();
+  //     console.log("Local storage cleared");
+  //     // Clear Redux state
+  //     dispatch({ type: "userDetails", payload: {} });
+  //     dispatch({ type: "managerInfo", payload: {} });
+  //   } catch (e) {
+  //     console.error("Failed to clear local storage:", e);
+  //   }
+  // };
+
+
+const handleLogout = async () => {
+  console.log("🚪 [Logout] Starting logout process...");
+  try {
+    // 1. Clear AsyncStorage completely
+    await AsyncStorage.clear();
+    console.log("✅ [Logout] AsyncStorage cleared");
+    
+    // 2. Clear all in-memory cache from services
+    await clearAllCache();
+    console.log("✅ [Logout] Service cache cleared");
+    
+    // 3. Reset ALL Redux state to initial values
+    dispatch({ type: "RESET_ALL_STATE" });
+    console.log("✅ [Logout] Redux state reset");
+    
+    // 4. Additional individual state resets for safety
+    dispatch({ type: "userDetails", payload: {} });
+    dispatch({ type: "managerInfo", payload: [] });
+    dispatch({ type: "punchInfo", payload: [] });
+    dispatch({ type: "leaveDetails", payload: {} });
+    dispatch({ type: "calendarData", payload: [] });
+    dispatch({ type: "todayPunch", payload: null });
+    
+    // Reset timesheet state
+    dispatch({ type: "SET_TIMESHEET_TASKS", payload: [] });
+    dispatch({ type: "SET_TIMESHEET_PROJECTS", payload: [] });
+    dispatch({ type: "SET_MONTHLY_TIMESHEET_DATA", payload: {} });
+    dispatch({ type: "SET_SELECTED_TIMESHEET_DATE", payload: null });
+    
+    // Reset asset/ticket state
+    dispatch({ type: "SET_ASSET_CATEGORIES", payload: [] });
+    dispatch({ type: "SET_MY_TICKETS", payload: [] });
+    dispatch({ type: "SET_TICKET_STATS", payload: {
+      total: 0, pending: 0, approved: 0, allocated: 0, rejected: 0, cancelled: 0
+    }});
+    dispatch({ type: "SET_ASSET_LOADING", payload: false });
+    dispatch({ type: "SET_TICKET_LOADING", payload: false });
+    dispatch({ type: "SET_RAISING_TICKET", payload: null });
+    dispatch({ type: "SET_CANCELLING_TICKET", payload: null });
+    
+    console.log("✅ [Logout] Complete logout cleanup finished");
+    
+  } catch (e) {
+    console.error("❌ [Logout] Failed during logout cleanup:", e);
+  }
+};
+
 
   return (
     <View style={styles.container}>

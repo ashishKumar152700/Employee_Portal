@@ -15,19 +15,19 @@ import {
   Modal,
   Dimensions,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import {
-  TimesheetTask,
-  Project,
-  getTasksByDate,
-  addTasks,
-  updateTask,
+import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  TimesheetTask, 
+  Project, 
+  getTasksByDate, 
+  addTasks, 
+  updateTask, 
   deleteTask,
   getProjects,
-  clearCache,
+  clearCache
 } from "../../Services/Timesheet/timesheetService";
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
 
 interface TimesheetFormProps {
   selectedDate: string;
@@ -35,10 +35,10 @@ interface TimesheetFormProps {
   closeModal: () => void;
 }
 
-export default function TimesheetForm({
-  selectedDate,
-  onTasksUpdated,
-  closeModal,
+export default function TimesheetForm({ 
+  selectedDate, 
+  onTasksUpdated, 
+  closeModal 
 }: TimesheetFormProps) {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -67,12 +67,12 @@ export default function TimesheetForm({
     try {
       const [projectsData, tasksData] = await Promise.all([
         getProjects(),
-        getTasksByDate(selectedDate),
+        getTasksByDate(selectedDate)
       ]);
-
+      
       console.log("📋 [Form] Projects loaded:", projectsData.length);
       console.log("📋 [Form] Tasks loaded:", tasksData.length);
-
+      
       setProjects(projectsData);
       setExistingTasks(tasksData);
     } catch (error) {
@@ -96,7 +96,7 @@ export default function TimesheetForm({
   };
 
   const getTotalMinutes = (): number => {
-    return hours * 60 + minutes;
+    return (hours * 60) + minutes;
   };
 
   const setTimeFromMinutes = (totalMinutes: number) => {
@@ -112,19 +112,11 @@ export default function TimesheetForm({
       return false;
     }
     if (!taskDescription.trim()) {
-      showAlert(
-        "warning",
-        "Validation Error",
-        "Please enter a task description."
-      );
+      showAlert("warning", "Validation Error", "Please enter a task description.");
       return false;
     }
     if (getTotalMinutes() <= 0) {
-      showAlert(
-        "warning",
-        "Validation Error",
-        "Please enter valid time (greater than 0)."
-      );
+      showAlert("warning", "Validation Error", "Please enter valid time (greater than 0).");
       return false;
     }
     return true;
@@ -135,11 +127,9 @@ export default function TimesheetForm({
 
     setSaving(true);
     try {
-      const finalProjectName =
-        showCustomProject && customProject
-          ? customProject
-          : projects.find((p) => p.projectId === projectId)?.projectName ||
-            "No Project";
+      const finalProjectName = showCustomProject && customProject 
+        ? customProject 
+        : projects.find(p => p.projectId === projectId)?.projectName || 'No Project';
 
       const taskData: TimesheetTask = {
         taskTitle: taskTitle.trim(),
@@ -164,16 +154,12 @@ export default function TimesheetForm({
       clearForm();
       await onTasksUpdated();
       await loadInitialData();
+      
     } catch (error: any) {
       console.error("❌ [Form] Error submitting task:", error);
       // Show success anyway for JSON parse errors (operation likely succeeded)
-      showAlert(
-        "success",
-        "Success",
-        editingTaskId
-          ? "Task updated successfully!"
-          : "Task added successfully!"
-      );
+      showAlert("success", "Success", 
+        editingTaskId ? "Task updated successfully!" : "Task added successfully!");
       clearForm();
       await onTasksUpdated();
       await loadInitialData();
@@ -184,20 +170,19 @@ export default function TimesheetForm({
 
   const handleEditTask = (task: TimesheetTask) => {
     console.log("✏️ [Form] Editing task:", task.taskId);
-
+    
     setTaskTitle(task.taskTitle || "");
     setTaskDescription(task.taskDescription || "");
     setProjectId(task.projectId || 0);
-
+    
     const taskMinutes = task.minutes || task.minutesSpend || 0;
     setTimeFromMinutes(taskMinutes);
-
-    const billableValue =
-      typeof task.billable === "string"
-        ? task.billable.toLowerCase() === "yes"
-        : Boolean(task.billable);
+    
+    const billableValue = typeof task.billable === 'string' 
+      ? task.billable.toLowerCase() === 'yes' 
+      : Boolean(task.billable);
     setIsBillable(billableValue);
-
+    
     setEditingTaskId(task.taskId || null);
   };
 
@@ -240,37 +225,31 @@ export default function TimesheetForm({
   };
 
   // Professional Alert Functions
-  const showAlert = (
-    type: "success" | "error" | "warning",
-    title: string,
-    message: string
-  ) => {
+  const showAlert = (type: 'success' | 'error' | 'warning', title: string, message: string) => {
     const icons = {
-      success: "✅",
-      error: "❌",
-      warning: "⚠️",
+      success: '✅',
+      error: '❌',
+      warning: '⚠️'
     };
-    Alert.alert(`${icons[type]} ${title}`, message, [
-      { text: "OK", style: "default" },
-    ]);
+    Alert.alert(`${icons[type]} ${title}`, message, [{ text: "OK", style: "default" }]);
   };
 
-  const showConfirmAlert = (
-    title: string,
-    message: string,
-    onConfirm: () => void
-  ) => {
-    Alert.alert(title, message, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: onConfirm },
-    ]);
+  const showConfirmAlert = (title: string, message: string, onConfirm: () => void) => {
+    Alert.alert(
+      title,
+      message,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: onConfirm }
+      ]
+    );
   };
 
   // Professional Loading Component
   const LoadingOverlay = ({ message }: { message: string }) => (
     <View style={styles.loadingOverlay}>
       <LinearGradient
-        colors={["rgba(0,41,87,0.9)", "rgba(0,41,87,0.7)"]}
+        colors={['rgba(0,41,87,0.9)', 'rgba(0,41,87,0.7)']}
         style={styles.loadingGradient}
       >
         <View style={styles.loadingCard}>
@@ -292,12 +271,12 @@ export default function TimesheetForm({
       <View style={styles.timePickerOverlay}>
         <View style={styles.timePickerContainer}>
           <LinearGradient
-            colors={["rgb(0, 41, 87)", "rgba(0, 41, 87, 0.8)"]}
+            colors={['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']}
             style={styles.timePickerHeader}
           >
             <Text style={styles.timePickerTitle}>Select Time</Text>
           </LinearGradient>
-
+          
           <View style={styles.timePickerContent}>
             <View style={styles.timePickerRow}>
               <View style={styles.timePickerColumn}>
@@ -307,12 +286,12 @@ export default function TimesheetForm({
                   onValueChange={setHours}
                   style={styles.timePicker}
                 >
-                  {Array.from({ length: 24 }, (_, i) => (
+                  {Array.from({length: 24}, (_, i) => (
                     <Picker.Item key={i} label={i.toString()} value={i} />
                   ))}
                 </Picker>
               </View>
-
+              
               <View style={styles.timePickerColumn}>
                 <Text style={styles.timePickerLabel}>Minutes</Text>
                 <Picker
@@ -320,13 +299,13 @@ export default function TimesheetForm({
                   onValueChange={setMinutes}
                   style={styles.timePicker}
                 >
-                  {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                  {Array.from({length: 12}, (_, i) => i * 5).map(m => (
                     <Picker.Item key={m} label={m.toString()} value={m} />
                   ))}
                 </Picker>
               </View>
             </View>
-
+            
             <View style={styles.timePickerButtons}>
               <TouchableOpacity
                 style={[styles.timePickerButton, styles.timePickerCancelButton]}
@@ -334,13 +313,13 @@ export default function TimesheetForm({
               >
                 <Text style={styles.timePickerCancelText}>Cancel</Text>
               </TouchableOpacity>
-
+              
               <TouchableOpacity
                 style={[styles.timePickerButton, styles.timePickerDoneButton]}
                 onPress={() => setShowTimePicker(false)}
               >
                 <LinearGradient
-                  colors={["rgb(0, 41, 87)", "rgba(0, 41, 87, 0.8)"]}
+                  colors={['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']}
                   style={styles.timePickerDoneGradient}
                 >
                   <Text style={styles.timePickerDoneText}>Done</Text>
@@ -359,10 +338,7 @@ export default function TimesheetForm({
 
   return (
     <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Enhanced Header */}
         {/* <LinearGradient
           colors={['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']}
@@ -387,10 +363,10 @@ export default function TimesheetForm({
         {/* Enhanced Task Form */}
         <View style={styles.formContainer}>
           <View style={styles.formHeader}>
-            <FontAwesome
-              name={editingTaskId ? "edit" : "plus-circle"}
-              size={20}
-              color="rgb(0, 41, 87)"
+            <FontAwesome 
+              name={editingTaskId ? "edit" : "plus-circle"} 
+              size={20} 
+              color="rgb(0, 41, 87)" 
             />
             <Text style={styles.sectionTitle}>
               {editingTaskId ? "Edit Task" : "Add New Task"}
@@ -400,12 +376,7 @@ export default function TimesheetForm({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Task Title *</Text>
             <View style={styles.inputContainer}>
-              <FontAwesome
-                name="tag"
-                size={16}
-                color="#9CA3AF"
-                style={styles.inputIcon}
-              />
+              <FontAwesome name="tag" size={16} color="#9CA3AF" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
                 value={taskTitle}
@@ -420,12 +391,7 @@ export default function TimesheetForm({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Task Description *</Text>
             <View style={styles.inputContainer}>
-              <FontAwesome
-                name="align-left"
-                size={16}
-                color="#9CA3AF"
-                style={styles.inputIconTextArea}
-              />
+              <FontAwesome name="align-left" size={16} color="#9CA3AF" style={styles.inputIconTextArea} />
               <TextInput
                 style={[styles.textInput, styles.textArea]}
                 value={taskDescription}
@@ -444,44 +410,20 @@ export default function TimesheetForm({
             <Text style={styles.label}>Project</Text>
             <View style={styles.projectToggleContainer}>
               <TouchableOpacity
-                style={[
-                  styles.projectToggle,
-                  !showCustomProject && styles.projectToggleActive,
-                ]}
+                style={[styles.projectToggle, !showCustomProject && styles.projectToggleActive]}
                 onPress={() => setShowCustomProject(false)}
               >
-                <FontAwesome
-                  name="list"
-                  size={14}
-                  color={!showCustomProject ? "white" : "#6B7280"}
-                />
-                <Text
-                  style={[
-                    styles.projectToggleText,
-                    !showCustomProject && styles.projectToggleTextActive,
-                  ]}
-                >
+                <FontAwesome name="list" size={14} color={!showCustomProject ? 'white' : '#6B7280'} />
+                <Text style={[styles.projectToggleText, !showCustomProject && styles.projectToggleTextActive]}>
                   Select Project
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.projectToggle,
-                  showCustomProject && styles.projectToggleActive,
-                ]}
+                style={[styles.projectToggle, showCustomProject && styles.projectToggleActive]}
                 onPress={() => setShowCustomProject(true)}
               >
-                <FontAwesome
-                  name="edit"
-                  size={14}
-                  color={showCustomProject ? "white" : "#6B7280"}
-                />
-                <Text
-                  style={[
-                    styles.projectToggleText,
-                    showCustomProject && styles.projectToggleTextActive,
-                  ]}
-                >
+                <FontAwesome name="edit" size={14} color={showCustomProject ? 'white' : '#6B7280'} />
+                <Text style={[styles.projectToggleText, showCustomProject && styles.projectToggleTextActive]}>
                   Custom Project
                 </Text>
               </TouchableOpacity>
@@ -489,12 +431,7 @@ export default function TimesheetForm({
 
             {showCustomProject ? (
               <View style={styles.inputContainer}>
-                <FontAwesome
-                  name="briefcase"
-                  size={16}
-                  color="#9CA3AF"
-                  style={styles.inputIcon}
-                />
+                <FontAwesome name="briefcase" size={16} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.textInput}
                   value={customProject}
@@ -506,22 +443,17 @@ export default function TimesheetForm({
               </View>
             ) : (
               <View style={styles.pickerContainer}>
-                <FontAwesome
-                  name="briefcase"
-                  size={16}
-                  color="#9CA3AF"
-                  style={styles.pickerIcon}
-                />
+                <FontAwesome name="briefcase" size={16} color="#9CA3AF" style={styles.pickerIcon} />
                 <Picker
                   selectedValue={projectId}
                   onValueChange={setProjectId}
                   style={styles.picker}
                 >
                   {projects.map((project) => (
-                    <Picker.Item
-                      key={project.projectId}
-                      label={project.projectName}
-                      value={project.projectId}
+                    <Picker.Item 
+                      key={project.projectId} 
+                      label={project.projectName} 
+                      value={project.projectId} 
                     />
                   ))}
                 </Picker>
@@ -543,8 +475,7 @@ export default function TimesheetForm({
               <FontAwesome name="chevron-right" size={12} color="#9CA3AF" />
             </TouchableOpacity>
             <Text style={styles.helperText}>
-              Tap to select hours and minutes • {getTotalMinutes()} minutes
-              total
+              Tap to select hours and minutes • {getTotalMinutes()} minutes total
             </Text>
           </View>
 
@@ -579,26 +510,23 @@ export default function TimesheetForm({
               disabled={saving}
             >
               <LinearGradient
-                colors={["rgb(0, 41, 87)", "rgba(0, 41, 87, 0.8)"]}
+                colors={['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']}
                 style={styles.submitGradient}
               >
                 {saving ? (
                   <ActivityIndicator color="#ffffff" size="small" />
                 ) : (
-                  <FontAwesome
-                    name={editingTaskId ? "save" : "plus"}
-                    size={16}
-                    color="white"
+                  <FontAwesome 
+                    name={editingTaskId ? "save" : "plus"} 
+                    size={16} 
+                    color="white" 
                   />
                 )}
                 <Text style={styles.submitButtonText}>
-                  {saving
-                    ? editingTaskId
-                      ? "Updating..."
-                      : "Adding..."
-                    : editingTaskId
-                    ? "Update Task"
-                    : "Add Task"}
+                  {saving 
+                    ? (editingTaskId ? "Updating..." : "Adding...") 
+                    : (editingTaskId ? "Update Task" : "Add Task")
+                  }
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -613,50 +541,35 @@ export default function TimesheetForm({
               Today's Tasks ({existingTasks.length})
             </Text>
           </View>
-
+          
           {existingTasks.length === 0 ? (
             <View style={styles.emptyState}>
               <LinearGradient
-                colors={["rgba(0, 41, 87, 0.1)", "rgba(0, 41, 87, 0.05)"]}
+                colors={['rgba(0, 41, 87, 0.1)', 'rgba(0, 41, 87, 0.05)']}
                 style={styles.emptyStateCard}
               >
-                <FontAwesome
-                  name="calendar-plus-o"
-                  size={48}
-                  color="rgba(0, 41, 87, 0.3)"
-                />
-                <Text style={styles.emptyStateText}>
-                  No tasks logged for this date
-                </Text>
-                <Text style={styles.emptyStateSubtext}>
-                  Add your first task using the form above
-                </Text>
+                <FontAwesome name="calendar-plus-o" size={48} color="rgba(0, 41, 87, 0.3)" />
+                <Text style={styles.emptyStateText}>No tasks logged for this date</Text>
+                <Text style={styles.emptyStateSubtext}>Add your first task using the form above</Text>
               </LinearGradient>
             </View>
           ) : (
             existingTasks.map((task, index) => {
               const taskMinutes = task.minutes || task.minutesSpend || 0;
-              const taskBillable =
-                typeof task.billable === "string"
-                  ? task.billable.toLowerCase() === "yes"
-                  : Boolean(task.billable);
+              const taskBillable = typeof task.billable === 'string' 
+                ? task.billable.toLowerCase() === 'yes' 
+                : Boolean(task.billable);
 
               return (
                 <View key={task.taskId || index} style={styles.taskCard}>
                   <LinearGradient
-                    colors={["rgba(0, 41, 87, 0.02)", "rgba(0, 41, 87, 0.01)"]}
+                    colors={['rgba(0, 41, 87, 0.02)', 'rgba(0, 41, 87, 0.01)']}
                     style={styles.taskCardGradient}
                   >
                     <View style={styles.taskHeader}>
                       <View style={styles.taskTitleContainer}>
-                        <FontAwesome
-                          name="tag"
-                          size={14}
-                          color="rgb(0, 41, 87)"
-                        />
-                        <Text style={styles.taskTitle}>
-                          {task.taskTitle || "Untitled Task"}
-                        </Text>
+                        <FontAwesome name="tag" size={14} color="rgb(0, 41, 87)" />
+                        <Text style={styles.taskTitle}>{task.taskTitle || 'Untitled Task'}</Text>
                       </View>
                       <View style={styles.taskActions}>
                         <TouchableOpacity
@@ -667,9 +580,7 @@ export default function TimesheetForm({
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.deleteButton}
-                          onPress={() =>
-                            task.taskId && handleDeleteTask(task.taskId)
-                          }
+                          onPress={() => task.taskId && handleDeleteTask(task.taskId)}
                           disabled={deleting === task.taskId}
                         >
                           {deleting === task.taskId ? (
@@ -680,20 +591,16 @@ export default function TimesheetForm({
                         </TouchableOpacity>
                       </View>
                     </View>
-
+                    
                     <Text style={styles.taskDescription}>
-                      {task.taskDescription || "No description provided"}
+                      {task.taskDescription || 'No description provided'}
                     </Text>
-
+                    
                     <View style={styles.taskFooter}>
                       <View style={styles.taskDetail}>
-                        <FontAwesome
-                          name="briefcase"
-                          size={12}
-                          color="#6B7280"
-                        />
+                        <FontAwesome name="briefcase" size={12} color="#6B7280" />
                         <Text style={styles.taskDetailText}>
-                          {task.projectName || "Unknown Project"}
+                          {task.projectName || 'Unknown Project'}
                         </Text>
                       </View>
                       <View style={styles.taskDetail}>
@@ -703,18 +610,13 @@ export default function TimesheetForm({
                         </Text>
                       </View>
                       <View style={styles.taskDetail}>
-                        <FontAwesome
-                          name={taskBillable ? "dollar" : "minus-circle"}
-                          size={12}
-                          color={taskBillable ? "#10B981" : "#6B7280"}
+                        <FontAwesome 
+                          name={taskBillable ? "dollar" : "minus-circle"} 
+                          size={12} 
+                          color={taskBillable ? "#10B981" : "#6B7280"} 
                         />
-                        <Text
-                          style={[
-                            styles.taskDetailText,
-                            taskBillable && styles.billableText,
-                          ]}
-                        >
-                          {taskBillable ? "Billable" : "Non-billable"}
+                        <Text style={[styles.taskDetailText, taskBillable && styles.billableText]}>
+                          {taskBillable ? 'Billable' : 'Non-billable'}
                         </Text>
                       </View>
                     </View>
@@ -725,7 +627,7 @@ export default function TimesheetForm({
           )}
         </View>
       </ScrollView>
-
+      
       {renderTimePicker()}
     </>
   );
@@ -734,7 +636,7 @@ export default function TimesheetForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: '#f8fafc',
   },
   scrollContent: {
     paddingBottom: 10,
@@ -746,63 +648,63 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 25,
   },
   headerContent: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   dateText: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
+    fontWeight: 'bold',
+    color: 'white',
     marginBottom: 8,
-    textAlign: "center",
+    textAlign: 'center',
   },
   totalHoursContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   totalHoursText: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.9)",
-    fontWeight: "600",
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
   },
   formContainer: {
-    backgroundColor: "white",
+    backgroundColor: 'white',
     margin: 15,
     borderRadius: 20,
     padding: 15,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 6,
   },
   formHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 10,
     gap: 12,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "rgb(0, 41, 87)",
+    fontWeight: 'bold',
+    color: 'rgb(0, 41, 87)',
   },
   inputGroup: {
     marginBottom: 15,
   },
   label: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 6,
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderColor: '#E5E7EB',
     borderRadius: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -811,40 +713,40 @@ const styles = StyleSheet.create({
   },
   inputIconTextArea: {
     marginRight: 12,
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
     marginTop: 4,
   },
   textInput: {
     flex: 1,
     fontSize: 16,
-    color: "#374151",
+    color: '#374151',
     padding: 0,
   },
   textArea: {
     minHeight: 20,
-    textAlignVertical: "top",
+    textAlignVertical: 'top',
     paddingTop: 0,
   },
   projectToggleContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     padding: 4,
     marginBottom: 12,
   },
   projectToggle: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     gap: 8,
   },
   projectToggleActive: {
-    backgroundColor: "rgb(0, 41, 87)",
-    shadowColor: "rgb(0, 41, 87)",
+    backgroundColor: 'rgb(0, 41, 87)',
+    shadowColor: 'rgb(0, 41, 87)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -852,26 +754,26 @@ const styles = StyleSheet.create({
   },
   projectToggleText: {
     fontSize: 14,
-    color: "#6B7280",
-    fontWeight: "700",
+    color: '#6B7280',
+    fontWeight: '700',
   },
   projectToggleTextActive: {
-    color: "white",
+    color: 'white',
   },
   pickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderColor: '#E5E7EB',
     borderRadius: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     paddingLeft: 16,
   },
   pickerIcon: {
     // marginRight: 0,
-    fontSize: 16,
-    color: "#374151",
-    fontWeight: "600",
+     fontSize: 16,
+    color: '#374151',
+    fontWeight: '600',
   },
   picker: {
     flex: 1,
@@ -879,13 +781,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   timeInputButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderColor: '#E5E7EB',
     borderRadius: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     paddingHorizontal: 14,
     paddingVertical: 14,
     gap: 18,
@@ -893,263 +795,263 @@ const styles = StyleSheet.create({
   timeInputText: {
     flex: 1,
     fontSize: 16,
-    color: "#374151",
-    fontWeight: "600",
+    color: '#374151',
+    fontWeight: '600',
   },
   helperText: {
     fontSize: 12,
-    color: "#6B7280",
+    color: '#6B7280',
     marginTop: 6,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   switchContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 0,
     marginBottom: 5,
   },
   switchLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   switchLabel: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "rgb(0, 41, 87)",
+    fontWeight: '600',
+    color: 'rgb(0, 41, 87)',
   },
   buttonContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
   clearButton: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: '#E5E7EB',
     gap: 8,
-    height: 50,
+     height: 50,
   },
   clearButtonText: {
-    color: "#6B7280",
+    color: '#6B7280',
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   submitButton: {
     flex: 2,
     borderRadius: 12,
-    overflow: "hidden",
-    height: 50,
+    overflow: 'hidden',
+     height: 50,
   },
   submitGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 16,
     gap: 8,
   },
   submitButtonText: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   // Time Picker Styles
   timePickerOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
   },
   timePickerContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
     borderRadius: 20,
-    width: "100%",
+    width: '100%',
     maxWidth: 350,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   timePickerHeader: {
     paddingVertical: 20,
     paddingHorizontal: 20,
-    alignItems: "center",
+    alignItems: 'center',
   },
   timePickerTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
+    fontWeight: 'bold',
+    color: 'white',
   },
   timePickerContent: {
     padding: 20,
   },
   timePickerRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 20,
     marginBottom: 20,
   },
   timePickerColumn: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
   },
   timePickerLabel: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 10,
   },
   timePicker: {
-    width: "100%",
+    width: '100%',
     height: 120,
   },
   timePickerButtons: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
   timePickerButton: {
     flex: 1,
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   timePickerCancelButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
     paddingVertical: 16,
-    alignItems: "center",
+    alignItems: 'center',
   },
   timePickerCancelText: {
-    color: "#6B7280",
+    color: '#6B7280',
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   timePickerDoneButton: {
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   timePickerDoneGradient: {
     paddingVertical: 16,
-    alignItems: "center",
+    alignItems: 'center',
   },
   timePickerDoneText: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   // Tasks List Styles
   tasksContainer: {
-    backgroundColor: "white",
+    backgroundColor: 'white',
     marginHorizontal: 15,
     borderRadius: 20,
     padding: 15,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 6,
   },
   tasksHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 15,
     gap: 12,
   },
   emptyState: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: 30,
   },
   emptyStateCard: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: 40,
     paddingHorizontal: 30,
     borderRadius: 16,
-    width: "100%",
+    width: '100%',
   },
   emptyStateText: {
     marginTop: 16,
     fontSize: 16,
-    color: "rgba(0, 41, 87, 0.7)",
-    fontWeight: "600",
-    textAlign: "center",
+    color: 'rgba(0, 41, 87, 0.7)',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   emptyStateSubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: "rgba(0, 41, 87, 0.5)",
-    textAlign: "center",
+    color: 'rgba(0, 41, 87, 0.5)',
+    textAlign: 'center',
   },
   taskCard: {
     borderRadius: 16,
     marginBottom: 16,
-    overflow: "hidden",
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: '#E5E7EB',
   },
   taskCardGradient: {
     padding: 16,
   },
   taskHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   taskTitleContainer: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     marginRight: 12,
   },
   taskTitle: {
     flex: 1,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
+    fontWeight: '600',
+    color: '#1F2937',
   },
   taskActions: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 8,
   },
   editButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: '#3B82F6',
     borderRadius: 8,
     padding: 8,
   },
   deleteButton: {
-    backgroundColor: "#EF4444",
+    backgroundColor: '#EF4444',
     borderRadius: 8,
     padding: 8,
   },
   taskDescription: {
     fontSize: 14,
-    color: "#6B7280",
+    color: '#6B7280',
     marginBottom: 16,
     lineHeight: 20,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   taskFooter: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
   },
   taskDetail: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   taskDetailText: {
     fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
+    color: '#6B7280',
+    fontWeight: '500',
   },
   billableText: {
-    color: "#10B981",
-    fontWeight: "600",
+    color: '#10B981',
+    fontWeight: '600',
   },
   loadingOverlay: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
@@ -1158,16 +1060,16 @@ const styles = StyleSheet.create({
   },
   loadingGradient: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingCard: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: 16,
   },
   loadingText: {
     fontSize: 18,
-    color: "white",
-    fontWeight: "600",
+    color: 'white',
+    fontWeight: '600',
   },
 });
