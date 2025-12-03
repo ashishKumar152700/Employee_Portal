@@ -29,7 +29,8 @@
     "expo-linear-gradient": "~14.0.2",
     "expo-local-authentication": "~15.0.2",
     "expo-location": "~18.0.7",
-    "lottie-react-native": "^7.3.2",
+    "lottie": "^0.0.1",
+    "lottie-react-native": "6",
     "react": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-native": "^0.76.7",
@@ -60,7 +61,8 @@
     "redux": "^5.0.1",
     "redux-thunk": "^3.1.0",
     "sweetalert2": "^11.14.5",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@react-native-community/datetimepicker": "8.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

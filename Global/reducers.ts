@@ -104,13 +104,21 @@ const reducers = (state = initialState, action: any) => {
             : ticket
         )
       };
+    // case "DELETE_TICKET":
+    //   return {
+    //     ...state,
+    //     myTickets: state.myTickets.filter((ticket: any) =>
+    //       (ticket.id || ticket._id) !== action.payload
+    //     )
+    //   };
     case "DELETE_TICKET":
-      return {
-        ...state,
-        myTickets: state.myTickets.filter((ticket: any) =>
-          (ticket.id || ticket._id) !== action.payload
-        )
-      };
+  return {
+    ...state,
+    myTickets: state.myTickets.filter(
+      (t) => (t.id || t._id).toString() !== action.payload.toString()
+    ),
+  };
+
 
     default:
       return state;

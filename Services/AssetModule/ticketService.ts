@@ -41,7 +41,7 @@ export interface TicketStats {
 const getAuthHeader = async () => {
   try {
     const token = await AsyncStorage.getItem('accessToken');
-    console.log('🔑 [Ticket Service] Token found:', !!token);
+    console.log(' [Ticket Service] Token found:', !!token);
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -56,7 +56,7 @@ const getAuthHeader = async () => {
 
 // Helper function to handle API responses that might not be JSON
 const handleApiResponse = async (response: Response, operationName: string) => {
-  console.log(`📡 [Ticket Service] ${operationName} Response status:`, response.status);
+  console.log(` [Ticket Service] ${operationName} Response status:`, response.status);
   
   if (!response.ok) {
     const errorText = await response.text();
@@ -65,15 +65,15 @@ const handleApiResponse = async (response: Response, operationName: string) => {
   }
   
   const responseText = await response.text();
-  console.log(`📡 [Ticket Service] ${operationName} Raw response:`, responseText.substring(0, 200) + '...');
+  console.log(` [Ticket Service] ${operationName} Raw response:`, responseText.substring(0, 200) + '...');
   
   // Try to parse as JSON, if it fails, return a success object
   try {
     const jsonData = JSON.parse(responseText);
-    console.log(`✅ [Ticket Service] ${operationName} JSON response:`, JSON.stringify(jsonData, null, 2));
+    console.log(` [Ticket Service] ${operationName} JSON response:`, JSON.stringify(jsonData, null, 2));
     return jsonData;
   } catch (parseError) {
-    console.log(`ℹ️ [Ticket Service] ${operationName} Non-JSON response, treating as success:`, responseText.substring(0, 100));
+    console.log(`[Ticket Service] ${operationName} Non-JSON response, treating as success:`, responseText.substring(0, 100));
     return { 
       success: true, 
       message: responseText,
@@ -85,7 +85,7 @@ const handleApiResponse = async (response: Response, operationName: string) => {
 // Get categories by role (IT categories only)
 export const getCategoriesByRole = async (): Promise<Category[]> => {
   try {
-    console.log('📋 [Ticket Service] ===== FETCHING CATEGORIES =====');
+    console.log('[Ticket Service] ===== FETCHING CATEGORIES =====');
     const headers = await getAuthHeader();
     const response = await fetch(`${baseUrl}/category/get-by-role`, {
       method: 'GET',
@@ -99,7 +99,7 @@ export const getCategoriesByRole = async (): Promise<Category[]> => {
     
     // Filter only IT categories like web version
     const itCategories = categories.filter((item: Category) => item.type === 'IT');
-    console.log('📋 [Ticket Service] IT Categories filtered:', itCategories.length);
+    console.log(' [Ticket Service] IT Categories filtered:', itCategories.length);
     
     return itCategories;
   } catch (error) {
@@ -111,8 +111,8 @@ export const getCategoriesByRole = async (): Promise<Category[]> => {
 // Raise ticket for categories
 export const raiseTicket = async (categories: string[]): Promise<any> => {
   try {
-    console.log('🎫 [Ticket Service] ===== RAISING TICKET =====');
-    console.log('🎫 [Ticket Service] Categories:', categories);
+    console.log(' [Ticket Service] ===== RAISING TICKET =====');
+    console.log(' [Ticket Service] Categories:', categories);
     
     const headers = await getAuthHeader();
     const response = await fetch(`${baseUrl}/ticket/add-ticket`, {
@@ -129,7 +129,7 @@ export const raiseTicket = async (categories: string[]): Promise<any> => {
     console.error('  [Ticket Service] Error raising ticket:', error);
     // If the error is just JSON parsing but status was 200, treat as success
     if (error.message && error.message.includes('JSON Parse')) {
-      console.log('ℹ️ [Ticket Service] Treating JSON parse error as success for raise ticket');
+      console.log(' [Ticket Service] Treating JSON parse error as success for raise ticket');
       return { success: true, message: 'Ticket raised successfully' };
     }
     throw error;
@@ -139,7 +139,7 @@ export const raiseTicket = async (categories: string[]): Promise<any> => {
 // Get my tickets
 export const getMyTickets = async (): Promise<Ticket[]> => {
   try {
-    console.log('📋 [Ticket Service] ===== FETCHING MY TICKETS =====');
+    console.log('[Ticket Service] ===== FETCHING MY TICKETS =====');
     const headers = await getAuthHeader();
     const response = await fetch(`${baseUrl}/ticket/get-my-ticket`, {
       method: 'GET',
@@ -178,7 +178,7 @@ export const cancelTicket = async (ticketId: string): Promise<any> => {
     console.error('  [Ticket Service] Error cancelling ticket:', error);
     // If the error is just JSON parsing but status was 200, treat as success
     if (error.message && error.message.includes('JSON Parse')) {
-      console.log('ℹ️ [Ticket Service] Treating JSON parse error as success for cancel ticket');
+      console.log('[Ticket Service] Treating JSON parse error as success for cancel ticket');
       return { success: true, message: 'Ticket cancelled successfully' };
     }
     throw error;
@@ -187,7 +187,7 @@ export const cancelTicket = async (ticketId: string): Promise<any> => {
 
 // Calculate ticket statistics
 export const calculateTicketStats = (tickets: Ticket[]): TicketStats => {
-  console.log('📊 [Ticket Service] Calculating stats for', tickets.length, 'tickets');
+  console.log(' [Ticket Service] Calculating stats for', tickets.length, 'tickets');
   
   const stats: TicketStats = {
     total: tickets.length,
@@ -200,7 +200,7 @@ export const calculateTicketStats = (tickets: Ticket[]): TicketStats => {
 
   tickets.forEach((ticket, index) => {
     const status = ticket.status.toLowerCase();
-    console.log(`📊 [Ticket Service] Ticket ${index + 1}: ${ticket.category} - ${status}`);
+    console.log(` [Ticket Service] Ticket ${index + 1}: ${ticket.category} - ${status}`);
     
     if (status.includes('pending') || status.includes('waiting')) {
       stats.pending++;
@@ -215,7 +215,7 @@ export const calculateTicketStats = (tickets: Ticket[]): TicketStats => {
     }
   });
 
-  console.log('📊 [Ticket Service] Final stats:', stats);
+  console.log(' [Ticket Service] Final stats:', stats);
   return stats;
 };
 

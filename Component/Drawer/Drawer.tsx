@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import * as Font from 'expo-font'; // Import expo-font
+import * as Font from 'expo-font';
+import LottieView from 'lottie-react-native';
 import BottomNavForPunchScreen from '../BottomNav/BottomNavForPunchScreen';
-// import BottomNavForLeaveScreen from '../BottomNav/BottomNavForLeaveScreen';
-import CalendarListScreen from '../../Screen/Timesheet/Testing';
 import BottomNavForAsset from '../BottomNav/BottomNavForAsset';
 import MyTickets from '../../Screen/Asset/MyTickets';
 import CustomDrawerContent from './DrawerContnet';
@@ -25,25 +24,40 @@ import TaxModule from '../../Screen/TaxModule/TaxModule';
 import { StatusBar } from 'react-native';
 import BottomNavForBiometricCrud from '../BottomNav/BottomNavForBiometricCrud';
 import TimesheetCalendar from '../../Screen/Timesheet/TimesheetCalendar';
+
 const Drawer = createDrawerNavigator();
 
 const CustomHeader = ({ navigation, title }) => {
+  const formatTitle = (text) => {
+    return text.replace(/([A-Z])/g, " $1").trim();
+  };
+
   return (
     <View style={styles.headerContainer}>
-      <TouchableOpacity onPress={() => navigation.openDrawer()}>
+      <TouchableOpacity 
+        onPress={() => navigation.openDrawer()}
+        style={styles.menuButton}
+      >
         <Ionicons name="menu" size={28} color="white" />
       </TouchableOpacity>
 
-    <Image
-        source={require("../../assets/RktLogo.jpg")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
+      {/* Lottie Animation instead of Logo */}
+      <View style={styles.lottieContainer}>
+        <LottieView
+          source={require("../../assets/animations/header.json")}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+        />
+      </View>
       
-      <Text style={styles.headerText}>{title}</Text>
-
-      <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-        <FontAwesome name="user-circle" size={30} color="white" />
+      <Text style={styles.headerText}>{formatTitle(title)}</Text>
+      
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('Profile')}
+        style={styles.profileButton}
+      >
+        <FontAwesome name="user-circle" size={28} color="white" />
       </TouchableOpacity>
     </View>
   );
@@ -71,7 +85,12 @@ function DrawerNavigator() {
   if (!fontsLoaded) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="rgb(0, 41, 87)" />
+        <LottieView
+          source={require("../../assets/animations/loading.json")}
+          autoPlay
+          loop
+          style={styles.loadingLottie}
+        />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -79,7 +98,7 @@ function DrawerNavigator() {
 
   return (
     <>
-        <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
+      <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
       <Drawer.Navigator
         initialRouteName="Attendance"
         drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -88,7 +107,8 @@ function DrawerNavigator() {
           header: ({ navigation, route }) => (
             <CustomHeader navigation={navigation} title={route.name} />
           ),
-          swipeEdgeWidth: 100,}}
+          swipeEdgeWidth: 100,
+        }}
       >
         <Drawer.Screen name="Attendance" component={BottomTabNavigator} />
         <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} />
@@ -106,48 +126,10 @@ function DrawerNavigator() {
         <Drawer.Screen name="SeparationRequest" component={ResignationForm} />
         <Drawer.Screen name="TaxModule" component={TaxModule} />
         {/* <Drawer.Screen name="BiometricUser" component={BottomNavForBiometricCrud} /> */}
-
-
       </Drawer.Navigator>
     </>
   );
 }
-
-// const styles = StyleSheet.create({
-//   headerContainer: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     backgroundColor: 'rgb(0, 41, 87)',
-//     paddingHorizontal: 16,
-//     paddingVertical: 10,
-//     elevation: 4,
-//   },
-//   logo: {
-//     width: 40,
-//     height: 40,
-//     marginHorizontal: 20,
-//     backgroundColor: 'white',
-//   },
-//   headerText: {
-//     color: 'white',
-//     fontSize: 20,
-//     fontWeight: 'bold',
-//     flex: 1,
-//   },
-//   loaderContainer: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     backgroundColor: 'white',
-//   },
-//   loadingText: {
-//     marginTop: 10,
-//     fontSize: 16,
-//     color: 'rgb(0, 41, 87)',
-//   },
-// });
-
 
 const styles = StyleSheet.create({
   headerContainer: {
@@ -167,16 +149,22 @@ const styles = StyleSheet.create({
     height: 60,
   },
   menuButton: {
-    padding: 8,
-    marginRight: 8,
+    padding: 4,
     borderRadius: 20,
   },
-  logo: {
-    width: 80,
-    height: 35,
+  lottieContainer: {
+    width: 90,
+    height: 40,
     marginHorizontal: 12,
-    backgroundColor: "white",
-    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  lottieAnimation: {
+    width: 90,
+    height: 70,
   },
   headerText: {
     color: "white",
@@ -195,6 +183,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "white",
   },
+  loadingLottie: {
+    width: 150,
+    height: 150,
+  },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
@@ -204,3 +196,182 @@ const styles = StyleSheet.create({
 });
 
 export default DrawerNavigator;
+
+
+// import React, { useEffect, useState } from 'react';
+// import { createDrawerNavigator } from '@react-navigation/drawer';
+// import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+// import * as Font from 'expo-font'; // Import expo-font
+// import BottomNavForPunchScreen from '../BottomNav/BottomNavForPunchScreen';
+// // import BottomNavForLeaveScreen from '../BottomNav/BottomNavForLeaveScreen';
+// import BottomNavForAsset from '../BottomNav/BottomNavForAsset';
+// import MyTickets from '../../Screen/Asset/MyTickets';
+// import CustomDrawerContent from './DrawerContnet';
+// import Ionicons from 'react-native-vector-icons/Ionicons';
+// import FontAwesome from 'react-native-vector-icons/FontAwesome';
+// import LeaveRequest from '../../Screen/LeaveRequestList/LeaveRequest';
+// import ProfilePage from '../../Screen/Profile/Testing';
+// import BottomTabNavigator from '../BottomNav/BottomNav';
+// import BottomTabNavLeave from '../BottomNav/BottomNavForLeave';
+// import Dashboard from '../../Screen/DashBoard/DashBoard';
+// import LoanRequestForm from '../../Screen/LoadRequest/LoanRequestForm';
+// import SalaryAdvanceRequestForm from '../../Screen/SalaryAdvance/SalaryAdvanceRequestForm';
+// import ReimbursementForm from '../../Screen/Reimbursement/ReimbursementForm';
+// import AddEmployeeRequestForm from '../../Screen/AddEmpToTeam/AddEmployeeRequestForm';
+// import OvertimeRequestForm from '../../Screen/Overtime/OvertimeRequestForm';
+// import ResignationForm from '../../Screen/Resignation/ResignationForm';
+// import TaxModule from '../../Screen/TaxModule/TaxModule';
+// import { StatusBar } from 'react-native';
+// import BottomNavForBiometricCrud from '../BottomNav/BottomNavForBiometricCrud';
+// import TimesheetCalendar from '../../Screen/Timesheet/TimesheetCalendar';
+// const Drawer = createDrawerNavigator();
+
+
+// const CustomHeader = ({ navigation, title }) => {
+
+//   const formatTitle = (text) => {
+//   return text.replace(/([A-Z])/g, " $1").trim();
+// };
+
+
+//   return (
+//     <View style={styles.headerContainer}>
+//       <TouchableOpacity onPress={() => navigation.openDrawer()}>
+//         <Ionicons name="menu" size={28} color="white" />
+//       </TouchableOpacity>
+
+//     <Image
+//         source={require("../../assets/RktLogo.jpg")}
+//         style={styles.logo}
+//         resizeMode="contain"
+//       />
+      
+//     <Text style={styles.headerText}>{formatTitle(title)}</Text>
+//       <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+//         <FontAwesome name="user-circle" size={30} color="white" />
+//       </TouchableOpacity>
+//     </View>
+//   );
+// };
+
+// function DrawerNavigator() {
+//   const [fontsLoaded, setFontsLoaded] = useState(false);
+
+//   useEffect(() => {
+//     async function preloadFonts() {
+//       try {
+//         await Font.loadAsync({
+//           Ionicons: require('react-native-vector-icons/Fonts/Ionicons.ttf'),
+//           FontAwesome: require('react-native-vector-icons/Fonts/FontAwesome.ttf'),
+//         });
+//         setFontsLoaded(true);
+//       } catch (error) {
+//         console.error('Error loading fonts:', error);
+//       }
+//     }
+
+//     preloadFonts();
+//   }, []);
+
+//   if (!fontsLoaded) {
+//     return (
+//       <View style={styles.loaderContainer}>
+//         <ActivityIndicator size="large" color="rgb(0, 41, 87)" />
+//         <Text style={styles.loadingText}>Loading...</Text>
+//       </View>
+//     );
+//   }
+
+//   return (
+//     <>
+//         <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
+//       <Drawer.Navigator
+//         initialRouteName="Attendance"
+//         drawerContent={(props) => <CustomDrawerContent {...props} />}
+//         screenOptions={{
+//           headerShown: true,
+//           header: ({ navigation, route }) => (
+//             <CustomHeader navigation={navigation} title={route.name} />
+//           ),
+//           swipeEdgeWidth: 100,}}
+//       >
+//         <Drawer.Screen name="Attendance" component={BottomTabNavigator} />
+//         <Drawer.Screen name="MyLeaveScreen" component={BottomTabNavLeave} />
+//         <Drawer.Screen name="Timesheet" component={TimesheetCalendar} />
+//         <Drawer.Screen name="AssetModule" component={BottomNavForAsset} />
+//         <Drawer.Screen name="MyTickets" component={MyTickets} />
+//         <Drawer.Screen name="LeaveRequest" component={LeaveRequest} />
+//         <Drawer.Screen name="Profile" component={ProfilePage} />
+//         <Drawer.Screen name="DashBoard" component={Dashboard} />
+//         <Drawer.Screen name="LoanRequest" component={LoanRequestForm} />
+//         <Drawer.Screen name="SalaryAdvanceRequest" component={SalaryAdvanceRequestForm} />
+//         <Drawer.Screen name="Reimbursement" component={ReimbursementForm} />
+//         <Drawer.Screen name="AddMember" component={AddEmployeeRequestForm} />
+//         <Drawer.Screen name="OvertimeRequest" component={OvertimeRequestForm} />
+//         <Drawer.Screen name="SeparationRequest" component={ResignationForm} />
+//         <Drawer.Screen name="TaxModule" component={TaxModule} />
+//         {/* <Drawer.Screen name="BiometricUser" component={BottomNavForBiometricCrud} /> */}
+
+
+//       </Drawer.Navigator>
+//     </>
+//   );
+// }
+
+
+
+// const styles = StyleSheet.create({
+//   headerContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgb(0, 41, 87)",
+//     paddingHorizontal: 16,
+//     paddingVertical: 12,
+//     elevation: 8,
+//     shadowColor: 'rgb(0, 41, 87)',
+//     shadowOffset: {
+//       width: 0,
+//       height: 4,
+//     },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 6,
+//     height: 60,
+//   },
+//   menuButton: {
+//     padding: 8,
+//     marginRight: 8,
+//     borderRadius: 20,
+//   },
+//   logo: {
+//     width: 80,
+//     height: 35,
+//     marginHorizontal: 12,
+//     backgroundColor: "white",
+//     borderRadius: 4,
+//   },
+//   headerText: {
+//     color: "white",
+//     fontSize: 18,
+//     fontWeight: "600",
+//     flex: 1,
+//     marginLeft: 8,
+//   },
+//   profileButton: {
+//     padding: 4,
+//     borderRadius: 20,
+//   },
+//   loaderContainer: {
+//     flex: 1,
+//     justifyContent: "center",
+//     alignItems: "center",
+//     backgroundColor: "white",
+//   },
+//   loadingText: {
+//     marginTop: 16,
+//     fontSize: 16,
+//     color: "rgb(0, 41, 87)",
+//     fontWeight: "500",
+//   },
+// });
+
+// export default DrawerNavigator;

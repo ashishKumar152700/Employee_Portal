@@ -91,16 +91,16 @@ export const CustomDrawerContent = (props: any) => {
       icon: 'keyboard',
       route: 'Timesheet'
     },
-    {
-      name: 'My Leaves',
-      icon: 'assignment',
-      route: 'MyLeaveScreen'
-    },
-    {
-      name: 'Leave Request',
-      icon: 'person',
-      route: 'LeaveRequest'
-    },
+    // {
+    //   name: 'My Leaves',
+    //   icon: 'assignment',
+    //   route: 'MyLeaveScreen'
+    // },
+    // {
+    //   name: 'Leave Request',
+    //   icon: 'person',
+    //   route: 'LeaveRequest'
+    // },
     {
       name: 'Ask for Assets',
       icon: 'mouse',
@@ -214,19 +214,19 @@ export const CustomDrawerContent = (props: any) => {
 
 
 const handleLogout = async () => {
-  console.log("🚪 [Logout] Starting logout process...");
+  console.log(" [Logout] Starting logout process...");
   try {
     // 1. Clear AsyncStorage completely
     await AsyncStorage.clear();
-    console.log("✅ [Logout] AsyncStorage cleared");
+    console.log(" [Logout] AsyncStorage cleared");
     
     // 2. Clear all in-memory cache from services
     await clearAllCache();
-    console.log("✅ [Logout] Service cache cleared");
+    console.log(" [Logout] Service cache cleared");
     
     // 3. Reset ALL Redux state to initial values
     dispatch({ type: "RESET_ALL_STATE" });
-    console.log("✅ [Logout] Redux state reset");
+    console.log(" [Logout] Redux state reset");
     
     // 4. Additional individual state resets for safety
     dispatch({ type: "userDetails", payload: {} });
@@ -253,10 +253,10 @@ const handleLogout = async () => {
     dispatch({ type: "SET_RAISING_TICKET", payload: null });
     dispatch({ type: "SET_CANCELLING_TICKET", payload: null });
     
-    console.log("✅ [Logout] Complete logout cleanup finished");
+    console.log(" [Logout] Complete logout cleanup finished");
     
   } catch (e) {
-    console.error("❌ [Logout] Failed during logout cleanup:", e);
+    console.error(" [Logout] Failed during logout cleanup:", e);
   }
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Dimensions,
   Platform,
   KeyboardAvoidingView,
-  ActivityIndicator,
   StatusBar,
   Animated,
   Easing,
@@ -25,6 +24,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { loginservice } from '../../Services/Login/Login.service';
 import { useDispatch } from 'react-redux';
 import { scale } from "react-native-size-matters";
+import LottieView from 'lottie-react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,13 +36,63 @@ const LoginScreen = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const dispatch = useDispatch();
 
-  // Simple logo scale animation
+  // Animation refs
   const logoScaleAnim = new Animated.Value(1);
   const buttonScaleAnim = new Animated.Value(1);
+  const welcomeAnimationRef = useRef<LottieView>(null);
+  const loadingOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     startLogoScale();
+    welcomeAnimationRef.current?.play();
   }, []);
+
+
+// useEffect(() => {
+//   if (loading) {
+//     // Fade in over 600ms (slower, smoother)
+//     Animated.timing(loadingOpacity, {
+//       toValue: 1,
+//       duration: 600,
+//       easing: Easing.bezier(0.4, 0.0, 0.2, 1), // Material design ease-out
+//       useNativeDriver: true,
+//     }).start();
+//   } else {
+//     // Fade out over 800ms (even slower for smooth exit)
+//     Animated.timing(loadingOpacity, {
+//       toValue: 0,
+//       duration: 800,
+//       easing: Easing.bezier(0.0, 0.0, 0.2, 1), // Material design ease-in
+//       useNativeDriver: true,
+//     }).start();
+//   }
+// }, [loading]);
+
+useEffect(() => {
+  if (loading) {
+    // Fade in over 1000ms (1 second - much smoother)
+    Animated.timing(loadingOpacity, {
+      toValue: 1,
+      duration: 1000,
+      easing: Easing.bezier(0.4, 0.0, 0.2, 1), // Material design ease-out
+      useNativeDriver: true,
+    }).start();
+  } else {
+    // Wait 800ms, then fade out over 1200ms (total ~2 seconds before disappearing)
+    Animated.sequence([
+      Animated.delay(1500), // Hold the loading screen for a bit
+      Animated.timing(loadingOpacity, {
+        toValue: 0,
+        duration: 1200,
+        easing: Easing.bezier(0.0, 0.0, 0.2, 1), // Material design ease-in
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+}, [loading]);
+
+
+
 
   const startLogoScale = () => {
     Animated.loop(
@@ -91,20 +141,42 @@ const LoginScreen = () => {
     animateButtonPress();
     setLoading(true);
 
+    // Start timer to ensure minimum 2 seconds of loading display
+    const startTime = Date.now();
+    const minLoadingTime = 20000; 
+
     try {
       const response = await loginservice.LoginApi({ employeecode: +employeecode, password }, dispatch);
+      
+      // Calculate remaining time to reach minimum loading duration
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      
+      // Wait for remaining time if needed
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+
       if (response.status === 200) {
         await AsyncStorage.setItem('token', response.data.accessToken);
         
         const userData = await AsyncStorage.getItem('user');
         if (userData) {
           // Navigation will be handled automatically by the conditional rendering in App.tsx
-          // The Redux state change will trigger the navigation stack switch
         } else {
           throw new Error('User data not found after login');
         }
       }
     } catch (error) {
+      // Calculate remaining time even in error case
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      
+      // Wait for remaining time if needed
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+
       let errorMessage = 'Login failed';
       if (error.message) {
         errorMessage = error.message;
@@ -136,9 +208,19 @@ const LoginScreen = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             bounces={false}
+            scrollEnabled={!loading}
           >
-            {/* Header Section */}
             <View style={styles.headerSection}>
+              <View style={styles.lottieContainer}>
+                <LottieView
+                  ref={welcomeAnimationRef}
+                  source={require('../../assets/animations/success.json')}
+                  autoPlay
+                  loop
+                  style={styles.welcomeLottie}
+                />
+              </View>
+              
               <Animated.View
                 style={[
                   styles.logoContainer,
@@ -152,8 +234,9 @@ const LoginScreen = () => {
                   style={styles.logo}
                 />
               </Animated.View>
+              
               <View style={styles.headerTextContainer}>
-                <Text style={styles.companyName}>RKT-ESS</Text>
+                <Text style={styles.companyName}>RKT ESS</Text>
                 <Text style={styles.tagline}>Employee Self Service Portal</Text>
               </View>
             </View>
@@ -164,6 +247,8 @@ const LoginScreen = () => {
                 colors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.9)']}
                 style={styles.cardGradient}
               >
+              
+
                 <View style={styles.cardHeader}>
                   <Text style={styles.welcomeText}>Welcome Back!</Text>
                   <Text style={styles.subtitleText}>Please sign in to continue</Text>
@@ -195,6 +280,7 @@ const LoginScreen = () => {
                       keyboardType="numeric"
                       contentStyle={styles.inputContent}
                       outlineStyle={styles.inputOutline}
+                      editable={!loading}
                     />
                   </View>
 
@@ -230,46 +316,58 @@ const LoginScreen = () => {
                       }
                       contentStyle={styles.inputContent}
                       outlineStyle={styles.inputOutline}
+                      editable={!loading}
                     />
                   </View>
 
-                  {loading ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="large" color="rgb(0, 41, 87)" />
-                      <Text style={styles.loadingText}>Signing you in...</Text>
-                    </View>
-                  ) : (
-                    <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
-                      <TouchableOpacity 
-                        style={styles.loginButton} 
-                        onPress={handleLogin}
-                        activeOpacity={0.8}
+                  <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
+                    <TouchableOpacity 
+                      style={styles.loginButton} 
+                      onPress={handleLogin}
+                      activeOpacity={0.8}
+                      disabled={loading}
+                    >
+                      <LinearGradient
+                        colors={['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']}
+                        style={styles.buttonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
                       >
-                        <LinearGradient
-                          colors={['rgb(0, 41, 87)', 'rgba(0, 41, 87, 0.8)']}
-                          style={styles.buttonGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                        >
-                          <MaterialIcons name="login" size={20} color="white" style={styles.buttonIcon} />
-                          <Text style={styles.buttonText}>Sign In</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  )}
+                        <MaterialIcons name="login" size={20} color="white" style={styles.buttonIcon} />
+                        <Text style={styles.buttonText}>Sign In</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Animated.View>
                 </View>
               </LinearGradient>
             </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Secure & Protected by{' '}
-                <Text style={styles.footerHighlight}>HRMS Security</Text>
-              </Text>
-            </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Loading Overlay with Blur */}
+        {loading && (
+          // <Animated.View 
+          //   style={[
+          //     styles.loadingOverlay,
+          //     {
+          //       opacity: loadingOpacity,
+          //     }
+          //   ]}
+          // >
+          <>
+            <View style={styles.blurBackground} />
+            <View>
+              <LottieView
+                source={require('../../assets/animations/loading.json')}
+                autoPlay
+                loop
+                style={styles.loadingLottie}
+              />
+              <Text style={styles.loadingText}>Signing you in...</Text>
+              <Text style={styles.loadingSubtext}>Please wait</Text>
+            </View>
+            </>
+        )}
       </LinearGradient>
     </>
   );
@@ -295,9 +393,23 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     paddingTop: 20,
   },
+  lottieContainer: {
+    position: 'absolute',
+    top: -66,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 0,
+  },
+  welcomeLottie: {
+    width: 260,
+    height: 200,
+    opacity: 0.6,
+  },
   logoContainer: {
     marginBottom: 16,
-    
+    marginTop: 106,
+    zIndex: 1,
   },
   logo: {
     width: 90,
@@ -308,23 +420,23 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     alignItems: 'center',
+    zIndex: 1,
   },
   companyName: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 4,
     textAlign: 'center',
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
   loginCard: {
     borderRadius: 24,
-
-    marginBottom: 30,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -338,9 +450,21 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 30,
   },
+  cardLogoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 41, 87, 0.1)',
+  },
+  cardLogo: {
+    width: 100,
+    height: 45,
+    backgroundColor: 'transparent',
+  },
   cardHeader: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   welcomeText: {
     fontSize: 24,
@@ -357,34 +481,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   input: {
-    // backgroundColor: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
   },
   inputContent: {
-    // backgroundColor: '#FFFFFF',
     color: '#000',
   },
   inputOutline: {
     borderRadius: 12,
     borderWidth: 1.5,
   },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  loadingText: {
-    marginTop: 12,
-    color: 'rgb(0, 41, 87)',
-    fontSize: 16,
-    fontWeight: '500',
-  },
   loginButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    marginTop: 40,
+    marginTop: 20,
     shadowColor: 'rgb(0, 41, 87)',
     shadowOffset: {
       width: 0,
@@ -398,7 +510,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 24,
   },
   buttonIcon: {
@@ -406,22 +518,62 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
-  footer: {
+  // Loading Overlay Styles
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
+    zIndex: 1000,
   },
-  footerText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
+  blurBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  loadingCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
+    minWidth: 280,
+  },
+  loadingLottie: {
+    width: 180,
+    height: 180,
+  },
+  loadingText: {
+    marginTop: 20,
+    color: 'rgb(0, 41, 87)',
+    fontSize: 18,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  footerHighlight: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+  loadingSubtext: {
+    marginTop: 8,
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
 
 export default LoginScreen;
+
