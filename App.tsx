@@ -18,6 +18,9 @@ import ResignNavigator from "./Component/ResignScreen/ResignTabs";
 // import TimesheetCalendar from "./Component/TimesheetScreen/TimesheetCalendar"; // Add this import
 import "./config"; 
 import TimesheetCalendar from "./Screen/Timesheet/TimesheetCalendar";
+import { useEffect } from "react";
+import { scheduleTimesheetReminderDaily } from "./Utils/NotificationHelper";
+
 
 const Stack = createStackNavigator();
 const AuthStack = createStackNavigator();
@@ -110,6 +113,12 @@ function Navigation() {
 }
 
 export default function App() {
+
+   useEffect(() => {
+    scheduleTimesheetReminderDaily();
+  }, []);
+
+
   return (
     <Provider store={store}>
       <SafeAreaView style={{ flex: 1 }}>

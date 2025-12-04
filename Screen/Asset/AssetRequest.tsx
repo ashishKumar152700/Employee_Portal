@@ -141,62 +141,61 @@ export default function AssetRequest() {
   }, []);
 
   const ConfirmAnimation = () => {
-  const scale = React.useRef(new Animated.Value(0)).current;
-  const opacity = React.useRef(new Animated.Value(0)).current;
+    const scale = React.useRef(new Animated.Value(0)).current;
+    const opacity = React.useRef(new Animated.Value(0)).current;
 
-  React.useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 5,
-        tension: 120,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
+    React.useEffect(() => {
+      Animated.parallel([
+        Animated.spring(scale, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 5,
+          tension: 120,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, []);
 
-  return (
-    <Animated.View
-      style={{
-        transform: [{ scale }],
-        opacity,
-        width: 100,
-        height: 100,
-        borderRadius: 60,
-        borderWidth: 8,
-        borderColor: "rgb(0,41,87)",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "white",
-        marginBottom : 10
-      }}
-    >
-      <View
+    return (
+      <Animated.View
         style={{
-          width: 10,
-          height: 30,
-          borderRadius: 5,
-          backgroundColor: "rgb(0,41,87)",
-          marginBottom: 5
+          transform: [{ scale }],
+          opacity,
+          width: 100,
+          height: 100,
+          borderRadius: 60,
+          borderWidth: 8,
+          borderColor: "rgb(0,41,87)",
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "white",
+          marginBottom: 10,
         }}
-      />
-      <View
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 9,
-          backgroundColor: "rgb(0,41,87)"
-        }}
-      />
-    </Animated.View>
-  );
-};
-
+      >
+        <View
+          style={{
+            width: 10,
+            height: 30,
+            borderRadius: 5,
+            backgroundColor: "rgb(0,41,87)",
+            marginBottom: 5,
+          }}
+        />
+        <View
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 9,
+            backgroundColor: "rgb(0,41,87)",
+          }}
+        />
+      </Animated.View>
+    );
+  };
 
   const showErrorAlert = (title: string, message: string) => {
     setErrorMessage(message);
@@ -209,7 +208,6 @@ export default function AssetRequest() {
       useNativeDriver: true,
     }).start();
   };
-
 
   const loadCategories = async () => {
     if (assetCategories.length > 0) {
@@ -235,7 +233,6 @@ export default function AssetRequest() {
     }
   };
 
-  
   const handleRaiseTicket = async (category: Category) => {
     showConfirmAlert(
       "Raise Asset Request",
@@ -263,7 +260,7 @@ export default function AssetRequest() {
 
           showSuccessAlert("Success", "Asset request raised successfully!");
 
-        //   navigation.navigate("MyTickets");
+          //   navigation.navigate("MyTickets");
         } catch (error: any) {
           console.error(" [AssetRequest] Error raising ticket:", error);
           if (error.message && error.message.includes("JSON Parse")) {
@@ -463,159 +460,118 @@ export default function AssetRequest() {
           contentContainerStyle={styles.categoriesContainer}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.row}
-         
         />
       )}
 
-      {/* Footer Info */}
-      {/* <View style={styles.footer}>
-        <View style={styles.footerContent}>
-          <FontAwesome name="info-circle" size={16} color="rgba(0,41,87,0.6)" />
-          <Text style={styles.footerText}>
-            Asset requests are subject to availability and approval
-          </Text>
-        </View>
-      </View> */}
+      {confirmModalVisible && (
+        <Modal visible transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Animated.View
+              style={[
+                styles.modalCard,
+                { transform: [{ translateY: confirmSlideAnim }] },
+              ]}
+            >
+              {/* Confirm Animation (NO LOTTIE) */}
+              <View style={{ alignItems: "center", marginBottom: 10 }}>
+                <ConfirmAnimation />
+              </View>
 
-      {/* Confirm Raise Request Modal */}
-    
+              <Text style={styles.modalTitle}>{confirmTitle}</Text>
+              <Text style={styles.modalMessage}>{confirmMessage}</Text>
 
-      {/* Confirm Modal */}
-{/* {confirmModalVisible && (
-  <Modal visible transparent animationType="fade">
-    <View style={styles.modalOverlay}>
-      <Animated.View style={[styles.modalCard, { transform: [{ translateY: confirmSlideAnim }] }]}>
-        <LottieView
-          source={require("../../assets/animations/confirm.json")}
-          autoPlay
-          loop={false}
-          style={styles.lottieStyle}
-        />
-        <Text style={styles.modalTitle}>{confirmTitle}</Text>
-        <Text style={styles.modalMessage}>{confirmMessage}</Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.btnCancel}
+                  onPress={() => setConfirmModalVisible(false)}
+                >
+                  <Text style={styles.btnCancelText}>Close</Text>
+                </TouchableOpacity>
 
-        <View style={styles.modalButtons}>
-          <TouchableOpacity style={styles.btnCancel} onPress={() => setConfirmModalVisible(false)}>
-            <Text style={styles.btnCancelText}>Close</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btnConfirm}
-            onPress={() => {
-              setConfirmModalVisible(false);
-              if (confirmAction) confirmAction();
-            }}
-          >
-            <Text style={styles.btnConfirmText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-    </View>
-  </Modal>
-)} */}
-
-{confirmModalVisible && (
-  <Modal visible transparent animationType="fade">
-    <View style={styles.modalOverlay}>
-      <Animated.View style={[styles.modalCard, { transform: [{ translateY: confirmSlideAnim }] }]}>
-
-        {/* Confirm Animation (NO LOTTIE) */}
-        <View style={{ alignItems: "center", marginBottom: 10 }}>
-          <ConfirmAnimation />
-        </View>
-
-        <Text style={styles.modalTitle}>{confirmTitle}</Text>
-        <Text style={styles.modalMessage}>{confirmMessage}</Text>
-
-        <View style={styles.modalButtons}>
-          <TouchableOpacity style={styles.btnCancel} onPress={() => setConfirmModalVisible(false)}>
-            <Text style={styles.btnCancelText}>Close</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btnConfirm}
-            onPress={() => {
-              setConfirmModalVisible(false);
-              if (confirmAction) confirmAction();
-            }}
-          >
-            <Text style={styles.btnConfirmText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-    </View>
-  </Modal>
-)}
-
-
-{/* Success Modal */}
-{successModalVisible && (
-  <Modal visible transparent animationType="fade">
-    <View style={styles.modalOverlay}>
-      <Animated.View style={[styles.modalCard, { transform: [{ translateY: successSlideAnim }] }]}>
-        <LottieView
-          source={require("../../assets/animations/success.json")}
-          autoPlay
-          loop={false}
-          style={styles.lottieStyle}
-        />
-        <Text style={styles.modalTitle}>Success</Text>
-        <Text style={styles.modalMessage}>{successMessage}</Text>
-
-        <TouchableOpacity style={styles.btnConfirm} onPress={() => setSuccessModalVisible(false)}>
-          <Text style={styles.btnConfirmText}>OK</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
-  </Modal>
-)}
-
-{/* Error Modal */}
-{errorModalVisible && (
-  <Modal visible transparent animationType="fade">
-    <View style={styles.modalOverlay}>
-      <Animated.View style={[styles.modalCard, { transform: [{ translateY: errorSlideAnim }] }]}>
-        <LottieView
-          source={require("../../assets/animations/error.json")}
-          autoPlay
-          loop={false}
-          style={styles.lottieStyle}
-        />
-        <Text style={styles.modalTitle}>Error</Text>
-        <Text style={styles.modalMessage}>{errorMessage}</Text>
-
-        <TouchableOpacity style={styles.btnConfirm} onPress={() => setErrorModalVisible(false)}>
-          <Text style={styles.btnConfirmText}>Close</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
-  </Modal>
-)}
-
+                <TouchableOpacity
+                  style={styles.btnConfirm}
+                  onPress={() => {
+                    setConfirmModalVisible(false);
+                    if (confirmAction) confirmAction();
+                  }}
+                >
+                  <Text style={styles.btnConfirmText}>Continue</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
 
       {/* Success Modal */}
+      {successModalVisible && (
+        <Modal visible transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Animated.View
+              style={[
+                styles.modalCard,
+                { transform: [{ translateY: successSlideAnim }] },
+              ]}
+            >
+              <LottieView
+                source={require("../../assets/animations/success.json")}
+                autoPlay
+                loop={false}
+                style={styles.lottieStyle}
+              />
+              <Text style={styles.modalTitle}>Success</Text>
+              <Text style={styles.modalMessage}>{successMessage}</Text>
+
+              <TouchableOpacity
+                style={styles.btnConfirm}
+                onPress={() => setSuccessModalVisible(false)}
+              >
+                <Text style={styles.btnConfirmText}>OK</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Error Modal */}
+      {errorModalVisible && (
+        <Modal visible transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Animated.View
+              style={[
+                styles.modalCard,
+                { transform: [{ translateY: errorSlideAnim }] },
+              ]}
+            >
+              <LottieView
+                source={require("../../assets/animations/error.json")}
+                autoPlay
+                loop={false}
+                style={styles.lottieStyle}
+              />
+              <Text style={styles.modalTitle}>Error</Text>
+              <Text style={styles.modalMessage}>{errorMessage}</Text>
+
+              <TouchableOpacity
+                style={styles.btnConfirm}
+                onPress={() => setErrorModalVisible(false)}
+              >
+                <Text style={styles.btnConfirmText}>Close</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
+
       <Modal visible={successModalVisible} transparent animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
+        <View style={styles.modalOverlay}>
           <Animated.View
-            style={{
-              width: "85%",
-              backgroundColor: "white",
-              borderRadius: 20,
-              padding: 20,
-              transform: [{ translateY: successSlideAnim }],
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
-              shadowRadius: 10,
-              elevation: 6,
-            }}
+            style={[
+              styles.modalCard,
+              {
+                transform: [{ translateY: successSlideAnim }],
+              },
+            ]}
           >
             {/* Lottie Success Animation */}
             <View style={{ alignItems: "center" }}>
@@ -637,7 +593,6 @@ export default function AssetRequest() {
             >
               Success
             </Text>
-
             <Text
               style={{
                 fontSize: 14,
@@ -665,82 +620,66 @@ export default function AssetRequest() {
         </View>
       </Modal>
 
-      {/* ERROR MODAL */}
-<Modal visible={errorModalVisible} transparent animationType="fade">
-  <View
-    style={{
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      justifyContent: "center",
-      alignItems: "center",
-    }}
-  >
-    <Animated.View
-      style={{
-        width: "85%",
-        backgroundColor: "white",
-        borderRadius: 20,
-        padding: 20,
-        transform: [{ translateY: errorSlideAnim }],
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 10,
-      }}
-    >
-      {/* Lottie Error Animation */}
-      <View style={{ alignItems: "center" }}>
-        <LottieView
-          source={require("../../assets/animations/error.json")}
-          autoPlay
-          loop={false}
-          style={{ width: 150, height: 150 }}
-        />
-      </View>
+      {/* ERROR MODAL - FIXED */}
+      <Modal visible={errorModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[
+              styles.modalCard,
+              {
+                transform: [{ translateY: errorSlideAnim }],
+              },
+            ]}
+          >
+            {/* Lottie Error Animation */}
+            <View style={{ alignItems: "center" }}>
+              <LottieView
+                source={require("../../assets/animations/error.json")}
+                autoPlay
+                loop={false}
+                style={{ width: 150, height: 150 }}
+              />
+            </View>
 
-      <Text
-        style={{
-          fontSize: 20,
-          fontWeight: "700",
-          color: "rgb(0, 41, 87)",
-          textAlign: "center",
-          marginTop: -10,
-        }}
-      >
-        Error
-      </Text>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                color: "rgb(0, 41, 87)",
+                textAlign: "center",
+                marginTop: -10,
+              }}
+            >
+              Error
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#6B7280",
+                textAlign: "center",
+                marginTop: 6,
+              }}
+            >
+              {errorMessage}
+            </Text>
 
-      <Text
-        style={{
-          fontSize: 14,
-          color: "#6B7280",
-          textAlign: "center",
-          marginTop: 6,
-        }}
-      >
-        {errorMessage}
-      </Text>
-
-      {/* OK Button */}
-      <TouchableOpacity
-        onPress={() => setErrorModalVisible(false)}
-        style={{
-          marginTop: 20,
-          backgroundColor: "rgb(0, 41, 87)",
-          paddingVertical: 12,
-          borderRadius: 12,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: "white", fontWeight: "700" }}>OK</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  </View>
-</Modal>
-
-
-
+            {/* OK Button */}
+            <TouchableOpacity
+              onPress={() => setErrorModalVisible(false)}
+              style={{
+                marginTop: 20,
+                backgroundColor: "rgb(0, 41, 87)",
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
+              <Text style={{ color: "white", fontWeight: "700" }}>OK</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -952,64 +891,63 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   modalOverlay: {
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(0,0,0,0.5)",
-},
-modalCard: {
-  width: "85%",
-  backgroundColor: "#fff",
-  borderRadius: 20,
-  padding: 20,
-  alignItems: "center",
-  elevation: 10,
-},
-lottieStyle: {
-  width: 150,
-  height: 150,
-},
-modalTitle: {
-  fontSize: 20,
-  fontWeight: "700",
-  color: "rgb(0,41,87)",
-  marginTop: -5,
-  textAlign: "center",
-},
-modalMessage: {
-  fontSize: 14,
-  color: "#6B7280",
-  textAlign: "center",
-  marginTop: 5,
-},
-modalButtons: {
-  width: "100%",
-  flexDirection: "row",
-  marginTop: 20,
-},
-btnCancel: {
-  flex: 1,
-  padding: 12,
-  borderWidth: 1,
-  borderColor: "#9CA3AF",
-  borderRadius: 12,
-  marginRight: 8,
-  alignItems: "center",
-},
-btnCancelText: {
-  color: "#374151",
-  fontWeight: "600",
-},
-btnConfirm: {
-  flex: 1,
-  padding: 12,
-  backgroundColor: "rgb(0,41,87)",
-  borderRadius: 12,
-  alignItems: "center",
-},
-btnConfirmText: {
-  color: "#fff",
-  fontWeight: "700",
-},
-
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalCard: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+    elevation: 10,
+  },
+  lottieStyle: {
+    width: 150,
+    height: 150,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "rgb(0,41,87)",
+    marginTop: -5,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 5,
+  },
+  modalButtons: {
+    width: "100%",
+    flexDirection: "row",
+    marginTop: 20,
+  },
+  btnCancel: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#9CA3AF",
+    borderRadius: 12,
+    marginRight: 8,
+    alignItems: "center",
+  },
+  btnCancelText: {
+    color: "#374151",
+    fontWeight: "600",
+  },
+  btnConfirm: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: "rgb(0,41,87)",
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  btnConfirmText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
 });

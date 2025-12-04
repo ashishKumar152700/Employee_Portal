@@ -1,29 +1,32 @@
 {
   "expo": {
-    "name": "essp202",
+    "name": "RKT Employee App",
     "slug": "essp202",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/undrawIcon2.png",
+    "icon": "./assets/RktEss.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
+
     "android": {
       "package": "com.sudhirtbk9.essp202",
       "jsEngine": "hermes",
+      "icon": "./assets/RktEss.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/RktEss.png",
+        "backgroundColor": "#FFFFFF"
+      },
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBTuDT9OJLrhj4XrIhOvUkdg2x54gSYEwU"
         }
       }
     },
-   
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+
     "plugins": [
       [
         "expo-build-properties",
@@ -33,8 +36,20 @@
             "enableProguardInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/RktLogo.jpg",
+          "color": "#1B4D90" 
+        }
       ]
     ],
+
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+
     "extra": {
       "googleApiKey": "AIzaSyBTuDT9OJLrhj4XrIhOvUkdg2x54gSYEwU",
       "geoapifyApiKey": "7cd11e341261405fb6cbf695ac66fb74",
@@ -42,15 +57,18 @@
         "projectId": "1fbc41dd-e388-48ed-93b5-b94c522fb277"
       }
     },
+
     "owner": "sudhir-tbk9",
+
     "ios": {
       "bundleIdentifier": "com.sudhirtbk9.essp202",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "This app requires access to the camera to allow users to capture photos for their profile and documents.",
-        "NSPhotoLibraryUsageDescription": "This app requires access to the photo library to allow users to upload and select images.",
-        "NSLocationWhenInUseUsageDescription": "This app requires access to your location to provide location-based features and enhance user experience."
+        "NSCameraUsageDescription": "This app requires access to the camera for profile and documents.",
+        "NSPhotoLibraryUsageDescription": "This app requires access to upload/select images.",
+        "NSLocationWhenInUseUsageDescription": "This app requires location access for enhanced features."
       }
     }
   }
 }
+
