@@ -41,6 +41,8 @@ const LoginScreen = () => {
   const buttonScaleAnim = new Animated.Value(1);
   const welcomeAnimationRef = useRef<LottieView>(null);
   const loadingOpacity = useRef(new Animated.Value(0)).current;
+  const [loginError, setLoginError] = useState("");
+  let loginSuccess = false;
 
   useEffect(() => {
     startLogoScale();
@@ -116,10 +118,12 @@ const LoginScreen = () => {
 
     animateButtonPress();
     setLoading(true);
+    setLoginError(""); // reset previous errors
 
-    // Start timer to ensure minimum 2 seconds of loading display
     const startTime = Date.now();
-    const minLoadingTime = 20000;
+    const minLoadingTime = 2000; // set to 2 seconds, not 20s
+
+    let loginSuccess = false;
 
     try {
       const response = await loginservice.LoginApi(
@@ -127,44 +131,41 @@ const LoginScreen = () => {
         dispatch
       );
 
-      // Calculate remaining time to reach minimum loading duration
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-
-      // Wait for remaining time if needed
-      if (remainingTime > 0) {
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      const elapsed = Date.now() - startTime;
+      if (elapsed < minLoadingTime) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, minLoadingTime - elapsed)
+        );
       }
 
       if (response.status === 200) {
-        await AsyncStorage.setItem("token", response.data.accessToken);
+        loginSuccess = true;
 
+        await AsyncStorage.setItem("token", response.data.accessToken);
         const userData = await AsyncStorage.getItem("user");
-        if (userData) {
-          // Navigation will be handled automatically by the conditional rendering in App.tsx
-        } else {
-          throw new Error("User data not found after login");
-        }
+
+        if (!userData) throw new Error("User data not found after login");
       }
     } catch (error) {
-      // Calculate remaining time even in error case
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-
-      // Wait for remaining time if needed
-      if (remainingTime > 0) {
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      const elapsed = Date.now() - startTime;
+      if (elapsed < minLoadingTime) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, minLoadingTime - elapsed)
+        );
       }
 
       let errorMessage = "Login failed";
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.response?.data?.message) {
+      if (error.message) errorMessage = error.message;
+      else if (error.response?.data?.message)
         errorMessage = error.response.data.message;
-      }
-      Alert.alert("Login Failed", errorMessage);
+
+      setLoginError(errorMessage);
+
+      return;
     } finally {
-      setLoading(false);
+      if (loginSuccess) {
+        setLoading(false);
+      }
     }
   };
 
@@ -359,14 +360,83 @@ const LoginScreen = () => {
           >
             <View style={styles.blurBackground} />
             <View style={styles.loadingCard}>
-              <LottieView
-                source={require("../../assets/animations/loading.json")}
-                autoPlay
-                loop
-                style={styles.loadingLottie}
-              />
-              <Text style={styles.loadingText}>Signing you in...</Text>
-              <Text style={styles.loadingSubtext}>Please wait</Text>
+              {loginError === "" ? (
+                <>
+                  {/* Loading Animation */}
+                  <LottieView
+                    source={require("../../assets/animations/loading.json")}
+                    autoPlay
+                    loop
+                    style={styles.loadingLottie}
+                  />
+
+                  <Text style={styles.loadingText}>Signing you in...</Text>
+                  <Text style={styles.loadingSubtext}>Please wait</Text>
+                </>
+              ) : (
+                <>
+                  <LottieView
+                    source={require("../../assets/animations/LoginError.json")}
+                    autoPlay
+                    loop={false}
+                    style={{
+                      width: 180,
+                      height: 180,
+                      marginBottom: 10,
+                    }}
+                  />
+
+                  <Text
+                    style={[
+                      styles.loadingText,
+                      { color: "#dc2626", marginTop: -10 },
+                    ]}
+                  >
+                    Login Failed
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.loadingSubtext,
+                      {
+                        color: "#dc2626",
+                        fontWeight: "600",
+                        marginTop: 6,
+                        textAlign: "center",
+                        paddingHorizontal: 10,
+                      },
+                    ]}
+                  >
+                    {loginError}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setLoginError("");
+                      setLoading(false);
+                      setEmployeecode("");
+                      setPassword("");
+                    }}
+                    style={{
+                      marginTop: 20,
+                      backgroundColor: "rgb(0, 41, 87)",
+                      paddingVertical: 12,
+                      paddingHorizontal: 26,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "white",
+                        fontWeight: "700",
+                        fontSize: 16,
+                      }}
+                    >
+                      Try Again
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </Animated.View>
         )}

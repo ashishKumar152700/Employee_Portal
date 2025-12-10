@@ -170,12 +170,15 @@ export default function MyTickets() {
           // Remove ticket from Redux store
           dispatch({ type: "DELETE_TICKET", payload: ticketId });
 
-          // Update stats
-          const updatedTickets = myTickets.filter(
+          // Remove ticket from Redux FIRST
+          const newList = myTickets.filter(
             (t: Ticket) => (t.id || t._id || "").toString() !== ticketId
           );
-          const updatedStats = calculateTicketStats(updatedTickets);
-          dispatch({ type: "SET_TICKET_STATS", payload: updatedStats });
+
+          dispatch({ type: "SET_MY_TICKETS", payload: newList });
+
+          const newStats = calculateTicketStats(newList);
+          dispatch({ type: "SET_TICKET_STATS", payload: newStats });
 
           showSuccessAlert("Success", "Request cancelled successfully!");
         } catch (error: any) {
@@ -469,97 +472,158 @@ export default function MyTickets() {
         />
       )}
 
-    {/* Custom Cancel Modal - FIXED */}
-<Modal visible={cancelModalVisible} transparent animationType="fade">
-  <View style={styles.cancelModalOverlay}>
-    <Animated.View
-      style={[
-        styles.cancelModalCard,
-        {
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
-    >
-      {/* Lottie Animation */}
-      <View style={{ alignItems: 'center' }}>
-        <LottieView
-          source={require('../../assets/animations/cancel.json')}
-          autoPlay
-          loop={false}
-          style={{ width: 140, height: 140 }}
-        />
-      </View>
+      {/* Custom Cancel Modal - FIXED */}
+      <Modal visible={cancelModalVisible} transparent animationType="none">
+        <View style={styles.cancelModalOverlay}>
+          <Animated.View
+            style={[
+              styles.cancelModalCard,
+              {
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Lottie Animation */}
+            <View style={{ alignItems: "center" }}>
+              <LottieView
+                source={require("../../assets/animations/cancel.json")}
+                autoPlay
+                loop={false}
+                style={{ width: 140, height: 140 }}
+              />
+            </View>
 
-      <Text style={{ fontSize: 18, fontWeight: '700', color: 'rgb(0, 41, 87)', textAlign: 'center', marginTop: 10 }}>
-        Cancel Request?
-      </Text>
-      <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 6 }}>
-        Are you sure you want to cancel this request?
-      </Text>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                color: "rgb(0, 41, 87)",
+                textAlign: "center",
+                marginTop: 10,
+              }}
+            >
+              Cancel Request?
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#6B7280",
+                textAlign: "center",
+                marginTop: 6,
+              }}
+            >
+              Are you sure you want to cancel this request?
+            </Text>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, width: '100%' }}>
-        {/* Cancel Button */}
-        <TouchableOpacity
-          onPress={() => setCancelModalVisible(false)}
-          style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#9CA3AF', marginRight: 10, alignItems: 'center' }}
-        >
-          <Text style={{ color: '#374151', fontWeight: '600' }}>Close</Text>
-        </TouchableOpacity>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 20,
+                width: "100%",
+              }}
+            >
+              {/* Cancel Button */}
+              <TouchableOpacity
+                onPress={() => setCancelModalVisible(false)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: "#9CA3AF",
+                  marginRight: 10,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#374151", fontWeight: "600" }}>
+                  Close
+                </Text>
+              </TouchableOpacity>
 
-        {/* Confirm Button */}
-        <TouchableOpacity
-          onPress={() => {
-            setCancelModalVisible(false);
-            if (cancelAction) cancelAction();
-          }}
-          style={{ flex: 1, backgroundColor: 'rgb(0, 41, 87)', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
-        >
-          <Text style={{ color: 'white', fontWeight: '700' }}>Yes, Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    </Animated.View>
-  </View>
-</Modal>
+              {/* Confirm Button */}
+              <TouchableOpacity
+                onPress={() => {
+                  setCancelModalVisible(false);
+                  if (cancelAction) cancelAction();
+                }}
+                style={{
+                  flex: 1,
+                  backgroundColor: "rgb(0, 41, 87)",
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "700" }}>
+                  Yes, Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
 
-{/* Success Modal - FIXED */}
-<Modal visible={successModalVisible} transparent animationType="fade">
-  <View style={styles.successModalOverlay}>
-    <Animated.View
-      style={[
-        styles.successModalCard,
-        {
-          transform: [{ translateY: successSlideAnim }],
-        },
-      ]}
-    >
-      {/* Lottie Success Animation */}
-      <View style={{ alignItems: 'center' }}>
-        <LottieView
-          source={require('../../assets/animations/success.json')}
-          autoPlay
-          loop={false}
-          style={{ width: 150, height: 150 }}
-        />
-      </View>
+      {/* Success Modal - FIXED */}
+      <Modal visible={successModalVisible} transparent animationType="none">
+        <View style={styles.successModalOverlay}>
+          <Animated.View
+            style={[
+              styles.successModalCard,
+              {
+                transform: [{ translateY: successSlideAnim }],
+              },
+            ]}
+          >
+            {/* Lottie Success Animation */}
+            <View style={{ alignItems: "center" }}>
+              <LottieView
+                source={require("../../assets/animations/success.json")}
+                autoPlay
+                loop={false}
+                style={{ width: 150, height: 150 }}
+              />
+            </View>
 
-      <Text style={{ fontSize: 20, fontWeight: '700', color: 'rgb(0, 41, 87)', textAlign: 'center', marginTop: -10 }}>
-        Success
-      </Text>
-      <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 6 }}>
-        {successMessage}
-      </Text>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                color: "rgb(0, 41, 87)",
+                textAlign: "center",
+                marginTop: -10,
+              }}
+            >
+              Success
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#6B7280",
+                textAlign: "center",
+                marginTop: 6,
+              }}
+            >
+              {successMessage}
+            </Text>
 
-      {/* OK Button */}
-      <TouchableOpacity
-        onPress={() => setSuccessModalVisible(false)}
-        style={{ marginTop: 20, backgroundColor: 'rgb(0, 41, 87)', paddingVertical: 12, borderRadius: 12, alignItems: 'center', width: '100%' }}
-      >
-        <Text style={{ color: 'white', fontWeight: '700' }}>OK</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  </View>
-</Modal>
-
+            {/* OK Button */}
+            <TouchableOpacity
+              onPress={() => setSuccessModalVisible(false)}
+              style={{
+                marginTop: 20,
+                backgroundColor: "rgb(0, 41, 87)",
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
+              <Text style={{ color: "white", fontWeight: "700" }}>OK</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -776,40 +840,39 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   cancelModalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.6)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-cancelModalCard: {
-  width: '85%',
-  backgroundColor: '#fff',
-  borderRadius: 20,
-  padding: 20,
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.15,
-  shadowRadius: 12,
-  elevation: 10,
-},
-successModalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.6)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-successModalCard: {
-  width: '85%',
-  backgroundColor: '#fff',
-  borderRadius: 20,
-  padding: 20,
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.15,
-  shadowRadius: 12,
-  elevation: 10,
-},
-
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cancelModalCard: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  successModalCard: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
 });

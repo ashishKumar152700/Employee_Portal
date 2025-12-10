@@ -1,4 +1,3 @@
-
 // Screen/Timesheet/Timesheet.tsx
 
 import React, { useState, useEffect } from "react";
@@ -15,8 +14,10 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import LottieView from "lottie-react-native";
 import {
   TimesheetTask,
@@ -187,21 +188,23 @@ export default function TimesheetForm({
       await onTasksUpdated();
       await loadInitialData();
 
-      // Show success alert only once after everything is done
       showAlert(
         "success",
         "Success",
         editingTaskId
           ? "Task updated successfully!"
-          : "Task added successfully!"
+          : "Task added successfully!",
+        async () => {
+          clearForm();
+          await onTasksUpdated();
+          await loadInitialData();
+        }
       );
     } catch (error: any) {
       console.error("  [Form] Error submitting task:", error);
-      // Only show error if it's a real error (not JSON parse)
       if (!error.message?.includes("JSON")) {
         showAlert("error", "Error", "Failed to submit task. Please try again.");
       } else {
-        // For JSON parse errors, still refresh and show success
         clearForm();
         await onTasksUpdated();
         await loadInitialData();
@@ -246,7 +249,6 @@ export default function TimesheetForm({
           showAlert("success", "Success", "Task deleted successfully!");
         } catch (error: any) {
           console.error("  [Form] Error deleting task:", error);
-          // Still refresh on error as operation likely succeeded
           await onTasksUpdated();
           await loadInitialData();
           showAlert("success", "Success", "Task deleted successfully!");
@@ -271,14 +273,23 @@ export default function TimesheetForm({
     }, 0);
     return formatMinutesToHoursAndMinutes(totalMinutes);
   };
+  const onTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") setShowTimePicker(false);
+
+    if (selectedDate) {
+      setHours(selectedDate.getHours());
+      setMinutes(selectedDate.getMinutes());
+    }
+  };
 
   // Updated Alert Functions with Lottie
   const showAlert = (
     type: "success" | "error" | "warning",
     title: string,
-    message: string
+    message: string,
+    onClose?: () => void
   ) => {
-    setAlertConfig({ type, title, message });
+    setAlertConfig({ type, title, message, onConfirm: onClose });
     setAlertVisible(true);
   };
 
@@ -290,6 +301,7 @@ export default function TimesheetForm({
     setAlertConfig({ type: "confirm", title, message, onConfirm });
     setAlertVisible(true);
   };
+
 
   // Custom Alert Modal Component
   const CustomAlertModal = () => {
@@ -311,8 +323,14 @@ export default function TimesheetForm({
     return (
       <Modal
         visible={alertVisible}
-        transparent
-        animationType="fade"
+        transparent={true}
+        animationType="none"
+        statusBarTranslucent={true}
+        hardwareAccelerated={true}
+        onShow={() => {
+          setTimeout(() => {
+          }, 0);
+        }}
         onRequestClose={() => setAlertVisible(false)}
       >
         <View style={styles.alertOverlay}>
@@ -384,6 +402,7 @@ export default function TimesheetForm({
     );
   };
 
+
   // Professional Loading Component
   const LoadingOverlay = ({ message }: { message: string }) => (
     <View style={styles.loadingOverlay}>
@@ -399,159 +418,6 @@ export default function TimesheetForm({
         </View>
       </LinearGradient>
     </View>
-  );
-
-  // Digital Round Clock Component
-  const DigitalClock = () => {
-    const getClockDegrees = () => {
-      const hourAngle = (hours % 12) * 30 + minutes * 0.5;
-      const minuteAngle = minutes * 6;
-      return { hourAngle, minuteAngle };
-    };
-
-    const { hourAngle, minuteAngle } = getClockDegrees();
-
-    return (
-      <View style={styles.clockContainer}>
-        <View style={styles.clockFace}>
-          {/* Clock numbers */}
-          {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((num, index) => {
-            const angle = (index * 30 - 90) * (Math.PI / 180);
-            const radius = 70;
-            const x = radius * Math.cos(angle);
-            const y = radius * Math.sin(angle);
-
-            return (
-              <Text
-                key={num}
-                style={[
-                  styles.clockNumber,
-                  {
-                    left: 90 + x - 10,
-                    top: 90 + y - 10,
-                  },
-                ]}
-              >
-                {num}
-              </Text>
-            );
-          })}
-
-          {/* Center dot */}
-          <View style={styles.clockCenter} />
-
-          {/* Hour hand */}
-          <View
-            style={[
-              styles.hourHand,
-              {
-                transform: [{ rotate: `${hourAngle}deg` }],
-              },
-            ]}
-          />
-
-          {/* Minute hand */}
-          <View
-            style={[
-              styles.minuteHand,
-              {
-                transform: [{ rotate: `${minuteAngle}deg` }],
-              },
-            ]}
-          />
-        </View>
-
-        {/* Digital Display */}
-        <View style={styles.digitalDisplay}>
-          <Text style={styles.digitalTime}>
-            {String(hours).padStart(2, "0")}:{String(minutes).padStart(2, "0")}
-          </Text>
-          <Text style={styles.digitalLabel}>
-            {formatMinutesToHoursAndMinutes(getTotalMinutes())}
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  // Time Picker Component with Digital Clock
-  const renderTimePicker = () => (
-    <Modal
-      visible={showTimePicker}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setShowTimePicker(false)}
-    >
-      <View style={styles.timePickerOverlay}>
-        <View style={styles.timePickerContainer}>
-          <LinearGradient
-            colors={["rgb(0, 41, 87)", "rgb(0, 61, 117)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.timePickerHeader}
-          >
-            <Text style={styles.timePickerTitle}>Select Time</Text>
-          </LinearGradient>
-
-          <View style={styles.timePickerContent}>
-            {/* Digital Clock Display */}
-            <DigitalClock />
-
-            {/* Time Pickers */}
-            <View style={styles.timePickerRow}>
-              <View style={styles.timePickerColumn}>
-                <Text style={styles.timePickerLabel}>Hours</Text>
-                <Picker
-                  selectedValue={hours}
-                  onValueChange={(value) => setHours(value)}
-                  style={styles.timePicker}
-                >
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <Picker.Item key={i} label={`${i}`} value={i} />
-                  ))}
-                </Picker>
-              </View>
-
-              <View style={styles.timePickerColumn}>
-                <Text style={styles.timePickerLabel}>Minutes</Text>
-                <Picker
-                  selectedValue={minutes}
-                  onValueChange={(value) => setMinutes(value)}
-                  style={styles.timePicker}
-                >
-                  {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
-                    <Picker.Item key={m} label={`${m}`} value={m} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            <View style={styles.timePickerButtons}>
-              <TouchableOpacity
-                style={[styles.timePickerButton, styles.timePickerCancelButton]}
-                onPress={() => setShowTimePicker(false)}
-              >
-                <Text style={styles.timePickerCancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.timePickerButton}
-                onPress={() => setShowTimePicker(false)}
-              >
-                <LinearGradient
-                  colors={["rgb(0, 41, 87)", "rgb(0, 61, 117)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.timePickerDoneGradient}
-                >
-                  <Text style={styles.timePickerDoneText}>Done</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
   );
 
   if (loading) {
@@ -666,6 +532,7 @@ export default function TimesheetForm({
               </Text>
               <FontAwesome name="chevron-down" size={14} color="#6B7280" />
             </TouchableOpacity>
+
             <Text style={styles.helperText}>
               Tap to select hours and minutes • {getTotalMinutes()} minutes
               total
@@ -851,7 +718,17 @@ export default function TimesheetForm({
         </View>
       </ScrollView>
 
-      {renderTimePicker()}
+      {showTimePicker && (
+        <DateTimePicker
+          value={new Date(0, 0, 0, hours, minutes)}
+          mode="time"
+          is24Hour={false}
+          display={Platform.OS === "android" ? "clock" : "spinner"}
+          themeVariant="dark"
+          onChange={onTimeChange}
+        />
+      )}
+
       <CustomAlertModal />
     </>
   );
@@ -1000,8 +877,8 @@ const styles = StyleSheet.create({
   picker: {
     flex: 1,
     height: 80,
-    fontSize: 14,  // Increased from 8 to make text fully visible
-  color: '#374151',  // Add text color for better visibility
+    fontSize: 14, // Increased from 8 to make text fully visible
+    color: "#374151", // Add text color for better visibility
   },
   timeInputButton: {
     flexDirection: "row",
@@ -1352,12 +1229,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   loadingOverlay: {
-    position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  zIndex: 1000,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
   },
   loadingGradient: {
     flex: 1,
@@ -1373,26 +1250,37 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "600",
   },
-  // Custom Alert Modal Styles
+  
   alertOverlay: {
-   flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  justifyContent: 'center',
-  alignItems: 'center',
-  paddingHorizontal: 20,
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    // Force the overlay to cover entire screen immediately
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
   },
   alertContainer: {
-     backgroundColor: '#ffffff',
-  borderRadius: 24,
-  width: '90%',
-  maxWidth: 340,
-  overflow: 'hidden',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.3,
-  shadowRadius: 20,
-  elevation: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    width: "90%",
+    maxWidth: 340,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    // Ensure it's rendered at the correct position
+    margin: 0,
+    alignSelf: "center",
   },
+  
   alertContent: {
     padding: 20,
     alignItems: "center",
