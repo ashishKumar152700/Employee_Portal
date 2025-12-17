@@ -240,11 +240,11 @@ export default DrawerNavigator;
 //         <Ionicons name="menu" size={28} color="white" />
 //       </TouchableOpacity>
 
-//     <Image
-//         source={require("../../assets/RktLogo.jpg")}
-//         style={styles.logo}
-//         resizeMode="contain"
-//       />
+    // <Image
+    //     source={require("../../assets/RktLogo.jpg")}
+    //     style={styles.logo}
+    //     resizeMode="contain"
+    //   />
       
 //     <Text style={styles.headerText}>{formatTitle(title)}</Text>
 //       <TouchableOpacity onPress={() => navigation.navigate('Profile')}>

@@ -19,7 +19,11 @@ import TimesheetCalendar from "./Screen/Timesheet/TimesheetCalendar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { useEffect as useEffectReact } from "react";
-import { scheduleTimesheetReminderDaily, requestNotificationPermission, createNotificationChannelIfNeeded } from "./Utils/NotificationHelper";
+import {
+  scheduleTimesheetReminderDaily,
+  requestNotificationPermission,
+  createNotificationChannelIfNeeded,
+} from "./Utils/NotificationHelper";
 
 const Stack = createStackNavigator();
 const AuthStack = createStackNavigator();
@@ -40,8 +44,14 @@ function AppStackScreen() {
       <AppStack.Screen name="Main" component={DrawerNavigator} />
       <AppStack.Screen name="leaveHistory" component={TabViewExample} />
       <AppStack.Screen name="loanHistory" component={LoanTabNavigator} />
-      <AppStack.Screen name="salaryAdHistory" component={SalaryAdTabNavigator} />
-      <AppStack.Screen name="reimburseHistory" component={ReimbursementTabNavigator} />
+      <AppStack.Screen
+        name="salaryAdHistory"
+        component={SalaryAdTabNavigator}
+      />
+      <AppStack.Screen
+        name="reimburseHistory"
+        component={ReimbursementTabNavigator}
+      />
       <AppStack.Screen name="overtimeHistory" component={OvertimeNavigator} />
       <AppStack.Screen name="addMemberHistory" component={AddMemberNavigator} />
       <AppStack.Screen name="resignHistory" component={ResignNavigator} />
@@ -64,7 +74,11 @@ function Navigation() {
   const userDetails = useSelector((state: any) => state.userDetails);
   const isLoggedIn = userDetails && userDetails.user;
 
-  return <NavigationContainer>{isLoggedIn ? <AppStackScreen /> : <AuthStackScreen />}</NavigationContainer>;
+  return (
+    <NavigationContainer>
+      {isLoggedIn ? <AppStackScreen /> : <AuthStackScreen />}
+    </NavigationContainer>
+  );
 }
 
 export default function App() {
@@ -85,14 +99,17 @@ export default function App() {
 
   return (
     <Provider store={store}>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          padding: 20,
+        }}
+      >
         <Navigation />
       </SafeAreaView>
     </Provider>
   );
 }
-
-
 
 // import React from "react";
 // import { NavigationContainer } from "@react-navigation/native";
@@ -112,11 +129,10 @@ export default function App() {
 // import OvertimeNavigator from "./Component/OvertimeScreen/OvertimeTabs";
 // import ResignNavigator from "./Component/ResignScreen/ResignTabs";
 // // import TimesheetCalendar from "./Component/TimesheetScreen/TimesheetCalendar"; // Add this import
-// import "./config"; 
+// import "./config";
 // import TimesheetCalendar from "./Screen/Timesheet/TimesheetCalendar";
 // import { useEffect } from "react";
 // import { scheduleTimesheetReminderDaily } from "./Utils/NotificationHelper";
-
 
 // const Stack = createStackNavigator();
 // const AuthStack = createStackNavigator();
@@ -180,7 +196,7 @@ export default function App() {
 //       <AppStack.Screen
 //         name="timesheetCalendar"
 //         component={TimesheetCalendar}
-//         options={{ 
+//         options={{
 //           headerShown: true,
 //           title: "Timesheet Calendar",
 //           headerStyle: {
@@ -213,7 +229,6 @@ export default function App() {
 //    useEffect(() => {
 //     scheduleTimesheetReminderDaily();
 //   }, []);
-
 
 //   return (
 //     <Provider store={store}>
