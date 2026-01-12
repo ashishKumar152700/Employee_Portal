@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, Dimensions, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart, BarChart } from 'react-native-chart-kit';
 import RNPickerSelect from 'react-native-picker-select';
 
 const Dashboard = () => {
@@ -59,15 +58,6 @@ const Dashboard = () => {
         />
       </View>
 
-      <View style={styles.graphContainer}>
-        <Text style={styles.sectionTitle}>Monthly Attendance Trend</Text>
-        <LineChart data={monthlyData} width={width - 40} height={250} chartConfig={chartConfig} bezier style={styles.chartStyle} />
-      </View>
-
-      <View style={styles.graphContainer}>
-        <Text style={styles.sectionTitle}>Category-wise Attendance</Text>
-        <BarChart data={categoryData} width={width - 40} height={250} chartConfig={chartConfig} style={styles.chartStyle} fromZero yAxisLabel="" yAxisSuffix="" />
-      </View>
 
     </ScrollView>
   );

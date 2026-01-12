@@ -3,7 +3,7 @@ import { View, Text, Button, StyleSheet, ScrollView } from "react-native";
 import { TextInput, FAB } from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 import { useSelector } from "react-redux";
 
@@ -14,7 +14,7 @@ const ReimbursementForm: React.FC = () => {
   const [date, setDate] = useState<string>("");
   const [expenseDescription, setExpenseDescription] = useState<string>("");
   const [documents, setDocuments] = useState<any[]>([]); // To store multiple uploaded documents
-  type reimburseHistory = StackNavigationProp<
+  type reimburseHistory = NativeStackNavigationProp <
     RootStackParamList,
     "reimburseHistory"
   >;

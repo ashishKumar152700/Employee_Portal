@@ -1,5 +1,5 @@
 import { RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp  } from '@react-navigation/native-stack';
 
 // Define the stack parameter list
 export type RootStackParamList = {
@@ -17,7 +17,7 @@ export type RootStackParamList = {
 };
 
 // Type for navigation prop
-export type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LoginScreen'>;
+export type LoginScreenNavigationProp = NativeStackNavigationProp <RootStackParamList, 'LoginScreen'>;
 
 // Type for route prop (if passing parameters, otherwise can be ignored)
 export type LoginScreenRouteProp = RouteProp<RootStackParamList, 'LoginScreen'>;

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, FAB } from 'react-native-paper';
 import { RootStackParamList } from '../../Global/Types';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp  } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
 
 const SalaryAdvanceRequestForm: React.FC = () => {
@@ -13,7 +13,7 @@ const SalaryAdvanceRequestForm: React.FC = () => {
   const [approverName, setApproverName] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [reason, setReason] = useState<string>('');
-  type salaryAdHistory = StackNavigationProp<RootStackParamList, 'salaryAdHistory'>;
+  type salaryAdHistory = NativeStackNavigationProp <RootStackParamList, 'salaryAdHistory'>;
 
   const managerDetailsSelector = useSelector((state:any) => state.managerInfo ) ;
   const userDetailsSelector = useSelector((state:any) => state.userDetails ) ;

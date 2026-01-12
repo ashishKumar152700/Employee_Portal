@@ -3,7 +3,7 @@ import { View, Text, Button, StyleSheet, ScrollView } from "react-native";
 import { FAB, TextInput, RadioButton } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 
 const AddEmployeeRequestForm: React.FC = () => {
@@ -17,7 +17,7 @@ const AddEmployeeRequestForm: React.FC = () => {
 
   const navigation =
     useNavigation<
-      StackNavigationProp<RootStackParamList, "addMemberHistory">
+      NativeStackNavigationProp <RootStackParamList, "addMemberHistory">
     >();
 
   const handleSubmit = () => {

@@ -19,7 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootStackParamList } from "../../Global/Types";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { MaterialIcons } from "@expo/vector-icons";
 import { loginservice } from "../../Services/Login/Login.service";
 import { useDispatch } from "react-redux";
@@ -33,7 +33,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [secureTextEntry, setSecureTextEntry] = useState(true);
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp <RootStackParamList>>();
   const dispatch = useDispatch();
 
   // Animation refs

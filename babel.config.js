@@ -1,7 +1,10 @@
-module.exports = function(api) {
+module.exports = function (api) {
   api.cache(true);
   return {
-    presets: ['babel-preset-expo'],
-    plugins: ['react-native-reanimated/plugin', 'inline-dotenv'], // Add this line
+    presets: ["babel-preset-expo"],
+    plugins: [
+      "inline-dotenv",
+      "react-native-reanimated/plugin",
+    ],
   };
 };

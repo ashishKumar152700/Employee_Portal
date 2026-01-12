@@ -13,7 +13,7 @@ import { getLeaves } from "../../Services/Leave/Leave.service";
 import { FAB } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../Global/Types";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
 export default function MyLeaveScreen() {
@@ -42,7 +42,7 @@ export default function MyLeaveScreen() {
     const dispatch = useDispatch();
     const leaveDetailsSelector = useSelector((state: any) => state.leaveDetails);
     const navigation = useNavigation();
-    type leaveHistory = StackNavigationProp<RootStackParamList, "leaveHistory">;
+    type leaveHistory = NativeStackNavigationProp <RootStackParamList, "leaveHistory">;
     const [refreshing, setRefreshing] = useState(false);
 
     const onRefresh = useCallback(async () => {
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
 // import { FAB } from "react-native-paper";
 // import { useNavigation } from "@react-navigation/native";
 // import { RootStackParamList } from "../../Global/Types";
-// import { StackNavigationProp } from "@react-navigation/stack";
+// import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 // import Icon from "react-native-vector-icons/MaterialIcons";
 //
 // export default function MyLeaveScreen() {
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
 //   const dispatch = useDispatch();
 //   const leaveDetailsSelector = useSelector((state: any) => state.leaveDetails);
 //   const navigation = useNavigation();
-//   type leaveHistory = StackNavigationProp<RootStackParamList, "leaveHistory">;
+//   type leaveHistory = NativeStackNavigationProp <RootStackParamList, "leaveHistory">;
 //   const [refreshing, setRefreshing] = useState(false);
 //
 //   const onRefresh = useCallback(async () => {

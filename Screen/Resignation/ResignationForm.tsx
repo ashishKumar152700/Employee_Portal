@@ -3,7 +3,7 @@ import { View, Text, Button, StyleSheet, ScrollView } from "react-native";
 import { FAB, TextInput } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 
 const ResignationForm: React.FC = () => {
@@ -17,7 +17,7 @@ const ResignationForm: React.FC = () => {
   const userDetails = useSelector((state: any) => state.userDetails);
   const managerDetails = useSelector((state: any) => state.managerInfo);
 
-  type resignHistory = StackNavigationProp<RootStackParamList, 'resignHistory'>;
+  type resignHistory = NativeStackNavigationProp <RootStackParamList, 'resignHistory'>;
 
   
   const HistoryPress = () => {

@@ -12,14 +12,14 @@ import {
   Easing,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import CalendarPicker from "react-native-calendar-picker";
+import { Calendar } from "react-native-calendars";
 import { useFocusEffect } from "@react-navigation/native";
 import { format } from "date-fns";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { submitLeaveApplication } from "../../Services/Leave/Leave.service";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ActivityIndicator } from "react-native";
@@ -41,15 +41,17 @@ const LeaveApplicationScreen: React.FC = () => {
   const [totalDays, setTotalDays] = useState<number>(1);
   const [isCalendarModalVisible, setIsCalendarModalVisible] =
     useState<boolean>(false);
-  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
-  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+
   const [userDOJ, setUserDOJ] = useState<Date | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  type LoginScreenNavigationProp = StackNavigationProp<
+  type LoginScreenNavigationProp = NativeStackNavigationProp<
     RootStackParamList,
     "MyLeaveScreen"
   >;
+  const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
+const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
+const [markedDates, setMarkedDates] = useState({});
 
   const leave_Details = useSelector((state: any) => state.leaveDetails);
   const managerDetailsSelector = useSelector((state: any) => state.managerInfo);
@@ -87,7 +89,7 @@ const LeaveApplicationScreen: React.FC = () => {
     setTotalDays(0);
     setSelectedOption("full-day");
 
-     setAlertVisible(false);
+    setAlertVisible(false);
   };
 
   useEffect(() => {
@@ -246,6 +248,72 @@ const LeaveApplicationScreen: React.FC = () => {
     );
   };
 
+  const todayISO = new Date().toISOString().split("T")[0];
+
+
+  const onDayPress = (day: any) => {
+  const date = day.dateString;
+
+  if (!selectedStartDate) {
+    setSelectedStartDate(date);
+    setSelectedEndDate(null);
+    setMarkedDates({
+      [date]: {
+        startingDay: true,
+        endingDay: true,
+        color: "#002957",
+        textColor: "#FFFFFF",
+      },
+    });
+    return;
+  }
+
+  if (selectedStartDate && !selectedEndDate) {
+    const range = createMarkedRange(selectedStartDate, date);
+    setSelectedEndDate(date);
+    setMarkedDates(range);
+    return;
+  }
+
+  // reset if both already picked
+  setSelectedStartDate(date);
+  setSelectedEndDate(null);
+  setMarkedDates({
+    [date]: {
+      startingDay: true,
+      endingDay: true,
+      color: "#002957",
+      textColor: "#FFFFFF",
+    },
+  });
+};
+
+
+const createMarkedRange = (start: string, end: string) => {
+  let range: any = {};
+  let startTime = new Date(start).getTime();
+  let endTime = new Date(end).getTime();
+
+  if (startTime > endTime) {
+    [startTime, endTime] = [endTime, startTime];
+    [start, end] = [end, start];
+  }
+
+  let current = startTime;
+  while (current <= endTime) {
+    const date = new Date(current).toISOString().split("T")[0];
+    range[date] = {
+      color: current === startTime || current === endTime ? "#002957" : "#1a4a7a",
+      textColor: "#FFFFFF",
+      startingDay: date === start,
+      endingDay: date === end,
+    };
+    current += 86400000;
+  }
+  return range;
+};
+
+
   // Custom Loading Component
   const CustomLoader = ({ visible, message }: any) => {
     if (!visible) return null;
@@ -261,76 +329,6 @@ const LeaveApplicationScreen: React.FC = () => {
       </Modal>
     );
   };
-
-  // const handleApplyLeave = async () => {
-  //   if (!selectedStartDate) {
-  //     Alert.alert("Error", "Please select a start date.");
-  //     return;
-  //   }
-  //   if (!reason.trim()) {
-  //     Alert.alert("Error", "Reason for leave is required.");
-  //     return;
-  //   }
-
-  //   // Check if selected leave type has available leaves
-  //   if (!isLeaveTypeAvailable(leaveType)) {
-  //     Alert.alert(
-  //       "No Leaves Available",
-  //       `You have no ${leaveType} leaves remaining. Please select another leave type.`,
-  //       [{ text: "OK", style: "default" }]
-  //     );
-  //     return;
-  //   }
-
-  //   const leaveApplication = {
-  //     leavetype: leaveType,
-  //     leavestart: selectedStartDate
-  //       ? format(selectedStartDate, "dd/MM/yyyy")
-  //       : "",
-  //     leaveend: selectedEndDate
-  //       ? format(selectedEndDate, "dd/MM/yyyy")
-  //       : format(selectedStartDate, "dd/MM/yyyy"),
-  //     leavepart: selectedOption,
-  //     reason: reason.trim(),
-  //     approver: managerDetailsSelector.id,
-  //   };
-
-  //   console.log("Leave Application:", leaveApplication);
-
-  //   setIsLoading(true);
-
-  //   try {
-  //     const response = await submitLeaveApplication(leaveApplication);
-  //     if (response.status === 200) {
-  //       Alert.alert(
-  //         "Success!",
-  //         response.message || "Leave application submitted successfully!",
-  //         [
-  //           {
-  //             text: "OK",
-  //             style: "default",
-  //             onPress: () => {
-  //               resetForm();
-  //               navigation.navigate("MyLeaveScreen");
-  //             },
-  //           },
-  //         ]
-  //       );
-  //     } else {
-  //       Alert.alert(
-  //         "Error",
-  //         response.message || "Failed to submit leave application."
-  //       );
-  //     }
-  //   } catch (error) {
-  //     Alert.alert(
-  //       "Error",
-  //       "An error occurred while submitting the leave application."
-  //     );
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
 
   const handleApplyLeave = async () => {
     if (!selectedStartDate) {
@@ -437,16 +435,7 @@ const LeaveApplicationScreen: React.FC = () => {
     }
   };
 
-  const onDateChange = (date: Date) => {
-    if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
-      setSelectedStartDate(date);
-      setSelectedEndDate(null);
-    } else {
-      setSelectedEndDate(date);
-    }
-    calculateTotalDays();
-  };
-
+ 
   const calculateTotalDays = () => {
     if (selectedStartDate && !selectedEndDate) {
       const leavepart = selectedOption === "full-day" ? 1 : 0.5;
@@ -666,16 +655,19 @@ const LeaveApplicationScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <CalendarPicker
-              todayBackgroundColor={"#e9f0f7"}
-              minDate={new Date()}
-              selectedDayTextColor={"#FFFFFF"}
-              selectedDayStyle={{ backgroundColor: "#002957" }}
-              selectedRangeStyle={{ backgroundColor: "#1a4a7a" }}
-              onDateChange={onDateChange}
-              allowRangeSelection={true}
-              selectedStartDate={selectedStartDate}
-              selectedEndDate={selectedEndDate}
+            <Calendar
+              onDayPress={onDayPress}
+              markingType="period"
+              markedDates={markedDates}
+              minDate={todayISO}
+              theme={{
+                todayBackgroundColor: "#e9f0f7",
+                todayTextColor: "#000",
+                selectedDayBackgroundColor: "#002957",
+                selectedDayTextColor: "#FFFFFF",
+                textDayFontWeight: "500",
+                arrowColor: "#002957",
+              }}
             />
 
             <TouchableOpacity
@@ -922,7 +914,7 @@ const styles = StyleSheet.create({
   // Alert Styles
   alertOverlay: {
     flex: 1,
-     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     // backgroundColor: "#002957",
     justifyContent: "center",
     alignItems: "center",

@@ -4,7 +4,7 @@ import { TextInput, FAB } from "react-native-paper";
 import { Picker } from "@react-native-picker/picker";
 import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
+import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 import { useSelector } from "react-redux";
 
@@ -22,7 +22,7 @@ const LoanRequestForm: React.FC = () => {
   const [address, setAddress] = useState<string>("");
   const [emergencyContact, setEmergencyContact] = useState<string>("");
   const [documents, setDocuments] = useState<any[]>([]); // To store multiple uploaded documents
-  type loanHistory = StackNavigationProp<RootStackParamList, 'loanHistory'>;
+  type loanHistory = NativeStackNavigationProp <RootStackParamList, 'loanHistory'>;
 
   const managerDetailsSelector = useSelector((state:any) => state.managerInfo ) ;
   const userDetailsSelector = useSelector((state:any) => state.userDetails ) ;
