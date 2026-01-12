@@ -22,9 +22,6 @@ import TimesheetCalendar from "./Screen/Timesheet/TimesheetCalendar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { useEffect as useEffectReact } from "react";
-
-const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 const store = createStore(reducers, applyMiddleware(thunk));
