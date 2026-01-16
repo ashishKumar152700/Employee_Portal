@@ -58,11 +58,11 @@ export const CustomDrawerContent = ({ onClose, isDrawerOpen }: any) => {
   };
 
   const menuItems = [
-    {
-      name: 'Attendance',
-      icon: 'fingerprint',
-      route: 'Attendance'
-    },
+    // {
+    //   name: 'Attendance',
+    //   icon: 'fingerprint',
+    //   route: 'Attendance'
+    // },
     {
       name: 'Timesheet',
       icon: 'keyboard',
