@@ -11,7 +11,8 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
-  StatusBar
+  StatusBar,
+  SafeAreaView
 } from "react-native";
 import { CalendarList } from "react-native-calendars";
 import TimesheetForm from "./Timesheet";
@@ -310,7 +311,7 @@ const TimesheetCalendar: React.FC = () => {
         </View>
       </View>
 
-      {/* ✅ NEW ILLUSTRATION (ONLY ADDITION) */}
+      {/* Illustration */}
       <View style={styles.illustrationContainer}>
         <LottieView
           source={require("../../assets/animations/workPeople.json")}
@@ -320,53 +321,65 @@ const TimesheetCalendar: React.FC = () => {
         />
       </View>
 
-      {/* Modal */}
+      {/* Modal with SafeAreaView for proper header display */}
       <Modal
         animationType="slide"
         transparent={false}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent={false}
       >
-        <KeyboardAvoidingView 
-          style={styles.modalContainer}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
+        <SafeAreaView style={styles.modalSafeArea}>
+          <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
+          
+          {/* Modal Header - Now clearly visible */}
           <View style={styles.modalHeader}>
-            <View style={styles.modalHeaderContent}>
-              <Text style={styles.modalTitle}>
-                {new Date(selectedDate).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short', 
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </Text>
-
-              {hourCountSummary[selectedDate] && (
-                <Text style={styles.modalSubtitle}>
-                  {(hourCountSummary[selectedDate].totalMinutes / 60).toFixed(1)} hours logged
+            <View style={styles.modalHeaderLeft}>
+              <FontAwesome name="calendar" size={20} color="white" />
+              <View style={styles.modalHeaderTextContainer}>
+                <Text style={styles.modalTitle}>
+                  {new Date(selectedDate).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
                 </Text>
-              )}
+
+                {hourCountSummary[selectedDate] && (
+                  <Text style={styles.modalSubtitle}>
+                    Total: {(hourCountSummary[selectedDate].totalMinutes / 60).toFixed(1)} hours logged
+                  </Text>
+                )}
+              </View>
             </View>
 
             <TouchableOpacity
               onPress={() => setModalVisible(false)}
               style={styles.closeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <FontAwesome name="times" size={20} color="white" />
+              <FontAwesome name="times" size={24} color="white" />
             </TouchableOpacity>
           </View>
 
-          {loading ? (
-            <LoadingOverlay message="Loading tasks..." />
-          ) : (
-            <TimesheetForm
-              selectedDate={selectedDate}
-              onTasksUpdated={handleTasksUpdated}
-              closeModal={() => setModalVisible(false)}
-            />
-          )}
-        </KeyboardAvoidingView>
+          {/* Form Content */}
+          <KeyboardAvoidingView 
+            style={styles.modalContent}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+          >
+            {loading ? (
+              <LoadingOverlay message="Loading tasks..." />
+            ) : (
+              <TimesheetForm
+                selectedDate={selectedDate}
+                onTasksUpdated={handleTasksUpdated}
+                closeModal={() => setModalVisible(false)}
+              />
+            )}
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
 
       {refreshing && (
@@ -408,7 +421,8 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
   },
   refreshButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -418,7 +432,6 @@ const styles = StyleSheet.create({
   },
   calendar: {
     height: 360,
-    // marginTop: 6,
   },
   legend: {
     backgroundColor: '#ffffff',
@@ -480,53 +493,68 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb',
     marginHorizontal: 16,
   },
-
-  /* ✅ ADDED BELOW */
   illustrationContainer: {
     width: "100%",
     height: 160,
     justifyContent: "center",
     alignItems: "center",
-    // marginTop: 5,
-    // marginBottom: 20,
   },
   illustration: {
     width: "90%",
     height: "100%",
   },
-
-  modalContainer: {
+  
+  // ===== FIXED MODAL STYLES =====
+  modalSafeArea: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgb(0, 41, 87)',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: Platform.OS === 'android' ? 16 : 12,
+    paddingBottom: 16,
     backgroundColor: 'rgb(0, 41, 87)',
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  modalHeaderContent: {
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  modalHeaderTextContainer: {
     flex: 1,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
   },
   closeButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 20,
     padding: 10,
+    marginLeft: 12,
   },
+  modalContent: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  
+  // Loading & Refreshing Overlays
   loadingOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
@@ -539,6 +567,10 @@ const styles = StyleSheet.create({
     padding: 30,
     alignItems: 'center',
     elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   loadingText: {
     marginTop: 16,
@@ -561,6 +593,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     elevation: 8,
     gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   refreshingText: {
     fontSize: 14,
@@ -570,4 +606,3 @@ const styles = StyleSheet.create({
 });
 
 export default TimesheetCalendar;
-

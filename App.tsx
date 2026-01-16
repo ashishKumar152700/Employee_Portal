@@ -23,6 +23,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { useEffect as useEffectReact } from "react";
+import { StatusBar } from "react-native";
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -75,6 +76,12 @@ function Navigation() {
 
   return (
     <NavigationContainer>
+         <StatusBar
+        barStyle="light-content"
+        backgroundColor="rgb(0, 41, 87)"
+        translucent={false}
+      />
+
       {isLoggedIn ? <AppStackScreen /> : <AuthStackScreen />}
     </NavigationContainer>
   );

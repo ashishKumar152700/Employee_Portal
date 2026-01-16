@@ -293,25 +293,25 @@ function DrawerNavigator() {
         transparent={true}
         animationType="none"
         onRequestClose={closeDrawer}
-        statusBarTranslucent
+        statusBarTranslucent ={false}
       >
-        <View style={styles.modalContainer}>
-          <Pressable 
-            style={styles.modalOverlay} 
-            onPress={closeDrawer}
-          />
+        <Pressable 
+          style={styles.modalContainer} 
+          onPress={closeDrawer}
+        >
           <Animated.View 
             style={[
               styles.drawerContainer,
               { transform: [{ translateX: slideAnim }] }
             ]}
+            onStartShouldSetResponder={() => true}
           >
             <CustomDrawerContent 
               onClose={closeDrawer}
               isDrawerOpen={isDrawerOpen}
             />
           </Animated.View>
-        </View>
+        </Pressable>
       </Modal>
     </>
   );
@@ -381,18 +381,18 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    flexDirection: 'row',
-  },
-  modalOverlay: {
-    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   drawerContainer: {
-    width: '80%',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 300,
     backgroundColor: 'white',
     elevation: 16,
     shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
+    shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },

@@ -63,6 +63,7 @@ const Schedule: React.FC = () => {
   const [items, setItems] = useState<Record<string, Item[]>>({});
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<string>(todayISO);
+
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {}
   );
@@ -129,9 +130,13 @@ const Schedule: React.FC = () => {
         const grouped: Record<string, Item[]> = {};
 
         (data?.data ?? data).forEach((row: any) => {
+          // const dayISO = row.punchdate
+          //   ? row.punchdate.split("T")[0]
+          //   : new Date().toISOString().split("T")[0];
           const dayISO = row.punchdate
-            ? row.punchdate.split("T")[0]
-            : new Date().toISOString().split("T")[0];
+            ? format(parseISO(row.punchdate), "yyyy-MM-dd")
+            : todayISO;
+
           if (!grouped[dayISO]) grouped[dayISO] = [];
 
           grouped[dayISO].push({
@@ -219,6 +224,8 @@ const Schedule: React.FC = () => {
           if (isActive) {
             console.log("Loading calendar data on focus");
             await loadItemsForMonth(today, true);
+          
+
             lastFocusTime.current = Date.now();
             isInitialLoad.current = false;
           }
@@ -234,8 +241,6 @@ const Schedule: React.FC = () => {
       };
     }, [loadItemsForMonth])
   );
-
-
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -263,10 +268,10 @@ const Schedule: React.FC = () => {
     async (day: { dateString: string }) => {
       setSelectedDate(day.dateString);
 
-      // Collapse calendar after selection
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setCalendarCollapsed(true);
 
+    
       // Fetch data for the range from selected date to today if not already loaded
       const datesToLoad = eachDayOfInterval({
         start: parseISO(day.dateString),
@@ -281,9 +286,14 @@ const Schedule: React.FC = () => {
           missingDates[missingDates.length - 1]
         );
       }
+       await fetchRange(day.dateString, todayISO);
     },
     [items, fetchRange]
   );
+
+ 
+ 
+
 
   /* ---------- Toggle calendar visibility ---------- */
   const toggleCalendar = useCallback(() => {
@@ -310,6 +320,8 @@ const Schedule: React.FC = () => {
       .map((date) => format(date, "yyyy-MM-dd"))
       .reverse(); // Show most recent first
   }, [selectedDate]);
+
+
 
   /* ---------- Marked dates for calendar ---------- */
   const markedDates = useMemo(() => {
@@ -812,7 +824,6 @@ const styles = StyleSheet.create({
   },
   locationSection: {
     marginBottom: 2,
-    
   },
   locationHeader: {
     flexDirection: "row",

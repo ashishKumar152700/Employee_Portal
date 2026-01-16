@@ -1,7 +1,6 @@
 // Screen/Timesheet/Timesheet.tsx
 
 import React, { useState, useEffect } from "react";
-import { Picker } from "@react-native-picker/picker";
 import { FontAwesome } from "@expo/vector-icons";
 import {
   View,
@@ -15,6 +14,8 @@ import {
   Modal,
   Dimensions,
   Platform,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -30,7 +31,7 @@ import {
   clearCache,
 } from "../../Services/Timesheet/timesheetService";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 interface TimesheetFormProps {
   selectedDate: string;
@@ -58,6 +59,7 @@ export default function TimesheetForm({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
 
   // Custom Alert Modal State
   const [alertVisible, setAlertVisible] = useState(false);
@@ -273,6 +275,7 @@ export default function TimesheetForm({
     }, 0);
     return formatMinutesToHoursAndMinutes(totalMinutes);
   };
+
   const onTimeChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === "android") setShowTimePicker(false);
 
@@ -302,7 +305,6 @@ export default function TimesheetForm({
     setAlertVisible(true);
   };
 
-
   // Custom Alert Modal Component
   const CustomAlertModal = () => {
     const getLottieSource = () => {
@@ -323,20 +325,14 @@ export default function TimesheetForm({
     return (
       <Modal
         visible={alertVisible}
-        transparent={true}
-        animationType="none"
+        transparent={false}
+        animationType="fade"
         statusBarTranslucent={true}
-        hardwareAccelerated={true}
-        onShow={() => {
-          setTimeout(() => {
-          }, 0);
-        }}
         onRequestClose={() => setAlertVisible(false)}
       >
         <View style={styles.alertOverlay}>
           <View style={styles.alertContainer}>
             <View style={styles.alertContent}>
-              {/* Lottie Animation */}
               <LottieView
                 source={getLottieSource()}
                 autoPlay
@@ -344,13 +340,9 @@ export default function TimesheetForm({
                 style={styles.lottieAnimation}
               />
 
-              {/* Alert Title */}
               <Text style={styles.alertTitle}>{alertConfig.title}</Text>
-
-              {/* Alert Message */}
               <Text style={styles.alertMessage}>{alertConfig.message}</Text>
 
-              {/* Action Buttons */}
               <View style={styles.alertButtonContainer}>
                 {alertConfig.type === "confirm" ? (
                   <>
@@ -382,7 +374,10 @@ export default function TimesheetForm({
                 ) : (
                   <TouchableOpacity
                     style={styles.alertButton}
-                    onPress={() => setAlertVisible(false)}
+                    onPress={() => {
+                      setAlertVisible(false);
+                      alertConfig.onConfirm?.();
+                    }}
                   >
                     <LinearGradient
                       colors={["rgb(0, 41, 87)", "rgb(0, 61, 117)"]}
@@ -402,6 +397,77 @@ export default function TimesheetForm({
     );
   };
 
+  // Custom Project Picker Modal
+  const ProjectPickerModal = () => (
+    <Modal
+      visible={showProjectPicker}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowProjectPicker(false)}
+    >
+      <TouchableOpacity 
+        style={styles.pickerModalOverlay}
+        activeOpacity={1}
+        onPress={() => setShowProjectPicker(false)}
+      >
+        <View style={styles.pickerModalContainer}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerHeaderText}>Select Project</Text>
+            <TouchableOpacity onPress={() => setShowProjectPicker(false)}>
+              <FontAwesome name="times" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.pickerScrollView}>
+            <TouchableOpacity
+              style={[
+                styles.pickerItem,
+                projectId === 0 && styles.pickerItemSelected
+              ]}
+              onPress={() => {
+                setProjectId(0);
+                setShowProjectPicker(false);
+              }}
+            >
+              <Text style={[
+                styles.pickerItemText,
+                projectId === 0 && styles.pickerItemTextSelected
+              ]}>
+                Select a project
+              </Text>
+              {projectId === 0 && (
+                <FontAwesome name="check" size={16} color="rgb(0, 41, 87)" />
+              )}
+            </TouchableOpacity>
+
+            {projects.map((project) => (
+              <TouchableOpacity
+                key={project.projectId}
+                style={[
+                  styles.pickerItem,
+                  projectId === project.projectId && styles.pickerItemSelected
+                ]}
+                onPress={() => {
+                  setProjectId(project.projectId);
+                  setShowProjectPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.pickerItemText,
+                  projectId === project.projectId && styles.pickerItemTextSelected
+                ]}>
+                  {project.projectName}
+                </Text>
+                {projectId === project.projectId && (
+                  <FontAwesome name="check" size={16} color="rgb(0, 41, 87)" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
   // Professional Loading Component
   const LoadingOverlay = ({ message }: { message: string }) => (
@@ -424,11 +490,15 @@ export default function TimesheetForm({
     return <LoadingOverlay message="Loading..." />;
   }
 
+  const selectedProjectName = projects.find(p => p.projectId === projectId)?.projectName || "Select a project";
+
   return (
-    <>
+    <SafeAreaView style={styles.safeArea}>
+      {/* <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" /> */}
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Enhanced Task Form */}
         <View style={styles.formContainer}>
@@ -500,22 +570,19 @@ export default function TimesheetForm({
                 />
               </View>
             ) : (
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={projectId}
-                  onValueChange={(value) => setProjectId(value)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Select a project" value={0} />
-                  {projects.map((project) => (
-                    <Picker.Item
-                      key={project.projectId}
-                      label={project.projectName}
-                      value={project.projectId}
-                    />
-                  ))}
-                </Picker>
-              </View>
+              <TouchableOpacity
+                style={styles.customPickerButton}
+                onPress={() => setShowProjectPicker(true)}
+              >
+                <FontAwesome name="briefcase" size={16} color="#6B7280" />
+                <Text style={[
+                  styles.customPickerText,
+                  projectId === 0 && styles.customPickerPlaceholder
+                ]}>
+                  {selectedProjectName}
+                </Text>
+                <FontAwesome name="chevron-down" size={14} color="#6B7280" />
+              </TouchableOpacity>
             )}
           </View>
 
@@ -534,8 +601,7 @@ export default function TimesheetForm({
             </TouchableOpacity>
 
             <Text style={styles.helperText}>
-              Tap to select hours and minutes • {getTotalMinutes()} minutes
-              total
+              Tap to select hours and minutes • {getTotalMinutes()} minutes total
             </Text>
           </View>
 
@@ -724,53 +790,34 @@ export default function TimesheetForm({
           mode="time"
           is24Hour={false}
           display={Platform.OS === "android" ? "clock" : "spinner"}
-          themeVariant="dark"
           onChange={onTimeChange}
         />
       )}
 
+      <ProjectPickerModal />
       <CustomAlertModal />
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+  },
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
   },
   scrollContent: {
-    paddingBottom: 10,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
-  headerContent: {
-    alignItems: "center",
-  },
-  dateText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  totalHoursContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  totalHoursText: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.9)",
-    fontWeight: "600",
+    paddingBottom: 20,
+    paddingTop: 10,
   },
   formContainer: {
     backgroundColor: "white",
-    margin: 15,
+    marginHorizontal: 15,
+    marginTop: 10,
     borderRadius: 20,
     padding: 15,
     shadowColor: "#000",
@@ -782,24 +829,22 @@ const styles = StyleSheet.create({
   formHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 15,
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "bold",
     color: "rgb(0, 41, 87)",
-    marginTop: 5,
-    marginBottom: 5,
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: 18,
   },
   label: {
     fontSize: 14,
     fontWeight: "600",
     color: "#374151",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   inputContainer: {
     flexDirection: "row",
@@ -809,7 +854,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#ffffff",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   inputIcon: {
     marginRight: 12,
@@ -821,64 +866,36 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: "#374151",
     padding: 0,
   },
   textArea: {
-    minHeight: 18,
+    minHeight: 60,
     textAlignVertical: "top",
     paddingTop: 0,
   },
-  projectToggleContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 12,
-  },
-  projectToggle: {
-    flex: 1,
+  customPickerButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 8,
-  },
-  projectToggleActive: {
-    backgroundColor: "rgb(0, 41, 87)",
-    shadowColor: "rgb(0, 41, 87)",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  projectToggleText: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "700",
-  },
-  projectToggleTextActive: {
-    color: "white",
-  },
-  pickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
     borderRadius: 12,
     backgroundColor: "#ffffff",
-    paddingLeft: 12, // Reduced from 16 to 12
-    paddingVertical: 5,
-    height: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
-  picker: {
+  customPickerText: {
     flex: 1,
-    height: 80,
-    fontSize: 14, // Increased from 8 to make text fully visible
-    color: "#374151", // Add text color for better visibility
+    fontSize: 15,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  customPickerPlaceholder: {
+    color: "#9CA3AF",
+    fontWeight: "400",
   },
   timeInputButton: {
     flexDirection: "row",
@@ -888,13 +905,13 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     borderRadius: 12,
     backgroundColor: "#ffffff",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
   timeInputText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: "#374151",
     fontWeight: "600",
   },
@@ -908,8 +925,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 0,
-    marginBottom: 5,
+    paddingVertical: 8,
+    marginBottom: 18,
   },
   switchLabelContainer: {
     flexDirection: "row",
@@ -924,203 +941,49 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 8,
   },
   clearButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: "#F3F4F6",
     borderWidth: 1,
     borderColor: "#E5E7EB",
     gap: 8,
-    height: 40,
+    height: 48,
   },
   clearButtonText: {
     color: "#6B7280",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
   },
   submitButton: {
     flex: 2,
     borderRadius: 12,
     overflow: "hidden",
-    height: 40,
+    height: 48,
   },
   submitGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
     gap: 8,
+    height: "100%",
   },
   submitButtonText: {
     color: "#ffffff",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
   },
-  // Digital Clock Styles
-  clockContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-    gap: 15,
-  },
-  clockFace: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "#ffffff",
-    borderWidth: 3,
-    borderColor: "rgb(0, 41, 87)",
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  clockNumber: {
-    position: "absolute",
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "rgb(0, 41, 87)",
-    width: 20,
-    textAlign: "center",
-  },
-  clockCenter: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "rgb(0, 41, 87)",
-    position: "absolute",
-    zIndex: 10,
-  },
-  hourHand: {
-    position: "absolute",
-    width: 4,
-    height: 40,
-    backgroundColor: "rgb(0, 41, 87)",
-    borderRadius: 2,
-    bottom: "50%",
-    left: "50%",
-    marginLeft: -2,
-    transformOrigin: "bottom",
-  },
-  minuteHand: {
-    position: "absolute",
-    width: 3,
-    height: 55,
-    backgroundColor: "#3B82F6",
-    borderRadius: 1.5,
-    bottom: "50%",
-    left: "50%",
-    marginLeft: -1.5,
-    transformOrigin: "bottom",
-  },
-  digitalDisplay: {
-    backgroundColor: "rgb(0, 41, 87)",
-    paddingHorizontal: 24,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  digitalTime: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
-    letterSpacing: 2,
-  },
-  digitalLabel: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
-    // marginTop: 4,
-  },
-  // Time Picker Styles
-  timePickerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  timePickerContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    width: "100%",
-    maxWidth: 350,
-    overflow: "hidden",
-  },
-  timePickerHeader: {
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    alignItems: "center",
-  },
-  timePickerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
-  },
-  timePickerContent: {
-    padding: 25,
-  },
-  timePickerRow: {
-    flexDirection: "row",
-    gap: 20,
-    // marginBottom: 10,
-  },
-  timePickerColumn: {
-    flex: 1,
-    alignItems: "center",
-  },
-  timePickerLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
-    // marginBottom: 10,
-  },
-  timePicker: {
-    width: "100%",
-    height: 80,
-  },
-  timePickerButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  timePickerButton: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  timePickerCancelButton: {
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  timePickerCancelText: {
-    color: "#6B7280",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  timePickerDoneButton: {
-    overflow: "hidden",
-  },
-  timePickerDoneGradient: {
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  timePickerDoneText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  // Tasks List Styles
   tasksContainer: {
     backgroundColor: "white",
     marginHorizontal: 15,
+    marginTop: 20,
     borderRadius: 20,
     padding: 15,
     shadowColor: "#000",
@@ -1132,95 +995,99 @@ const styles = StyleSheet.create({
   tasksHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 15,
     gap: 12,
   },
   emptyState: {
     alignItems: "center",
-    marginBottom: 10,
+    marginVertical: 10,
   },
   emptyStateCard: {
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: 40,
     paddingHorizontal: 30,
     borderRadius: 16,
     width: "100%",
   },
   emptyStateText: {
-    marginTop: 10,
-    fontSize: 12,
+    marginTop: 16,
+    fontSize: 14,
     color: "rgba(0, 41, 87, 0.7)",
     fontWeight: "600",
     textAlign: "center",
   },
   emptyStateSubtext: {
     marginTop: 8,
-    fontSize: 11,
+    fontSize: 12,
     color: "rgba(0, 41, 87, 0.5)",
     textAlign: "center",
   },
   taskCard: {
     borderRadius: 12,
-    marginBottom: 10,
+    marginBottom: 12,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   taskCardGradient: {
-    padding: 10,
+    padding: 14,
   },
   taskHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   taskTitleContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginRight: 8,
+    gap: 8,
+    marginRight: 12,
   },
   taskTitle: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#1F2937",
   },
   taskActions: {
     flexDirection: "row",
-    gap: 6,
+    gap: 8,
   },
   editButton: {
     backgroundColor: "#3B82F6",
-    borderRadius: 6,
-    padding: 6,
+    borderRadius: 8,
+    padding: 8,
+    minWidth: 36,
+    alignItems: "center",
   },
   deleteButton: {
     backgroundColor: "#EF4444",
-    borderRadius: 6,
-    padding: 6,
+    borderRadius: 8,
+    padding: 8,
+    minWidth: 36,
+    alignItems: "center",
   },
   taskDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#6B7280",
-    marginBottom: 10,
-    lineHeight: 16,
+    marginBottom: 12,
+    lineHeight: 18,
     fontStyle: "italic",
   },
   taskFooter: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 16,
   },
   taskDetail: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   taskDetailText: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#6B7280",
     fontWeight: "500",
   },
@@ -1229,12 +1096,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
+    flex: 1,
+    backgroundColor: "rgb(0, 41, 87)",
   },
   loadingGradient: {
     flex: 1,
@@ -1246,24 +1109,16 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 16,
     color: "white",
     fontWeight: "600",
   },
-  
   alertOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    // Force the overlay to cover entire screen immediately
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9999,
   },
   alertContainer: {
     backgroundColor: "#ffffff",
@@ -1276,29 +1131,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
-    // Ensure it's rendered at the correct position
-    margin: 0,
-    alignSelf: "center",
   },
-  
   alertContent: {
-    padding: 20,
+    padding: 24,
     alignItems: "center",
   },
   lottieAnimation: {
-    width: 140,
-    height: 140,
-    marginBottom: 10,
+    width: 120,
+    height: 120,
+    marginBottom: 12,
   },
   alertTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#1F2937",
     marginBottom: 12,
     textAlign: "center",
   },
   alertMessage: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#6B7280",
     textAlign: "center",
     lineHeight: 22,
@@ -1343,6 +1194,57 @@ const styles = StyleSheet.create({
   alertOkButtonText: {
     color: "#ffffff",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  // Project Picker Modal Styles
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  pickerModalContainer: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: height * 0.7,
+    paddingBottom: Platform.OS === "ios" ? 34 : 20,
+  },
+  pickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  pickerHeaderText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1F2937",
+  },
+  pickerScrollView: {
+    maxHeight: height * 0.5,
+  },
+  pickerItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  pickerItemSelected: {
+    backgroundColor: "rgba(0, 41, 87, 0.05)",
+  },
+  pickerItemText: {
+    fontSize: 16,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  pickerItemTextSelected: {
+    color: "rgb(0, 41, 87)",
     fontWeight: "600",
   },
 });
