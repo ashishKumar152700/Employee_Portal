@@ -1,3 +1,4 @@
+// (imports untouched)
 import React, {
   useState,
   useEffect,
@@ -33,7 +34,6 @@ import {
 import { RefreshControl } from "react-native";
 import { useSelector } from "react-redux";
 import { Image } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 
 if (Platform.OS === "android") {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -68,6 +68,10 @@ const Schedule: React.FC = () => {
     {}
   );
   const [calendarCollapsed, setCalendarCollapsed] = useState<boolean>(true);
+
+  // ✔ OPTION C here (as requested)
+  const [loadingRange, setLoadingRange] = useState(false);
+
   const [refreshing, setRefreshing] = useState(false);
   const todayPunch = useSelector((state: any) => state.todayPunch);
   const dispatch = useDispatch();
@@ -75,7 +79,6 @@ const Schedule: React.FC = () => {
   const mobileIcon = require("../../assets/device/mobile.png");
   const biometricIcon = require("../../assets/device/biometric.png");
 
-  // Ref to track last load timestamps
   const lastLoadTimestamps = useRef<Record<string, number>>({}).current;
 
   useEffect(() => {
@@ -88,7 +91,6 @@ const Schedule: React.FC = () => {
     }
   }, [todayPunch]);
 
-  /* ---------- Helper functions ---------- */
   const isoToDisplay = (iso: string) => {
     try {
       const date = parseISO(iso);
@@ -118,7 +120,6 @@ const Schedule: React.FC = () => {
     return `${h}h ${m}m ${s}s`;
   };
 
-  /* ---------- Core data fetch ---------- */
   const fetchRange = useCallback(
     async (fromISO: string, toISO: string) => {
       try {
@@ -127,12 +128,10 @@ const Schedule: React.FC = () => {
           toISO,
           dispatch
         );
+
         const grouped: Record<string, Item[]> = {};
 
         (data?.data ?? data).forEach((row: any) => {
-          // const dayISO = row.punchdate
-          //   ? row.punchdate.split("T")[0]
-          //   : new Date().toISOString().split("T")[0];
           const dayISO = row.punchdate
             ? format(parseISO(row.punchdate), "yyyy-MM-dd")
             : todayISO;
@@ -156,8 +155,9 @@ const Schedule: React.FC = () => {
 
         const start = parseISO(fromISO);
         const end = parseISO(toISO);
+
         for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
-          const iso = d.toISOString().split("T")[0];
+          const iso = format(d, "yyyy-MM-dd");
           if (!grouped[iso]) {
             grouped[iso] = [
               {
@@ -169,6 +169,7 @@ const Schedule: React.FC = () => {
             ];
           }
         }
+
         setItems((prev) => ({ ...prev, ...grouped }));
       } catch (e) {
         console.error("fetchRange error:", e);
@@ -177,10 +178,14 @@ const Schedule: React.FC = () => {
     [dispatch]
   );
 
-  /* ---------- Load data for month ---------- */
   const loadItemsForMonth = useCallback(
     async (monthDate: Date, force = false) => {
-      const monthKey = format(monthDate, "yyyy-MM");
+      const monthDateNormalized = new Date(
+        monthDate.getFullYear(),
+        monthDate.getMonth(),
+        1
+      );
+      const monthKey = format(monthDateNormalized, "yyyy-MM");
 
       const currentTime = Date.now();
       if (
@@ -191,8 +196,11 @@ const Schedule: React.FC = () => {
         return;
       }
 
-      const fromISO = startOfMonth(monthDate).toISOString().split("T")[0];
-      const endOfMonthISO = endOfMonth(monthDate).toISOString().split("T")[0];
+      const fromISO = format(startOfMonth(monthDateNormalized), "yyyy-MM-dd");
+      const endOfMonthISO = format(
+        endOfMonth(monthDateNormalized),
+        "yyyy-MM-dd"
+      );
       const toISO = endOfMonthISO > todayISO ? todayISO : endOfMonthISO;
 
       await fetchRange(fromISO, toISO);
@@ -202,57 +210,29 @@ const Schedule: React.FC = () => {
     [loadedMonths, fetchRange]
   );
 
-  /* ---------- useFocusEffect with proper cleanup ---------- */
+  useEffect(() => {
+    const loadInitialData = async () => {
+      const today = new Date();
+      await loadItemsForMonth(today, false);
+    };
+    loadInitialData();
+  }, []);
 
-  const isInitialLoad = useRef(true);
-  const lastFocusTime = useRef(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      const now = Date.now();
-
-      // Prevent rapid successive calls (min 10 seconds between focus-triggered loads)
-      if (now - lastFocusTime.current < 10000 && !isInitialLoad.current) {
-        return;
-      }
-
-      let isActive = true;
-
-      const loadData = async () => {
-        try {
-          const today = new Date();
-          if (isActive) {
-            console.log("Loading calendar data on focus");
-            await loadItemsForMonth(today, true);
-          
-
-            lastFocusTime.current = Date.now();
-            isInitialLoad.current = false;
-          }
-        } catch (error) {
-          console.error("Error loading data on focus:", error);
-        }
-      };
-
-      loadData();
-
-      return () => {
-        isActive = false;
-      };
-    }, [loadItemsForMonth])
-  );
+  useEffect(() => {
+    if (selectedDate && !items[selectedDate]) {
+      const monthDate = parseISO(selectedDate);
+      loadItemsForMonth(monthDate, false);
+    }
+  }, [selectedDate, items]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
 
-    // Force reload current month and today's data
     const today = new Date();
     const todayISO = format(today, "yyyy-MM-dd");
 
-    // Fetch today's data specifically
     await fetchRange(todayISO, todayISO);
 
-    // Also refresh any other loaded months
     const monthsToRefresh = Array.from(loadedMonths);
     for (const monthKey of monthsToRefresh) {
       const [year, month] = monthKey.split("-");
@@ -263,45 +243,47 @@ const Schedule: React.FC = () => {
     setRefreshing(false);
   }, [loadItemsForMonth, loadedMonths, fetchRange]);
 
-  /* ---------- Handle day press ---------- */
+  // ✔ FINAL FIXED onDayPress
   const onDayPress = useCallback(
     async (day: { dateString: string }) => {
+      console.log("DAY PRESSED:", day.dateString);
+
+      const startDate = parseISO(day.dateString);
+
+      const endDate = new Date();
+      if (startDate > endDate) return;
+
+      setLoadingRange(true); // ⬅ start loading
       setSelectedDate(day.dateString);
 
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setCalendarCollapsed(true);
-
-    
-      // Fetch data for the range from selected date to today if not already loaded
-      const datesToLoad = eachDayOfInterval({
-        start: parseISO(day.dateString),
-        end: new Date(),
-      }).map((date) => format(date, "yyyy-MM-dd"));
-
-      const missingDates = datesToLoad.filter((date) => !items[date]);
-
-      if (missingDates.length > 0) {
-        await fetchRange(
-          missingDates[0],
-          missingDates[missingDates.length - 1]
-        );
+      if (!calendarCollapsed) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setCalendarCollapsed(true);
       }
-       await fetchRange(day.dateString, todayISO);
+
+      const monthToLoad = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        1
+      );
+
+      await loadItemsForMonth(monthToLoad, true);
+
+      await fetchRange(
+        format(startDate, "yyyy-MM-dd"),
+        format(endDate, "yyyy-MM-dd")
+      );
+
+      setLoadingRange(false); // ⬅ finish loading
     },
-    [items, fetchRange]
+    [calendarCollapsed, loadItemsForMonth, fetchRange]
   );
 
- 
- 
-
-
-  /* ---------- Toggle calendar visibility ---------- */
   const toggleCalendar = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setCalendarCollapsed(!calendarCollapsed);
   }, [calendarCollapsed]);
 
-  /* ---------- Toggle location visibility ---------- */
   const toggleExpanded = useCallback((date: string) => {
     setExpandedCards((prev) => ({
       ...prev,
@@ -309,21 +291,22 @@ const Schedule: React.FC = () => {
     }));
   }, []);
 
-  /* ---------- Get dates from selected date to today ---------- */
   const dateRange = useMemo(() => {
     if (!selectedDate) return [];
 
-    const startDate = parseISO(selectedDate);
-    const endDate = new Date();
+    try {
+      const startDate = parseISO(selectedDate);
+      const endDate = new Date();
+      if (startDate > endDate) return [selectedDate];
 
-    return eachDayOfInterval({ start: startDate, end: endDate })
-      .map((date) => format(date, "yyyy-MM-dd"))
-      .reverse(); // Show most recent first
-  }, [selectedDate]);
+      return eachDayOfInterval({ start: startDate, end: endDate })
+        .map((d) => format(d, "yyyy-MM-dd"))
+        // .reverse();
+    } catch {
+      return [];
+    }
+  }, [selectedDate]); // ⬅ removed items dependency
 
-
-
-  /* ---------- Marked dates for calendar ---------- */
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
 
@@ -341,26 +324,50 @@ const Schedule: React.FC = () => {
         disabled: date > todayISO,
       };
 
-      if (hasPunch) {
-        marks[date].marked = true;
-        marks[date].dotColor = isPartial ? "#FFA500" : "#4CAF50";
-      } else if (isLeave) {
-        marks[date].marked = true;
-        marks[date].dotColor = "#9C27B0";
-      } else if (date <= todayISO) {
-        marks[date].marked = true;
-        marks[date].dotColor = "#F44336";
+      if (dayItems.length > 0 && date <= todayISO) {
+        if (hasPunch) {
+          marks[date].marked = true;
+          marks[date].dotColor = isPartial ? "#FFA500" : "#4CAF50";
+        } else if (isLeave) {
+          marks[date].marked = true;
+          marks[date].dotColor = "#9C27B0";
+        } else {
+          marks[date].marked = true;
+          marks[date].dotColor = "#F44336";
+        }
       }
     });
+
+    if (selectedDate && !marks[selectedDate]) {
+      marks[selectedDate] = {
+        selected: true,
+        selectedColor: "#002957",
+        disabled: selectedDate > todayISO,
+      };
+    }
 
     return marks;
   }, [items, selectedDate]);
 
-  /* ---------- Render card for a specific date ---------- */
   const renderDateCard = useCallback(
     (date: string) => {
       const dayItems = items[date] || [];
-      if (dayItems.length === 0) return null;
+      if (dayItems.length === 0) {
+        return (
+          <Card key={date} style={[styles.card]}>
+            <Card.Content style={styles.cardContent}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.date}>{isoToDisplay(date)}</Text>
+                <Badge style={styles.absentBadge}>Loading...</Badge>
+              </View>
+              <View style={styles.absentContainer}>
+                <Icon name="loading" size={24} color="#999" />
+                <Text style={styles.absentText}>Loading data...</Text>
+              </View>
+            </Card.Content>
+          </Card>
+        );
+      }
 
       const item = dayItems[0];
       const disp = isoToDisplay(date);
@@ -387,7 +394,7 @@ const Schedule: React.FC = () => {
         );
       }
 
-      if (!item.punchInTime) {
+      if (!item.punchInTime || item.status === "Absent") {
         return (
           <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
             <Card.Content style={styles.cardContent}>
@@ -423,7 +430,9 @@ const Schedule: React.FC = () => {
                   <Icon name="clock-in" size={20} color="#002957" />
                   <Text style={styles.timeLabel}>Punch In</Text>
                 </View>
-                <Text style={styles.timeValue}>{item.punchInTime}</Text>
+                <Text style={styles.timeValue}>
+                  {item.punchInTime || "--:--"}
+                </Text>
               </View>
 
               <View style={styles.timeSeparator}>
@@ -438,22 +447,21 @@ const Schedule: React.FC = () => {
                 <Text
                   style={[styles.timeValue, isPartial && styles.partialText]}
                 >
-                  {item.punchOutTime}
+                  {item.punchOutTime || "--:--"}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.durationContainer}>
-              <Icon name="timer" size={20} color="#002957" />
-              <Text style={styles.durationText}>
-                {isPartial
-                  ? ""
-                  : calcDuration(date, item.punchInTime, item.punchOutTime)}
-              </Text>
-            </View>
+            {!isPartial && (
+              <View style={styles.durationContainer}>
+                <Icon name="timer" size={20} color="#002957" />
+                <Text style={styles.durationText}>
+                  {calcDuration(date, item.punchInTime, item.punchOutTime)}
+                </Text>
+              </View>
+            )}
 
-            {/* Location Toggle */}
-            {item.outactualaddress && (
+            {(item.outactualaddress || item.inactualaddress) && (
               <TouchableOpacity
                 style={styles.locationToggle}
                 onPress={() => toggleExpanded(date)}
@@ -470,55 +478,62 @@ const Schedule: React.FC = () => {
               </TouchableOpacity>
             )}
 
-            {isExpanded && (
+            {isExpanded && (item.outactualaddress || item.inactualaddress) && (
               <Animated.View style={styles.locationDetails}>
                 <Divider style={styles.divider} />
 
-                {/* Punch In */}
-                <View style={styles.locationSection}>
-                  <View style={styles.locationHeader}>
-                    <Icon name="map-marker" size={18} color="#002957" />
-                    <Text style={styles.locationTitle}>Punch In</Text>
-                  </View>
-                  <View style={styles.addressWithDevice}>
-                    <Text style={styles.locationText}>
-                      {item.inactualaddress || "No address available"}
-                    </Text>
-                    <Image
-                      source={
-                        item.indevice?.toLowerCase() === "mobile"
-                          ? mobileIcon
-                          : biometricIcon
-                      }
-                      style={styles.deviceIconSmall}
-                      resizeMode="contain"
-                    />
-                  </View>
-                </View>
+                {item.inactualaddress && (
+                  <>
+                    <View style={styles.locationSection}>
+                      <View style={styles.locationHeader}>
+                        <Icon name="map-marker" size={18} color="#002957" />
+                        <Text style={styles.locationTitle}>Punch In</Text>
+                      </View>
+                      <View style={styles.addressWithDevice}>
+                        <Text style={styles.locationText}>
+                          {item.inactualaddress}
+                        </Text>
+                        {item.indevice && (
+                          <Image
+                            source={
+                              item.indevice?.toLowerCase() === "mobile"
+                                ? mobileIcon
+                                : biometricIcon
+                            }
+                            style={styles.deviceIconSmall}
+                            resizeMode="contain"
+                          />
+                        )}
+                      </View>
+                    </View>
+                    <Divider style={styles.divider} />
+                  </>
+                )}
 
-                <Divider style={styles.divider} />
-
-                {/* Punch Out */}
-                <View style={styles.locationSection}>
-                  <View style={styles.locationHeader}>
-                    <Icon name="map-marker" size={18} color="#002957" />
-                    <Text style={styles.locationTitle}>Punch Out</Text>
+                {item.outactualaddress && (
+                  <View style={styles.locationSection}>
+                    <View style={styles.locationHeader}>
+                      <Icon name="map-marker" size={18} color="#002957" />
+                      <Text style={styles.locationTitle}>Punch Out</Text>
+                    </View>
+                    <View style={styles.addressWithDevice}>
+                      <Text style={styles.locationText}>
+                        {item.outactualaddress}
+                      </Text>
+                      {item.outdevice && (
+                        <Image
+                          source={
+                            item.outdevice?.toLowerCase() === "mobile"
+                              ? mobileIcon
+                              : biometricIcon
+                          }
+                          style={styles.deviceIconSmall}
+                          resizeMode="contain"
+                        />
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.addressWithDevice}>
-                    <Text style={styles.locationText}>
-                      {item.outactualaddress || "No address available"}
-                    </Text>
-                    <Image
-                      source={
-                        item.outdevice?.toLowerCase() === "mobile"
-                          ? mobileIcon
-                          : biometricIcon
-                      }
-                      style={styles.deviceIconSmall}
-                      resizeMode="contain"
-                    />
-                  </View>
-                </View>
+                )}
               </Animated.View>
             )}
           </Card.Content>
@@ -528,10 +543,8 @@ const Schedule: React.FC = () => {
     [items, expandedCards, toggleExpanded]
   );
 
-  /* ---------- Component ---------- */
   return (
     <View style={styles.container}>
-      {/* Calendar Header with Toggle */}
       <TouchableOpacity
         style={styles.calendarHeader}
         onPress={toggleCalendar}
@@ -545,36 +558,81 @@ const Schedule: React.FC = () => {
         />
       </TouchableOpacity>
 
-      {/* Collapsible Calendar */}
       {!calendarCollapsed && (
         <Animated.View style={styles.calendarContainer}>
           <CalendarList
-            current={todayISO}
+            // key={`calendar-${selectedDate}`}
+            current={selectedDate}
             minDate={minDate}
             maxDate={todayISO}
             onDayPress={onDayPress}
             markedDates={markedDates}
+            dayComponent={({ date, state }) => {
+              const dateString = date.dateString;
+              const mark = markedDates[dateString];
+
+              const isSelected = mark?.selected;
+              const hasDot = mark?.marked;
+              const dotColor = mark?.dotColor;
+
+              // const isDisabled = state === "disabled" || dateString > todayISO;
+              const isDisabled = dateString > todayISO;
+
+              return (
+                <TouchableOpacity
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: isSelected ? "#002957" : "transparent",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    opacity: isDisabled ? 0.4 : 1,
+                  }}
+                  onPress={() => !isDisabled && onDayPress({ dateString })}
+                >
+                  <Text
+                    style={{
+                      color: isSelected ? "#fff" : "#2d4150",
+                      fontSize: 14,
+                    }}
+                  >
+                    {date.day}
+                  </Text>
+
+                  {hasDot && !isSelected && (
+                    <View
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: dotColor || "#002957",
+                        marginTop: 1,
+                      }}
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            }}
             onVisibleMonthsChange={(months) => {
               const currentTime = Date.now();
-
               months.forEach((month) => {
                 const monthDate = new Date(month.dateString);
                 const monthKey = format(monthDate, "yyyy-MM");
-
-                // Check if we already loaded this month recently
                 if (
                   loadedMonths.has(monthKey) &&
                   currentTime - (lastLoadTimestamps[monthKey] || 0) < 5000
                 ) {
                   return;
                 }
-
                 lastLoadTimestamps[monthKey] = currentTime;
                 loadItemsForMonth(monthDate);
               });
             }}
             horizontal
             pagingEnabled
+            pastScrollRange={24}
+            futureScrollRange={12}
             theme={{
               calendarBackground: "#ffffff",
               textSectionTitleColor: "#002957",
@@ -601,7 +659,9 @@ const Schedule: React.FC = () => {
       <View style={styles.detailsContainer}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            Attendance from {isoToDisplay(selectedDate)} to Today
+            {selectedDate === todayISO
+              ? "Today's Attendance"
+              : `Attendance from ${isoToDisplay(selectedDate)} to Today`}
           </Text>
           <Text style={styles.datesCount}>
             {dateRange.length} day{dateRange.length !== 1 ? "s" : ""}
@@ -609,20 +669,31 @@ const Schedule: React.FC = () => {
         </View>
 
         <ScrollView
+          key={`scrollview-${selectedDate}`}
           style={styles.cardsContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {dateRange.map((date) => renderDateCard(date))}
+          {loadingRange ? (
+            <Text style={{ textAlign: "center", padding: 20, color: "#666" }}>
+              Loading attendance...
+            </Text>
+          ) : dateRange.length === 0 ? (
+            <Text style={{ textAlign: "center", padding: 20, color: "#666" }}>
+              No dates to display
+            </Text>
+          ) : (
+            dateRange.map((date) => renderDateCard(date))
+          )}
         </ScrollView>
       </View>
     </View>
   );
 };
 
-/* ---------- Styles ---------- */
+/* ---------- Styles (UNCHANGED) ---------- */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -815,9 +886,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#002957",
   },
-  locationDetails: {
-    // marginTop: 8,
-  },
+  locationDetails: {},
   divider: {
     marginVertical: 8,
     backgroundColor: "#e0e0e0",
@@ -828,7 +897,6 @@ const styles = StyleSheet.create({
   locationHeader: {
     flexDirection: "row",
     alignItems: "center",
-    // marginBottom: 4,
   },
   locationTitle: {
     fontSize: 16,
@@ -858,7 +926,6 @@ const styles = StyleSheet.create({
   deviceIconSmall: {
     width: 120,
     height: 120,
-    // marginLeft: 8,
   },
   addressWithDevice: {
     flexDirection: "row",
