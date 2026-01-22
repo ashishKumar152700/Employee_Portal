@@ -243,7 +243,6 @@ const Schedule: React.FC = () => {
     setRefreshing(false);
   }, [loadItemsForMonth, loadedMonths, fetchRange]);
 
-  // ✔ FINAL FIXED onDayPress
   const onDayPress = useCallback(
     async (day: { dateString: string }) => {
       console.log("DAY PRESSED:", day.dateString);
@@ -299,9 +298,10 @@ const Schedule: React.FC = () => {
       const endDate = new Date();
       if (startDate > endDate) return [selectedDate];
 
-      return eachDayOfInterval({ start: startDate, end: endDate })
-        .map((d) => format(d, "yyyy-MM-dd"))
-        // .reverse();
+      return eachDayOfInterval({ start: startDate, end: endDate }).map((d) =>
+        format(d, "yyyy-MM-dd")
+      );
+      // .reverse();
     } catch {
       return [];
     }
@@ -370,6 +370,18 @@ const Schedule: React.FC = () => {
       }
 
       const item = dayItems[0];
+      // 🔹 Override punch addresses if device is biometric
+      const isInBiometric = item?.indevice?.toLowerCase?.() === "biometric";
+      const isOutBiometric = item?.outdevice?.toLowerCase?.() === "biometric";
+
+      if (isInBiometric) {
+        item.inactualaddress = "RishiKirti Technologies Private Limited";
+      }
+
+      if (isOutBiometric) {
+        item.outactualaddress = "RishiKirti Technologies Private Limited";
+      }
+
       const disp = isoToDisplay(date);
       const isExpanded = expandedCards[date];
       const isToday = date === todayISO;

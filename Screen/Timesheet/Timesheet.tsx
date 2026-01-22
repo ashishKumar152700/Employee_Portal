@@ -1,4 +1,3 @@
-// Screen/Timesheet/Timesheet.tsx
 
 import React, { useState, useEffect } from "react";
 import { FontAwesome } from "@expo/vector-icons";
@@ -812,12 +811,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
-    paddingTop: 10,
+    // paddingTop: 10,
   },
   formContainer: {
     backgroundColor: "white",
     marginHorizontal: 15,
-    marginTop: 10,
+    // marginTop: 10,
     borderRadius: 20,
     padding: 15,
     shadowColor: "#000",

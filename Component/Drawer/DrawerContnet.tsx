@@ -4,28 +4,16 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSelector, useDispatch } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { clearAllCache } from '../../Services/Timesheet/timesheetService';
 
-export const CustomDrawerContent = ({ onClose, isDrawerOpen }: any) => {
+export const CustomDrawerContent = ({  onClose, isDrawerOpen, currentRoute, setCurrentRoute  }: any) => {
   const navigation = useNavigation();
-  const navigationState = useNavigationState(state => state);
   
-  const [activeRoute, setActiveRoute] = useState('Attendance');
   const [machineStatus, setMachineStatus] = useState<boolean>(true);
   const [statusLoading, setStatusLoading] = useState<boolean>(false);
   const userDetails = useSelector((state: any) => state.userDetails);
   const dispatch = useDispatch();
-
-  // Get current route name
-  useEffect(() => {
-    if (navigationState && navigationState.routes) {
-      const currentRoute = navigationState.routes[navigationState.index];
-      if (currentRoute) {
-        setActiveRoute(currentRoute.name);
-      }
-    }
-  }, [navigationState]);
 
   useEffect(() => {
     if (isDrawerOpen && userDetails?.user?.role === 'ADMIN') {
@@ -59,11 +47,6 @@ export const CustomDrawerContent = ({ onClose, isDrawerOpen }: any) => {
 
   const menuItems = [
     {
-      name: 'Attendance',
-      icon: 'fingerprint',
-      route: 'Attendance'
-    },
-    {
       name: 'Timesheet',
       icon: 'keyboard',
       route: 'Timesheet'
@@ -72,6 +55,11 @@ export const CustomDrawerContent = ({ onClose, isDrawerOpen }: any) => {
       name: 'Ask for Assets',
       icon: 'mouse',
       route: 'AssetModule'
+    },
+    {
+      name: 'Attendance',
+      icon: 'fingerprint',
+      route: 'Attendance'
     },
   ];
 
@@ -89,39 +77,50 @@ export const CustomDrawerContent = ({ onClose, isDrawerOpen }: any) => {
   };
 
   const renderMenuItem = (item: any) => {
-    const isActive = activeRoute === item.route;
-    
-    return (
-      <TouchableOpacity
-        key={item.route}
-        style={[
-          styles.menuItem,
-          isActive && styles.activeMenuItem
-        ]}
-        onPress={() => {
-          navigation.navigate(item.route as never);
-          onClose();
-        }}
-        activeOpacity={0.7}
-      >
-        <View style={styles.menuItemContent}>
-          <MaterialIcons 
-            name={item.icon as any} 
-            size={22} 
-            color={isActive ? '#FFFFFF' : '#555555'} 
-            style={styles.menuIcon} 
-          />
-          <Text style={[
-            styles.menuText,
-            isActive && styles.activeMenuText
-          ]}>
-            {item.name}
-          </Text>
+  // Direct comparison - currentRoute should be the actual screen name
+  const isActive = currentRoute === item.route;
+  
+  // console.log(`[Drawer] Rendering ${item.route}, isActive: ${isActive}, currentRoute: ${currentRoute}`);
+  
+  return (
+    <TouchableOpacity
+      key={item.route}
+      style={[
+        styles.menuItem,
+        isActive && styles.activeMenuItem,
+        isActive && { borderWidth: 4, borderColor: '#FFFFFF' } // Debug border
+      ]}
+      onPress={() => {
+        // console.log(`[Drawer] Navigating to ${item.route}`);
+        setCurrentRoute(item.route); // Add this line to update immediately
+        navigation.navigate(item.route as never);
+        onClose();
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={styles.menuItemContent}>
+        <MaterialIcons 
+          name={item.icon as any} 
+          size={22} 
+          color={isActive ? '#FFFFFF' : '#555555'} 
+          style={styles.menuIcon} 
+        />
+        <Text style={[
+          styles.menuText,
+          isActive && styles.activeMenuText,
+          // isActive && { fontWeight: 'bold', fontSize: 17 } // Make it more obvious
+        ]}>
+          {item.name}
+        </Text>
+      </View>
+      {isActive && (
+        <View style={styles.activeIndicator}>
+          <View style={styles.activeIndicatorInner} />
         </View>
-        {isActive && <View style={styles.activeIndicator} />}
-      </TouchableOpacity>
-    );
-  };
+      )}
+    </TouchableOpacity>
+  );
+};
 
   const renderMachineStatus = () => {
     if (userDetails?.user?.role !== 'ADMIN') return null;
@@ -167,16 +166,16 @@ export const CustomDrawerContent = ({ onClose, isDrawerOpen }: any) => {
   };
 
   const handleLogout = async () => {
-    console.log("🔴 [Logout] Starting logout process...");
+    console.log(" [Logout] Starting logout process...");
     try {
       await AsyncStorage.clear();
-      console.log("✅ [Logout] AsyncStorage cleared");
+      console.log(" [Logout] AsyncStorage cleared");
       
       await clearAllCache();
-      console.log("✅ [Logout] Service cache cleared");
+      console.log(" [Logout] Service cache cleared");
       
       dispatch({ type: "RESET_ALL_STATE" });
-      console.log("✅ [Logout] Redux state reset");
+      console.log(" [Logout] Redux state reset");
       
       dispatch({ type: "userDetails", payload: {} });
       dispatch({ type: "managerInfo", payload: [] });
@@ -200,11 +199,11 @@ export const CustomDrawerContent = ({ onClose, isDrawerOpen }: any) => {
       dispatch({ type: "SET_RAISING_TICKET", payload: null });
       dispatch({ type: "SET_CANCELLING_TICKET", payload: null });
       
-      console.log("✅ [Logout] Complete logout cleanup finished");
+      console.log(" [Logout] Complete logout cleanup finished");
       
       onClose();
     } catch (e) {
-      console.error("❌ [Logout] Failed during logout cleanup:", e);
+      console.error(" [Logout] Failed during logout cleanup:", e);
     }
   };
 
@@ -335,10 +334,18 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    width: 4,
+    width: 6,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 2,
-    borderBottomLeftRadius: 2,
+    borderTopLeftRadius: 3,
+    borderBottomLeftRadius: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeIndicatorInner: {
+    width: 4,
+    height: '70%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
   },
   logoutContainer: {
     margin: 12,

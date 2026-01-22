@@ -7,7 +7,6 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native";
 import * as Font from "expo-font";
 import LottieView from "lottie-react-native";
@@ -30,7 +29,7 @@ import ResignationForm from "../../Screen/Resignation/ResignationForm";
 import TaxModule from "../../Screen/TaxModule/TaxModule";
 import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
 
 const Stack = createNativeStackNavigator();
 
@@ -70,6 +69,22 @@ const CustomHeader = ({ navigation, title, onMenuPress }) => {
   );
 };
 
+// Create a context to share the current route
+const RouteContext = React.createContext();
+
+// Wrapper component that provides route context
+const RouteProvider = ({ children, onRouteChange }) => {
+  const route = useRoute();
+  
+  useEffect(() => {
+    if (route.name && onRouteChange) {
+      onRouteChange(route.name);
+    }
+  }, [route.name]);
+
+  return children;
+};
+
 // Wrapper component to pass navigation and route to header
 const ScreenWrapper = ({ component: Component, onMenuPress, ...props }) => {
   const navigation = useNavigation();
@@ -91,6 +106,7 @@ function DrawerNavigator() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [slideAnim] = useState(new Animated.Value(-300));
+  const [currentRoute, setCurrentRoute] = useState('Timesheet');
 
   useEffect(() => {
     async function preloadFonts() {
@@ -127,6 +143,11 @@ function DrawerNavigator() {
   const openDrawer = () => setIsDrawerOpen(true);
   const closeDrawer = () => setIsDrawerOpen(false);
 
+  const handleRouteChange = (routeName) => {
+    console.log(`[DrawerNavigator] Current route changed to: ${routeName}`);
+    setCurrentRoute(routeName);
+  };
+
   if (!fontsLoaded) {
     return (
       <View style={styles.loaderContainer}>
@@ -144,145 +165,176 @@ function DrawerNavigator() {
   return (
     <>
       <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
+      
       <Stack.Navigator
-        initialRouteName="Attendance"
+        initialRouteName="Timesheet"
         screenOptions={{
           headerShown: false,
         }}
       >
         <Stack.Screen name="Attendance">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={BottomTabNavigator} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={BottomTabNavigator} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="MyLeaveScreen">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={BottomTabNavLeave} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={BottomTabNavLeave} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="Timesheet">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={TimesheetCalendar} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={TimesheetCalendar} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="AssetModule">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={BottomNavForAsset} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={BottomNavForAsset} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="MyTickets">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={MyTickets} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={MyTickets} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="LeaveRequest">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={LeaveRequest} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={LeaveRequest} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="Profile">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={ProfilePage} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={ProfilePage} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="DashBoard">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={Dashboard} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={Dashboard} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="LoanRequest">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={LoanRequestForm} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={LoanRequestForm} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="SalaryAdvanceRequest">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={SalaryAdvanceRequestForm} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={SalaryAdvanceRequestForm} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="Reimbursement">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={ReimbursementForm} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={ReimbursementForm} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="AddMember">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={AddEmployeeRequestForm} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={AddEmployeeRequestForm} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="OvertimeRequest">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={OvertimeRequestForm} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={OvertimeRequestForm} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="SeparationRequest">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={ResignationForm} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={ResignationForm} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
         <Stack.Screen name="TaxModule">
           {(props) => (
-            <ScreenWrapper 
-              {...props} 
-              component={TaxModule} 
-              onMenuPress={openDrawer}
-            />
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={TaxModule} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
           )}
         </Stack.Screen>
       </Stack.Navigator>
@@ -293,7 +345,7 @@ function DrawerNavigator() {
         transparent={true}
         animationType="none"
         onRequestClose={closeDrawer}
-        statusBarTranslucent ={false}
+        statusBarTranslucent={false}
       >
         <Pressable 
           style={styles.modalContainer} 
@@ -309,6 +361,8 @@ function DrawerNavigator() {
             <CustomDrawerContent 
               onClose={closeDrawer}
               isDrawerOpen={isDrawerOpen}
+              currentRoute={currentRoute}
+               setCurrentRoute={setCurrentRoute}
             />
           </Animated.View>
         </Pressable>
@@ -399,3 +453,4 @@ const styles = StyleSheet.create({
 });
 
 export default DrawerNavigator;
+
