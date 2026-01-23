@@ -69,8 +69,6 @@ const CustomHeader = ({ navigation, title, onMenuPress }) => {
   );
 };
 
-// Create a context to share the current route
-const RouteContext = React.createContext();
 
 // Wrapper component that provides route context
 const RouteProvider = ({ children, onRouteChange }) => {

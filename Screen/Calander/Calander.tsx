@@ -65,7 +65,7 @@ const Schedule: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(todayISO);
 
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [calendarCollapsed, setCalendarCollapsed] = useState<boolean>(true);
 
@@ -103,7 +103,7 @@ const Schedule: React.FC = () => {
   const calcDuration = (
     dateISO: string,
     inT?: string | null,
-    outT?: string | null
+    outT?: string | null,
   ) => {
     if (!inT || !outT) return "--h --m --s";
     const base = dateISO;
@@ -126,7 +126,7 @@ const Schedule: React.FC = () => {
         const data = await calendarservice.CalendarGet(
           fromISO,
           toISO,
-          dispatch
+          dispatch,
         );
 
         const grouped: Record<string, Item[]> = {};
@@ -175,7 +175,7 @@ const Schedule: React.FC = () => {
         console.error("fetchRange error:", e);
       }
     },
-    [dispatch]
+    [dispatch],
   );
 
   const loadItemsForMonth = useCallback(
@@ -183,7 +183,7 @@ const Schedule: React.FC = () => {
       const monthDateNormalized = new Date(
         monthDate.getFullYear(),
         monthDate.getMonth(),
-        1
+        1,
       );
       const monthKey = format(monthDateNormalized, "yyyy-MM");
 
@@ -199,7 +199,7 @@ const Schedule: React.FC = () => {
       const fromISO = format(startOfMonth(monthDateNormalized), "yyyy-MM-dd");
       const endOfMonthISO = format(
         endOfMonth(monthDateNormalized),
-        "yyyy-MM-dd"
+        "yyyy-MM-dd",
       );
       const toISO = endOfMonthISO > todayISO ? todayISO : endOfMonthISO;
 
@@ -207,7 +207,7 @@ const Schedule: React.FC = () => {
       setLoadedMonths((prev) => new Set(prev).add(monthKey));
       lastLoadTimestamps[monthKey] = currentTime;
     },
-    [loadedMonths, fetchRange]
+    [loadedMonths, fetchRange],
   );
 
   useEffect(() => {
@@ -263,19 +263,19 @@ const Schedule: React.FC = () => {
       const monthToLoad = new Date(
         startDate.getFullYear(),
         startDate.getMonth(),
-        1
+        1,
       );
 
       await loadItemsForMonth(monthToLoad, true);
 
       await fetchRange(
         format(startDate, "yyyy-MM-dd"),
-        format(endDate, "yyyy-MM-dd")
+        format(endDate, "yyyy-MM-dd"),
       );
 
       setLoadingRange(false); // ⬅ finish loading
     },
-    [calendarCollapsed, loadItemsForMonth, fetchRange]
+    [calendarCollapsed, loadItemsForMonth, fetchRange],
   );
 
   const toggleCalendar = useCallback(() => {
@@ -299,7 +299,7 @@ const Schedule: React.FC = () => {
       if (startDate > endDate) return [selectedDate];
 
       return eachDayOfInterval({ start: startDate, end: endDate }).map((d) =>
-        format(d, "yyyy-MM-dd")
+        format(d, "yyyy-MM-dd"),
       );
       // .reverse();
     } catch {
@@ -308,46 +308,47 @@ const Schedule: React.FC = () => {
   }, [selectedDate]); // ⬅ removed items dependency
 
   const markedDates = useMemo(() => {
-    const marks: Record<string, any> = {};
+  const marks: Record<string, any> = {};
 
-    Object.keys(items).forEach((date) => {
-      const dayItems = items[date];
-      const hasPunch = dayItems.some((item) => item.punchInTime);
-      const isLeave = dayItems.some((item) => item.leavestatus);
-      const isPartial = dayItems.some(
-        (item) => item.punchInTime && !item.punchOutTime
-      );
-
-      marks[date] = {
-        selected: date === selectedDate,
-        selectedColor: "#002957",
-        disabled: date > todayISO,
-      };
-
-      if (dayItems.length > 0 && date <= todayISO) {
-        if (hasPunch) {
-          marks[date].marked = true;
-          marks[date].dotColor = isPartial ? "#FFA500" : "#4CAF50";
-        } else if (isLeave) {
-          marks[date].marked = true;
-          marks[date].dotColor = "#9C27B0";
-        } else {
-          marks[date].marked = true;
-          marks[date].dotColor = "#F44336";
-        }
-      }
-    });
-
-    if (selectedDate && !marks[selectedDate]) {
-      marks[selectedDate] = {
-        selected: true,
-        selectedColor: "#002957",
-        disabled: selectedDate > todayISO,
-      };
+  Object.keys(items).forEach((date) => {
+    const dayItems = items[date];
+    const hasPunchIn = dayItems.some((item) => item.punchInTime);
+    const hasPunchOut = dayItems.some((item) => item.punchOutTime);
+    const isLeave = dayItems.some((item) => item.leavestatus);
+    
+    // Determine status
+    let dotColor = "#F44336"; // Default red (absent)
+    
+    if (isLeave) {
+      dotColor = "#9C27B0";
+    } else if (hasPunchIn && hasPunchOut) {
+      dotColor = "#4CAF50"; 
+    } else if (hasPunchIn || hasPunchOut) {
+      dotColor = "#FFA500"; 
     }
 
-    return marks;
-  }, [items, selectedDate]);
+    marks[date] = {
+      selected: date === selectedDate,
+      selectedColor: "#002957",
+      disabled: date > todayISO,
+    };
+
+    if (dayItems.length > 0 && date <= todayISO) {
+      marks[date].marked = true;
+      marks[date].dotColor = dotColor;
+    }
+  });
+
+  if (selectedDate && !marks[selectedDate]) {
+    marks[selectedDate] = {
+      selected: true,
+      selectedColor: "#002957",
+      disabled: selectedDate > todayISO,
+    };
+  }
+
+  return marks;
+}, [items, selectedDate]);
 
   const renderDateCard = useCallback(
     (date: string) => {
@@ -406,7 +407,11 @@ const Schedule: React.FC = () => {
         );
       }
 
-      if (!item.punchInTime || item.status === "Absent") {
+      // Updated: Only show absent when both punch in and punch out are missing
+      if (
+        (!item.punchInTime && !item.punchOutTime) ||
+        item.status === "Absent"
+      ) {
         return (
           <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
             <Card.Content style={styles.cardContent}>
@@ -423,7 +428,9 @@ const Schedule: React.FC = () => {
         );
       }
 
-      const isPartial = !item.punchOutTime;
+      // Updated: Show as partial if either punch in OR punch out is missing
+      const isPartial = !item.punchInTime || !item.punchOutTime;
+
       return (
         <Card key={date} style={[styles.card, isToday && styles.todayCard]}>
           <Card.Content style={styles.cardContent}>
@@ -464,7 +471,8 @@ const Schedule: React.FC = () => {
               </View>
             </View>
 
-            {!isPartial && (
+            {/* Show duration only when both punch in and punch out exist */}
+            {item.punchInTime && item.punchOutTime && (
               <View style={styles.durationContainer}>
                 <Icon name="timer" size={20} color="#002957" />
                 <Text style={styles.durationText}>
@@ -552,7 +560,7 @@ const Schedule: React.FC = () => {
         </Card>
       );
     },
-    [items, expandedCards, toggleExpanded]
+    [items, expandedCards, toggleExpanded],
   );
 
   return (
@@ -946,3 +954,4 @@ const styles = StyleSheet.create({
 });
 
 export default Schedule;
+
