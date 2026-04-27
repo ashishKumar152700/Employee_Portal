@@ -19,11 +19,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootStackParamList } from "../../Global/Types";
-import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialIcons } from "@expo/vector-icons";
 import { loginservice } from "../../Services/Login/Login.service";
 import { useDispatch } from "react-redux";
-import { scale } from "react-native-size-matters";
 import LottieView from "lottie-react-native";
 
 const { width, height } = Dimensions.get("window");
@@ -33,7 +32,8 @@ const LoginScreen = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [secureTextEntry, setSecureTextEntry] = useState(true);
-  const navigation = useNavigation<NativeStackNavigationProp <RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dispatch = useDispatch();
 
   // Animation refs
@@ -87,7 +87,7 @@ const LoginScreen = () => {
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   };
 
@@ -128,13 +128,13 @@ const LoginScreen = () => {
     try {
       const response = await loginservice.LoginApi(
         { employeecode: +employeecode, password },
-        dispatch
+        dispatch,
       );
 
       const elapsed = Date.now() - startTime;
       if (elapsed < minLoadingTime) {
         await new Promise((resolve) =>
-          setTimeout(resolve, minLoadingTime - elapsed)
+          setTimeout(resolve, minLoadingTime - elapsed),
         );
       }
 
@@ -150,7 +150,7 @@ const LoginScreen = () => {
       const elapsed = Date.now() - startTime;
       if (elapsed < minLoadingTime) {
         await new Promise((resolve) =>
-          setTimeout(resolve, minLoadingTime - elapsed)
+          setTimeout(resolve, minLoadingTime - elapsed),
         );
       }
 
@@ -178,9 +178,17 @@ const LoginScreen = () => {
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
-        <KeyboardAvoidingView
+        {/* <KeyboardAvoidingView
           style={styles.keyboardContainer}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+         */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={
+            Platform.OS === "ios" ? 0 : (StatusBar.currentHeight ?? 0)
+          }
         >
           <ScrollView
             style={styles.scrollView}
@@ -188,7 +196,7 @@ const LoginScreen = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             bounces={false}
-            scrollEnabled={!loading}
+          scrollEnabled={!loading || Platform.OS === "android"}
           >
             <View style={styles.headerSection}>
               <View style={styles.lottieContainer}>

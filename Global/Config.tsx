@@ -8,6 +8,7 @@ let MachinebaseUrl="http://192.168.0.159:4370";
 export {baseUrl,MachinebaseUrl,TimesheetProdUrl,TimesheetLocalUrl};
 
 
+
 // NOTE : DO NOT REMOVE BELOW CODES, KEEP IT FOR FUTURE DEVELOPMENT REFERENCE
 //  let baseUrl="http://192.168.0.136:8000";
 // let LocalbaseUrl="http://192.168.0.47:8000"; // PY 
@@ -17,4 +18,4 @@ export {baseUrl,MachinebaseUrl,TimesheetProdUrl,TimesheetLocalUrl};
 // let MachinebaseUrl="http://192.168.0.159:4370";
 // export {baseUrl,MachinebaseUrl,TimesheetProdUrl,TimesheetLocalUrl};
 
-// https://ess.rishikirti.com/time-sheet
+// https://ess.rishikirti.com/time-sheetnpm 

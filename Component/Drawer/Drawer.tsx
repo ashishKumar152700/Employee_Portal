@@ -165,7 +165,7 @@ function DrawerNavigator() {
       <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
       
       <Stack.Navigator
-        initialRouteName="Timesheet"
+        initialRouteName="Attendance"
         screenOptions={{
           headerShown: false,
         }}

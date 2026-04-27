@@ -16,6 +16,7 @@
       "package": "com.sudhirtbk9.essp202",
       "jsEngine": "hermes",
       "icon": "./assets/RktEss.png",
+       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/RktEss.png",
         "backgroundColor": "#FFFFFF"
