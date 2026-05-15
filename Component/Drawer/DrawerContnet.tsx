@@ -69,6 +69,11 @@ export const CustomDrawerContent = ({
       route: "Timesheet",
     },
     {
+      name: "Leave Section",
+      icon: "beach-access",
+      route: "MyLeaveScreen",
+    },
+    {
       name: "Ask for Assets",
       icon: "mouse",
       route: "AssetModule",

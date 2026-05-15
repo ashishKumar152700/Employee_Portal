@@ -396,13 +396,6 @@ const createMarkedRange = (start: string, end: string) => {
             response.message || "Leave application submitted successfully!",
           type: "success",
           buttons: [
-            // {
-            //   text: "View My Leaves",
-            //   onPress: () => {
-            //     resetForm();
-            //     navigation.navigate("MyLeaveScreen");
-            //   },
-            // },
             {
               text: "Cancel",
               style: "cancel",
