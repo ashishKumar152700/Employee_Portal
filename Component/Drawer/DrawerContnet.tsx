@@ -69,14 +69,14 @@ export const CustomDrawerContent = ({
       route: "Timesheet",
     },
     {
-      name: "Leave Section",
-      icon: "beach-access",
-      route: "MyLeaveScreen",
-    },
-    {
       name: "Ask for Assets",
       icon: "mouse",
       route: "AssetModule",
+    },
+    {
+      name: "Leave Section",
+      icon: "beach-access",
+      route: "MyLeaveComingSoon",
     },
   ];
 
@@ -92,7 +92,7 @@ export const CustomDrawerContent = ({
       setStatusLoading(false);
     }
   };
-
+  
   const renderMenuItem = (item: any) => {
     // Direct comparison - currentRoute should be the actual screen name
     const isActive = currentRoute === item.route;

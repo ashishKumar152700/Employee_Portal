@@ -24,6 +24,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { loginservice } from "../../Services/Login/Login.service";
 import { useDispatch } from "react-redux";
 import LottieView from "lottie-react-native";
+import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
+import {
+  saveUserCredentials,
+  getUserCredentials,
+  // clearUserCredentials,
+} from "../../src/utils/secureStorage";
 
 const { width, height } = Dimensions.get("window");
 
@@ -32,9 +38,25 @@ const LoginScreen = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [secureTextEntry, setSecureTextEntry] = useState(true);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [showBiometricButton, setShowBiometricButton] = useState(false);
+  const [biometricLoginError, setBiometricLoginError] = useState<string | null>(
+    null,
+  );
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dispatch = useDispatch();
+
+  // Biometric hook
+  const {
+    isSupported,
+    isEnrolled,
+    isAuthenticating,
+    error: biometricError,
+    authenticate,
+    enableBiometricLogin,
+    isBiometricAvailableAndEnabled,
+  } = useBiometricAuth();
 
   // Animation refs
   const logoScaleAnim = new Animated.Value(1);
@@ -42,12 +64,26 @@ const LoginScreen = () => {
   const welcomeAnimationRef = useRef<LottieView>(null);
   const loadingOpacity = useRef(new Animated.Value(0)).current;
   const [loginError, setLoginError] = useState("");
-  let loginSuccess = false;
 
   useEffect(() => {
     startLogoScale();
     welcomeAnimationRef.current?.play();
   }, []);
+
+  // Check if biometric login is available and enabled for displaying the button
+  useEffect(() => {
+    const checkBiometricAvailability = async () => {
+      try {
+        const available = await isBiometricAvailableAndEnabled();
+        setShowBiometricButton(available);
+      } catch (err) {
+        console.error("Failed to check biometric availability:", err);
+        setShowBiometricButton(false);
+      }
+    };
+
+    checkBiometricAvailability();
+  }, [isBiometricAvailableAndEnabled]);
 
   useEffect(() => {
     if (loading) {
@@ -110,6 +146,65 @@ const LoginScreen = () => {
     setSecureTextEntry(!secureTextEntry);
   };
 
+  const handleBiometricLogin = async () => {
+    setBiometricLoginError(null);
+    setLoading(true);
+
+    try {
+      // Step 1: Authenticate with biometric
+      const authenticated = await authenticate();
+
+      if (!authenticated) {
+        setLoading(false);
+        setBiometricLoginError(
+          "Biometric authentication failed. Please try again or use password login.",
+        );
+        return;
+      }
+
+      // Step 2: Retrieve stored credentials
+      const credentials = await getUserCredentials();
+      if (!credentials || !credentials.empCode || !credentials.password) {
+        setLoading(false);
+        setBiometricLoginError(
+          "No saved credentials found. Please login with password first.",
+        );
+        return;
+      }
+
+      // Step 3: Call backend API with retrieved credentials
+      const response = await loginservice.LoginApi(
+        { employeecode: +credentials.empCode, password: credentials.password },
+        dispatch,
+      );
+
+      if (response.status === 200) {
+        // Step 4: Save session token
+        await AsyncStorage.setItem("token", response.data.accessToken);
+        const userData = await AsyncStorage.getItem("user");
+
+        if (!userData) {
+          throw new Error("User data not found after login");
+        }
+
+        setLoginSuccess(true);
+        setLoading(false);
+        onLoginSuccess();
+      } else {
+        setLoading(false);
+        setBiometricLoginError("Login failed. Please try again.");
+      }
+    } catch (err) {
+      setLoading(false);
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Biometric login error - please try password login";
+      setBiometricLoginError(errorMessage);
+      console.error("Biometric login error:", err);
+    }
+  };
+
   const handleLogin = async () => {
     if (!employeecode || !password) {
       Alert.alert("Error", "Employee code and password are required");
@@ -122,8 +217,6 @@ const LoginScreen = () => {
 
     const startTime = Date.now();
     const minLoadingTime = 2000; // set to 2 seconds, not 20s
-
-    let loginSuccess = false;
 
     try {
       const response = await loginservice.LoginApi(
@@ -139,14 +232,64 @@ const LoginScreen = () => {
       }
 
       if (response.status === 200) {
-        loginSuccess = true;
-
         await AsyncStorage.setItem("token", response.data.accessToken);
         const userData = await AsyncStorage.getItem("user");
 
         if (!userData) throw new Error("User data not found after login");
+
+        // Save credentials securely for biometric login
+        try {
+          await saveUserCredentials(employeecode, password);
+        } catch (err) {
+          console.warn("Failed to save credentials for biometric login:", err);
+          // Don't fail the entire login flow if credential saving fails
+        }
+
+        setLoading(false);
+        setLoginSuccess(true);
+
+        // Show biometric setup prompt if biometric is supported and not yet enabled
+        if (isSupported && isEnrolled) {
+          Alert.alert(
+            "Enable Biometric Login?",
+            "Would you like to enable biometric (fingerprint/Face ID) login for faster access in the future?",
+            [
+              {
+                text: "No",
+                onPress: () => {
+                  console.log("User declined biometric login");
+                  onLoginSuccess();
+                },
+                style: "cancel",
+              },
+              {
+                text: "Yes",
+                onPress: async () => {
+                  try {
+                    await enableBiometricLogin();
+                    Alert.alert(
+                      "Success",
+                      "Biometric login has been enabled. You can now use fingerprint/Face ID to login.",
+                    );
+                    onLoginSuccess();
+                  } catch (err) {
+                    Alert.alert(
+                      "Error",
+                      "Failed to enable biometric login. You can try again later.",
+                    );
+                    onLoginSuccess();
+                  }
+                },
+              },
+            ],
+            { cancelable: false },
+          );
+        } else {
+          // No biometric available, proceed directly
+          onLoginSuccess();
+        }
       }
-    } catch (error) {
+    } catch (error:any) {
       const elapsed = Date.now() - startTime;
       if (elapsed < minLoadingTime) {
         await new Promise((resolve) =>
@@ -160,12 +303,46 @@ const LoginScreen = () => {
         errorMessage = error.response.data.message;
 
       setLoginError(errorMessage);
+      setLoading(false);
+    }
+  };
 
-      return;
-    } finally {
-      if (loginSuccess) {
-        setLoading(false);
-      }
+  const onLoginSuccess = () => {
+    // Navigate to main app after successful login (password or biometric)
+    // Replace 'MainApp' with your actual route name in the navigation stack
+    navigation.replace("Main");
+    // Alternative options:
+    // navigation.replace('Dashboard');
+    // navigation.replace('Home');
+    // navigation.navigate('DashBoard'); // if using navigate instead of replace
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Clear session data
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
+
+      // Clear saved credentials for security
+      // await clearUserCredentials();
+
+      // Optional: Also disable biometric login on logout for security
+      // Uncomment the line below if you want to clear biometric preference on logout
+      // const { disableBiometricLogin } = useBiometricAuth();
+      // await disableBiometricLogin();
+
+      // Reset form
+      setEmployeecode("");
+      setPassword("");
+      setLoginError("");
+      setBiometricLoginError(null);
+      setLoginSuccess(false);
+
+      console.log("Logged out successfully");
+      // Navigation back to login will happen automatically as part of your app's state management
+    } catch (err) {
+      console.error("Logout error:", err);
+      Alert.alert("Error", "Failed to logout. Please try again.");
     }
   };
 
@@ -196,7 +373,7 @@ const LoginScreen = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             bounces={false}
-          scrollEnabled={!loading || Platform.OS === "android"}
+            scrollEnabled={!loading || Platform.OS === "android"}
           >
             <View style={styles.headerSection}>
               <View style={styles.lottieContainer}>
@@ -350,6 +527,90 @@ const LoginScreen = () => {
                       </LinearGradient>
                     </TouchableOpacity>
                   </Animated.View>
+
+                  {/* Biometric Login Button - shown only if biometrics are available and enabled */}
+                  {showBiometricButton && (
+                    <Animated.View
+                      style={{ transform: [{ scale: buttonScaleAnim }] }}
+                    >
+                      <TouchableOpacity
+                        style={[
+                          styles.loginButton,
+                          { marginTop: 12, backgroundColor: "transparent" },
+                        ]}
+                        onPress={handleBiometricLogin}
+                        activeOpacity={0.8}
+                        disabled={loading || isAuthenticating}
+                      >
+                        <LinearGradient
+                          colors={["rgba(0, 41, 87, 0.8)","rgb(0, 41, 87)"]}
+                          style={styles.buttonGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                        >
+                          <MaterialIcons
+                            name="fingerprint"
+                            size={20}
+                            color="white"
+                            style={styles.buttonIcon}
+                          />
+                          <Text style={styles.buttonText}>
+                            {Platform.OS === "ios"
+                              ? "Login with Face ID"
+                              : "Login with Fingerprint"}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </Animated.View>
+                  )}
+
+                  {/* Biometric Login Error Display */}
+                  {biometricLoginError && (
+                    <View
+                      style={{
+                        marginTop: 12,
+                        padding: 12,
+                        backgroundColor: "#fee2e2",
+                        borderRadius: 8,
+                        borderLeftWidth: 4,
+                        borderLeftColor: "#dc2626",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#dc2626",
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {biometricLoginError}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* General Biometric Error Display */}
+                  {biometricError && (
+                    <View
+                      style={{
+                        marginTop: 16,
+                        padding: 12,
+                        backgroundColor: "#fee2e2",
+                        borderRadius: 8,
+                        borderLeftWidth: 4,
+                        borderLeftColor: "#dc2626",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#dc2626",
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        Biometric Error: {biometricError}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </LinearGradient>
             </View>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { FontAwesome } from "@expo/vector-icons";
 import {
   View,
@@ -15,6 +15,7 @@ import {
   SafeAreaView,
   StatusBar,
   Animated,
+  KeyboardAvoidingView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -49,7 +50,7 @@ interface TimesheetFormProps {
   closeModal: () => void;
 }
 
-export default function TimesheetForm({
+function TimesheetForm({
   selectedDate,
   onTasksUpdated,
   closeModal,
@@ -315,9 +316,6 @@ export default function TimesheetForm({
     projects.find((p) => p.projectId === projectId)?.projectName ||
     "Select a project";
 
-  // ════════════════════════════════════════════════════════════════════
-  //  SUB-COMPONENTS
-  // ════════════════════════════════════════════════════════════════════
 
   // ─── Premium Step Indicator ──────────────────────────────────────────
   const StepIndicator = () => (
@@ -374,151 +372,161 @@ export default function TimesheetForm({
 
   // ─── Step 0 – Task Info ──────────────────────────────────────────────
   const Step0 = () => (
-    <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-      <Text style={styles.stepHeading}>
-        {editingTaskId ? "Edit Task" : "What did you work on?"}
-      </Text>
-      <Text style={styles.stepSubheading}>
-        Give your task a clear title and description
-      </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+    >
+      <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
+        <Text style={styles.stepHeading}>
+          {editingTaskId ? "Edit Task" : "What did you work on?"}
+        </Text>
+        <Text style={styles.stepSubheading}>
+          Give your task a clear title and description
+        </Text>
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Task Title *</Text>
-        <View style={styles.inputRow}>
-          <View style={styles.inputIconBadge}>
-            <FontAwesome name="pencil" size={13} color={PRIMARY} />
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Task Title *</Text>
+          <View style={styles.inputRow}>
+            <View style={styles.inputIconBadge}>
+              <FontAwesome name="pencil" size={13} color={PRIMARY} />
+            </View>
+            <TextInput
+              style={styles.inputField}
+              placeholder="e.g. Fix login bug"
+              value={taskTitle}
+              onChangeText={setTaskTitle}
+              placeholderTextColor="#B0BAC6"
+            />
           </View>
-          <TextInput
-            style={styles.inputField}
-            placeholder="e.g. Fix login bug"
-            value={taskTitle}
-            onChangeText={setTaskTitle}
-            placeholderTextColor="#B0BAC6"
-          />
         </View>
-      </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Description *</Text>
-        <View style={[styles.inputRow, styles.inputRowMultiline]}>
-          <View style={[styles.inputIconBadge, { alignSelf: "flex-start", marginTop: 2 }]}>
-            <FontAwesome name="align-left" size={13} color={PRIMARY} />
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Description *</Text>
+          <View style={[styles.inputRow, styles.inputRowMultiline]}>
+            <View style={[styles.inputIconBadge, { alignSelf: "flex-start", marginTop: 2 }]}>
+              <FontAwesome name="align-left" size={13} color={PRIMARY} />
+            </View>
+            <TextInput
+              style={[styles.inputField, { minHeight: 80, textAlignVertical: "top" }]}
+              placeholder="Describe what you did in detail..."
+              value={taskDescription}
+              onChangeText={setTaskDescription}
+              multiline
+              numberOfLines={4}
+              placeholderTextColor="#B0BAC6"
+            />
           </View>
-          <TextInput
-            style={[styles.inputField, { minHeight: 80, textAlignVertical: "top" }]}
-            placeholder="Describe what you did in detail..."
-            value={taskDescription}
-            onChangeText={setTaskDescription}
-            multiline
-            numberOfLines={4}
-            placeholderTextColor="#B0BAC6"
-          />
         </View>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </KeyboardAvoidingView>
   );
 
   // ─── Step 1 – Project & Time ─────────────────────────────────────────
   const Step1 = () => (
-    <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-      <Text style={styles.stepHeading}>Project & Time</Text>
-      <Text style={styles.stepSubheading}>
-        Link to a project and log your hours
-      </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+    >
+      <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
+        <Text style={styles.stepHeading}>Project & Time</Text>
+        <Text style={styles.stepSubheading}>
+          Link to a project and log your hours
+        </Text>
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Project</Text>
-        {showCustomProject ? (
-          <View style={styles.inputRow}>
-            <View style={styles.inputIconBadge}>
-              <FontAwesome name="tag" size={13} color={PRIMARY} />
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Project</Text>
+          {showCustomProject ? (
+            <View style={styles.inputRow}>
+              <View style={styles.inputIconBadge}>
+                <FontAwesome name="tag" size={13} color={PRIMARY} />
+              </View>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Enter custom project name"
+                value={customProject}
+                onChangeText={setCustomProject}
+                placeholderTextColor="#B0BAC6"
+              />
             </View>
-            <TextInput
-              style={styles.inputField}
-              placeholder="Enter custom project name"
-              value={customProject}
-              onChangeText={setCustomProject}
-              placeholderTextColor="#B0BAC6"
-            />
-          </View>
-        ) : (
+          ) : (
+            <TouchableOpacity
+              style={styles.inputRow}
+              onPress={() => setShowProjectPicker(true)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.inputIconBadge}>
+                <FontAwesome name="briefcase" size={13} color={PRIMARY} />
+              </View>
+              <Text
+                style={[
+                  styles.inputField,
+                  { flex: 1 },
+                  projectId === 0 && { color: "#B0BAC6" },
+                ]}
+              >
+                {selectedProjectName}
+              </Text>
+              <FontAwesome name="chevron-down" size={12} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Time Spent *</Text>
           <TouchableOpacity
             style={styles.inputRow}
-            onPress={() => setShowProjectPicker(true)}
+            onPress={() => setShowTimePicker(true)}
             activeOpacity={0.8}
           >
             <View style={styles.inputIconBadge}>
-              <FontAwesome name="briefcase" size={13} color={PRIMARY} />
+              <FontAwesome name="clock-o" size={14} color={PRIMARY} />
             </View>
-            <Text
-              style={[
-                styles.inputField,
-                { flex: 1 },
-                projectId === 0 && { color: "#B0BAC6" },
-              ]}
-            >
-              {selectedProjectName}
+            <Text style={[styles.inputField, { flex: 1, fontWeight: "700" }]}>
+              {getTotalMinutes() > 0
+                ? formatMinutesToHoursAndMinutes(getTotalMinutes())
+                : "Tap to set time"}
             </Text>
-            <FontAwesome name="chevron-down" size={12} color="#9CA3AF" />
+            <View style={styles.timePill}>
+              <Text style={styles.timePillText}>{getTotalMinutes()} min</Text>
+            </View>
           </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Time Spent *</Text>
-        <TouchableOpacity
-          style={styles.inputRow}
-          onPress={() => setShowTimePicker(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.inputIconBadge}>
-            <FontAwesome name="clock-o" size={14} color={PRIMARY} />
-          </View>
-          <Text style={[styles.inputField, { flex: 1, fontWeight: "700" }]}>
-            {getTotalMinutes() > 0
-              ? formatMinutesToHoursAndMinutes(getTotalMinutes())
-              : "Tap to set time"}
+          <Text style={styles.helperNote}>
+            Tap the row above to open the time picker
           </Text>
-          <View style={styles.timePill}>
-            <Text style={styles.timePillText}>{getTotalMinutes()} min</Text>
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.helperNote}>
-          Tap the row above to open the time picker
-        </Text>
-      </View>
+        </View>
 
-      {/* Billable toggle card */}
-      <View style={styles.billableCard}>
-        <LinearGradient
-          colors={[PRIMARY_ULTRA_LIGHT, "rgba(0,41,87,0.02)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.billableGradient}
-        >
-          <View style={styles.billableLeft}>
-            <View style={styles.billableIconBox}>
-              <FontAwesome name="dollar" size={15} color={PRIMARY} />
+        {/* Billable toggle card */}
+        <View style={styles.billableCard}>
+          <LinearGradient
+            colors={[PRIMARY_ULTRA_LIGHT, "rgba(0,41,87,0.02)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.billableGradient}
+          >
+            <View style={styles.billableLeft}>
+              <View style={styles.billableIconBox}>
+                <FontAwesome name="dollar" size={15} color={PRIMARY} />
+              </View>
+              <View>
+                <Text style={styles.billableTitle}>Mark as Billable</Text>
+                <Text style={styles.billableSubtitle}>
+                  Will be invoiced to client
+                </Text>
+              </View>
             </View>
-            <View>
-              <Text style={styles.billableTitle}>Mark as Billable</Text>
-              <Text style={styles.billableSubtitle}>
-                Will be invoiced to client
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={isBillable}
-            onValueChange={setIsBillable}
-            trackColor={{
-              false: "#D1D5DB",
-              true: "rgba(0, 41, 87, 0.45)",
-            }}
-            thumbColor={isBillable ? PRIMARY : "#f4f3f4"}
-          />
-        </LinearGradient>
-      </View>
-    </Animated.View>
+            <Switch
+              value={isBillable}
+              onValueChange={setIsBillable}
+              trackColor={{
+                false: "#D1D5DB",
+                true: "rgba(0, 41, 87, 0.45)",
+              }}
+              thumbColor={isBillable ? PRIMARY : "#f4f3f4"}
+            />
+          </LinearGradient>
+        </View>
+      </Animated.View>
+    </KeyboardAvoidingView>
   );
 
   // ─── Step 2 – Review & Submit ────────────────────────────────────────
@@ -530,89 +538,94 @@ export default function TimesheetForm({
           "No Project";
 
     return (
-      <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-        <Text style={styles.stepHeading}>Review & Submit</Text>
-        <Text style={styles.stepSubheading}>
-          Confirm your timesheet entry below
-        </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+      >
+        <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
+          <Text style={styles.stepHeading}>Review & Submit</Text>
+          <Text style={styles.stepSubheading}>
+            Confirm your timesheet entry below
+          </Text>
 
-        {/* Review gradient card */}
-        <View style={styles.reviewCard}>
-          <LinearGradient
-            colors={[PRIMARY_DARK, PRIMARY_LIGHT]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.reviewGradient}
-          >
-            {/* Task title row */}
-            <View style={styles.reviewRow}>
-              <View style={styles.reviewIconBox}>
-                <FontAwesome name="pencil" size={13} color="white" />
+          {/* Review gradient card */}
+          <View style={styles.reviewCard}>
+            <LinearGradient
+              colors={[PRIMARY_DARK, PRIMARY_LIGHT]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.reviewGradient}
+            >
+              {/* Task title row */}
+              <View style={styles.reviewRow}>
+                <View style={styles.reviewIconBox}>
+                  <FontAwesome name="pencil" size={13} color="white" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reviewMiniLabel}>Task</Text>
+                  <Text style={styles.reviewValue}>{taskTitle || "—"}</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reviewMiniLabel}>Task</Text>
-                <Text style={styles.reviewValue}>{taskTitle || "—"}</Text>
-              </View>
-            </View>
-            <View style={styles.reviewSep} />
+              <View style={styles.reviewSep} />
 
-            {/* Description row */}
-            <View style={styles.reviewRow}>
-              <View style={styles.reviewIconBox}>
-                <FontAwesome name="align-left" size={13} color="white" />
+              {/* Description row */}
+              <View style={styles.reviewRow}>
+                <View style={styles.reviewIconBox}>
+                  <FontAwesome name="align-left" size={13} color="white" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reviewMiniLabel}>Description</Text>
+                  <Text style={styles.reviewValue} numberOfLines={2}>
+                    {taskDescription || "—"}
+                  </Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reviewMiniLabel}>Description</Text>
-                <Text style={styles.reviewValue} numberOfLines={2}>
-                  {taskDescription || "—"}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.reviewSep} />
+              <View style={styles.reviewSep} />
 
-            {/* Project row */}
-            <View style={styles.reviewRow}>
-              <View style={styles.reviewIconBox}>
-                <FontAwesome name="briefcase" size={13} color="white" />
+              {/* Project row */}
+              <View style={styles.reviewRow}>
+                <View style={styles.reviewIconBox}>
+                  <FontAwesome name="briefcase" size={13} color="white" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reviewMiniLabel}>Project</Text>
+                  <Text style={styles.reviewValue}>{finalProjectName}</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reviewMiniLabel}>Project</Text>
-                <Text style={styles.reviewValue}>{finalProjectName}</Text>
-              </View>
-            </View>
 
-            {/* Chips */}
-            <View style={styles.reviewChipsRow}>
-              <View style={styles.reviewChip}>
-                <FontAwesome name="clock-o" size={12} color={PRIMARY} />
-                <Text style={styles.reviewChipText}>
-                  {formatMinutesToHoursAndMinutes(getTotalMinutes())}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.reviewChip,
-                  isBillable && styles.reviewChipBillable,
-                ]}
-              >
-                <FontAwesome
-                  name="dollar"
-                  size={12}
-                  color={isBillable ? "#10B981" : PRIMARY}
-                />
-                <Text
+              {/* Chips */}
+              <View style={styles.reviewChipsRow}>
+                <View style={styles.reviewChip}>
+                  <FontAwesome name="clock-o" size={12} color={PRIMARY} />
+                  <Text style={styles.reviewChipText}>
+                    {formatMinutesToHoursAndMinutes(getTotalMinutes())}
+                  </Text>
+                </View>
+                <View
                   style={[
-                    styles.reviewChipText,
-                    isBillable && { color: "#10B981" },
+                    styles.reviewChip,
+                    isBillable && styles.reviewChipBillable,
                   ]}
                 >
-                  {isBillable ? "Billable" : "Non-billable"}
-                </Text>
+                  <FontAwesome
+                    name="dollar"
+                    size={12}
+                    color={isBillable ? "#10B981" : PRIMARY}
+                  />
+                  <Text
+                    style={[
+                      styles.reviewChipText,
+                      isBillable && { color: "#10B981" },
+                    ]}
+                  >
+                    {isBillable ? "Billable" : "Non-billable"}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </LinearGradient>
-        </View>
-      </Animated.View>
+            </LinearGradient>
+          </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     );
   };
 
@@ -688,7 +701,7 @@ export default function TimesheetForm({
   const CustomAlertModal = () => (
     <Modal
       visible={alertVisible}
-      transparent={false}
+      transparent={true}
       animationType="fade"
       statusBarTranslucent={true}
       onRequestClose={() => setAlertVisible(false)}
@@ -760,81 +773,89 @@ export default function TimesheetForm({
   );
 
   // ─── Project Picker (unchanged logic, restyled) ──────────────────────
-  const ProjectPickerModal = () => (
-    <Modal
-      visible={showProjectPicker}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowProjectPicker(false)}
-    >
-      <TouchableOpacity
-        style={styles.pickerOverlay}
-        activeOpacity={1}
-        onPress={() => setShowProjectPicker(false)}
+  const ProjectPickerModal = () => {
+    // Filter out any projects that are "No Project" to avoid duplicates
+    const filteredProjects = projects.filter(
+      (project) =>
+        project.projectId !== 0 && project.projectName !== "No Project",
+    );
+
+    return (
+      <Modal
+        visible={showProjectPicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowProjectPicker(false)}
       >
-        <View style={styles.pickerSheet}>
-          <View style={styles.pickerHandle} />
-          <View style={styles.pickerHead}>
-            <Text style={styles.pickerTitle}>Select Project</Text>
-            <TouchableOpacity onPress={() => setShowProjectPicker(false)}>
-              <FontAwesome name="times" size={20} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={{ maxHeight: height * 0.5 }}>
-            <TouchableOpacity
-              style={[
-                styles.pickerOption,
-                projectId === 0 && styles.pickerOptionSelected,
-              ]}
-              onPress={() => {
-                setProjectId(0);
-                setShowProjectPicker(false);
-              }}
-            >
-              <Text
-                style={[
-                  styles.pickerOptionText,
-                  projectId === 0 && styles.pickerOptionTextSelected,
-                ]}
-              >
-                No Project
-              </Text>
-              {projectId === 0 && (
-                <FontAwesome name="check" size={15} color={PRIMARY} />
-              )}
-            </TouchableOpacity>
-            {projects.map((project) => (
+        <TouchableOpacity
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={() => setShowProjectPicker(false)}
+        >
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHandle} />
+            <View style={styles.pickerHead}>
+              <Text style={styles.pickerTitle}>Select Project</Text>
+              <TouchableOpacity onPress={() => setShowProjectPicker(false)}>
+                <FontAwesome name="times" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: height * 0.5 }}>
               <TouchableOpacity
-                key={project.projectId}
                 style={[
                   styles.pickerOption,
-                  projectId === project.projectId &&
-                    styles.pickerOptionSelected,
+                  projectId === 0 && styles.pickerOptionSelected,
                 ]}
                 onPress={() => {
-                  setProjectId(project.projectId);
+                  setProjectId(0);
                   setShowProjectPicker(false);
                 }}
               >
                 <Text
                   style={[
                     styles.pickerOptionText,
-                    projectId === project.projectId &&
-                      styles.pickerOptionTextSelected,
+                    projectId === 0 && styles.pickerOptionTextSelected,
                   ]}
                 >
-                  {project.projectName}
+                  No Project
                 </Text>
-                {projectId === project.projectId && (
+                {projectId === 0 && (
                   <FontAwesome name="check" size={15} color={PRIMARY} />
                 )}
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
+              {filteredProjects.map((project) => (
+                <TouchableOpacity
+                  key={project.projectId}
+                  style={[
+                    styles.pickerOption,
+                    projectId === project.projectId &&
+                      styles.pickerOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setProjectId(project.projectId);
+                    setShowProjectPicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionText,
+                      projectId === project.projectId &&
+                        styles.pickerOptionTextSelected,
+                    ]}
+                  >
+                    {project.projectName}
+                  </Text>
+                  {projectId === project.projectId && (
+                    <FontAwesome name="check" size={15} color={PRIMARY} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
 
   // ─── Loading state ───────────────────────────────────────────────────
   if (loading) {
@@ -854,7 +875,8 @@ export default function TimesheetForm({
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
+        scrollEnabled={true}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Wizard Card ───────────────────────────────────────────── */}
@@ -1049,6 +1071,8 @@ export default function TimesheetForm({
 // ════════════════════════════════════════════════════════════════════════
 //  STYLES
 // ════════════════════════════════════════════════════════════════════════
+export default memo(TimesheetForm);
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

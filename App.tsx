@@ -22,6 +22,7 @@ import TimesheetCalendar from "./Screen/Timesheet/TimesheetCalendar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "react-native";
+import { useOTAUpdate } from "./src/hooks/useOTAUpdate";
 
 const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
@@ -73,7 +74,7 @@ function Navigation() {
 
   return (
     <NavigationContainer>
-         <StatusBar
+      <StatusBar
         barStyle="light-content"
         backgroundColor="rgb(0, 41, 87)"
         translucent={false}
@@ -85,6 +86,7 @@ function Navigation() {
 }
 
 export default function App() {
+  useOTAUpdate();
 
   return (
     <Provider store={store}>

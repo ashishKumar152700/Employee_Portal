@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MyLeaveScreen from '../../Screen/MyLeave/MyLeaveScreen';
 import LeaveApplicationScreen from '../../Screen/MyLeave/LeaveApplicationScreen';
+import MyLeaveComingSoon from '../../Screen/MyLeave/MyLeaveComingSoon';
 
 const Tab = createBottomTabNavigator();
 
@@ -34,7 +35,8 @@ function BottomTabNavLeave() {
     >
       <Tab.Screen 
         name="Leave Details" 
-        component={MyLeaveScreen} 
+        component={MyLeaveComingSoon} 
+        // component={MyLeaveScreen} 
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size, focused }) => (
