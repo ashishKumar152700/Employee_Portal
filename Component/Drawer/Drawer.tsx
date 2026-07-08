@@ -181,7 +181,7 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
-        <Stack.Screen name="MyLeaveComingSoon">
+        <Stack.Screen name="MyLeaves">
         {/* <Stack.Screen name="MyLeaveScreen"> */}
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>

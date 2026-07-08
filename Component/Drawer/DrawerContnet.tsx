@@ -76,7 +76,12 @@ export const CustomDrawerContent = ({
     {
       name: "Leave Section",
       icon: "beach-access",
-      route: "MyLeaveComingSoon",
+      route: "MyLeaves",
+    },
+    {
+      name: "Leave Approval",
+      icon: "fact-check",
+      route: "LeaveRequest",
     },
   ];
 

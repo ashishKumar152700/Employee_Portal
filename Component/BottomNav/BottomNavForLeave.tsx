@@ -35,8 +35,8 @@ function BottomTabNavLeave() {
     >
       <Tab.Screen 
         name="Leave Details" 
-        component={MyLeaveComingSoon} 
-        // component={MyLeaveScreen} 
+        // component={MyLeaveComingSoon}
+        component={MyLeaveScreen}
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size, focused }) => (

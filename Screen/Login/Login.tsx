@@ -25,11 +25,8 @@ import { loginservice } from "../../Services/Login/Login.service";
 import { useDispatch } from "react-redux";
 import LottieView from "lottie-react-native";
 import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
-import {
-  saveUserCredentials,
-  getUserCredentials,
-  // clearUserCredentials,
-} from "../../src/utils/secureStorage";
+import {saveUserCredentials,getUserCredentials} from "../../src/utils/secureStorage";
+
 
 const { width, height } = Dimensions.get("window");
 
