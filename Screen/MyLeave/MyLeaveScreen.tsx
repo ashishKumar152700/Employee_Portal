@@ -66,103 +66,45 @@ export default function MyLeaveScreen() {
     const getLeaveData = () => {
         if (
             !leaveDetailsSelector ||
-            Object.keys(leaveDetailsSelector).length === 0
+            !leaveDetailsSelector.summary ||
+            !leaveDetailsSelector.leaveTypes
         ) {
-            console.log("No leave data found, using defaults");
             return {
-                casualleave: 0,
-                sickleave: 0,
-                optionalleave: 0,
-                paidleave: 0,
-                earnedleave: 0,
-                maternityleave: 0,
-                paternityleave: 0,
+                summary: {
+                    allocated: 0,
+                    used: 0,
+                    remaining: 0,
+                    progress: 0,
+                },
+                leaveTypes: [],
             };
         }
 
-        console.log("Using leave data from selector:", leaveDetailsSelector);
         return leaveDetailsSelector;
     };
 
+
     const leaveData = getLeaveData();
+    const summary = leaveData.summary;
+
+    const casualLeave = leaveData.leaveTypes.find(
+        (l: any) => l.key === "casualleave"
+    );
+
+    const sickLeave = leaveData.leaveTypes.find(
+        (l: any) => l.key === "sickleave"
+    );
+
+    const paidLeave = leaveData.leaveTypes.find(
+        (l: any) => l.key === "paidleave"
+    );
+
+    const optionalLeave = leaveData.leaveTypes.find(
+        (l: any) => l.key === "optionalleave"
+    );
     console.log("Final Leave Data:", leaveData);
 
-    // Define total allocated leaves for each type
-    const totalLeavesAllocated = {
-        casual: 12,
-        sick: 12,
-        optional: 4,
-        paid: 12,
-    };
 
-    // API returns REMAINING leaves, so these are the balances left
-    const casualLeavesLeft = leaveData.casualleave || 0;
-    const sickLeavesLeft = leaveData.sickleave || 0;
-    const optionalLeavesLeft = leaveData.optionalleave || 0;
-    const paidLeavesLeft = leaveData.paidleave || 0;
-
-    // Calculate USED leaves (total allocated - remaining) with Math.max to avoid negative values
-    const casualLeavesUsed = Math.max(
-        0,
-        totalLeavesAllocated.casual - casualLeavesLeft,
-    );
-    const sickLeavesUsed = Math.max(
-        0,
-        totalLeavesAllocated.sick - sickLeavesLeft,
-    );
-    const optionalLeavesUsed = Math.max(
-        0,
-        totalLeavesAllocated.optional - optionalLeavesLeft,
-    );
-    const paidLeavesUsed = Math.max(
-        0,
-        totalLeavesAllocated.paid - paidLeavesLeft,
-    );
-
-    console.log(
-        "Casual Leaves - Used:",
-        casualLeavesUsed,
-        "Left:",
-        casualLeavesLeft,
-    );
-    console.log("Sick Leaves - Used:", sickLeavesUsed, "Left:", sickLeavesLeft);
-    console.log(
-        "Optional Leaves - Used:",
-        optionalLeavesUsed,
-        "Left:",
-        optionalLeavesLeft,
-    );
-    console.log("Paid Leaves - Used:", paidLeavesUsed, "Left:", paidLeavesLeft);
-
-    // Calculate overall totals
-    const totalLeavesUsed =
-        casualLeavesUsed + sickLeavesUsed + optionalLeavesUsed + paidLeavesUsed;
-
-    const totalLeavesAvailable =
-        totalLeavesAllocated.casual +
-        totalLeavesAllocated.sick +
-        totalLeavesAllocated.optional +
-        totalLeavesAllocated.paid;
-
-    const totalLeavesRemaining =
-        casualLeavesLeft + sickLeavesLeft + optionalLeavesLeft + paidLeavesLeft;
-
-    // Progress calculation functions - show progress of USED leaves
-    const calculateOverallProgress = () => {
-        const progress = totalLeavesUsed / totalLeavesAvailable;
-        return isNaN(progress) ? 0 : progress; // Handle NaN case
-    };
-
-    // const calculateTypeProgress = (used: number, total: number) => {
-    //   const progress = used / total;
-    //   return isNaN(progress) ? 0 : progress; // Handle NaN case
-    // };
-
-    const calculateTypeProgress = (used: number, monthlyTotal: number) => {
-        if (monthlyTotal === 0) return 0;
-        const progress = used / monthlyTotal;
-        return isNaN(progress) ? 0 : Math.min(progress, 1);
-    };
 
     const handleLeaveHistoryPress = () => {
         navigation.navigate("leaveHistory");
@@ -187,7 +129,7 @@ export default function MyLeaveScreen() {
                             <Text style={styles.balanceTitle}>Leave Balance</Text>
                             <View style={styles.balanceBadge}>
                                 <Text style={styles.balanceBadgeText}>
-                                    {totalLeavesRemaining} leaves left
+                                    {summary.remaining} leaves left
                                 </Text>
                             </View>
                         </View>
@@ -195,9 +137,9 @@ export default function MyLeaveScreen() {
                         <View style={styles.progressContainer}>
                             <Progress.Circle
                                 size={120}
-                                progress={calculateOverallProgress()}
+                                progress={summary.progress}
                                 showsText
-                                formatText={() => `${totalLeavesUsed}`}
+                                formatText={() => `${summary.used}`}
                                 color="#002957"
                                 unfilledColor="#e9f0f7"
                                 thickness={10}
@@ -208,18 +150,18 @@ export default function MyLeaveScreen() {
 
                         <View style={styles.statsContainer}>
                             <View style={styles.statItem}>
-                                <Text style={styles.statNumber}>{totalLeavesAvailable}</Text>
+                                <Text style={styles.statNumber}>{summary.allocated}</Text>
                                 <Text style={styles.statLabel}>Available</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <Text style={[styles.statNumber, styles.usedStat]}>
-                                    {totalLeavesUsed}
+                                    {summary.used}
                                 </Text>
                                 <Text style={styles.statLabel}>Used</Text>
                             </View>
                             <View style={styles.statItem}>
                                 <Text style={[styles.statNumber, styles.usedStat]}>
-                                    {totalLeavesRemaining}
+                                    {summary.remaining}
                                 </Text>
                                 <Text style={styles.statLabel}>Remaining</Text>
                             </View>
@@ -234,10 +176,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.progressWithIcon}>
                                     <Progress.Circle
                                         size={70}
-                                        progress={calculateTypeProgress(
-                                            paidLeavesUsed,
-                                            totalLeavesAllocated.paid,
-                                        )}
+                                        progress={paidLeave?.progress ?? 0}
                                         color="#002957"
                                         unfilledColor="#e9f0f7"
                                         thickness={8}
@@ -250,7 +189,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.leaveTypeDetails}>
                                     <Text style={styles.leaveTypeName}>Paid Leave</Text>
                                     <Text style={styles.leaveLeftText}>
-                                        {paidLeavesLeft} left
+                                        {paidLeave?.remaining ?? 0} left
                                     </Text>
                                 </View>
                             </View>
@@ -259,10 +198,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.progressWithIcon}>
                                     <Progress.Circle
                                         size={70}
-                                        progress={calculateTypeProgress(
-                                            casualLeavesUsed,
-                                            totalLeavesAllocated.casual,
-                                        )}
+                                        progress={casualLeave?.progress ?? 0}
                                         color="#002957"
                                         unfilledColor="#e9f0f7"
                                         thickness={8}
@@ -275,7 +211,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.leaveTypeDetails}>
                                     <Text style={styles.leaveTypeName}>Casual Leave</Text>
                                     <Text style={styles.leaveLeftText}>
-                                        {casualLeavesLeft} left
+                                        {casualLeave?.remaining ?? 0} left
                                     </Text>
                                 </View>
                             </View>
@@ -286,10 +222,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.progressWithIcon}>
                                     <Progress.Circle
                                         size={70}
-                                        progress={calculateTypeProgress(
-                                            sickLeavesUsed,
-                                            totalLeavesAllocated.sick,
-                                        )}
+                                        progress={sickLeave?.progress ?? 0}
                                         color="#002957"
                                         unfilledColor="#e9f0f7"
                                         thickness={8}
@@ -302,7 +235,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.leaveTypeDetails}>
                                     <Text style={styles.leaveTypeName}>Sick Leave</Text>
                                     <Text style={styles.leaveLeftText}>
-                                        {sickLeavesLeft} left
+                                        {sickLeave?.remaining ?? 0} left
                                     </Text>
                                 </View>
                             </View>
@@ -311,10 +244,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.progressWithIcon}>
                                     <Progress.Circle
                                         size={70}
-                                        progress={calculateTypeProgress(
-                                            optionalLeavesUsed,
-                                            totalLeavesAllocated.optional,
-                                        )}
+                                        progress={optionalLeave?.progress ?? 0}
                                         color="#002957"
                                         unfilledColor="#e9f0f7"
                                         thickness={8}
@@ -327,7 +257,7 @@ export default function MyLeaveScreen() {
                                 <View style={styles.leaveTypeDetails}>
                                     <Text style={styles.leaveTypeName}>Optional Leave</Text>
                                     <Text style={styles.leaveLeftText}>
-                                        {optionalLeavesLeft} left
+                                        {optionalLeave?.remaining ?? 0} left
                                     </Text>
                                 </View>
                             </View>
