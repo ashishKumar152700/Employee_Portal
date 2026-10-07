@@ -27,6 +27,10 @@ import AddEmployeeRequestForm from "../../Screen/AddEmpToTeam/AddEmployeeRequest
 import OvertimeRequestForm from "../../Screen/Overtime/OvertimeRequestForm";
 import ResignationForm from "../../Screen/Resignation/ResignationForm";
 import TaxModule from "../../Screen/TaxModule/TaxModule";
+import PayrollScreen from "../../Screen/Payroll/PayrollScreen";
+import PayrollDetailScreen from "../../Screen/Payroll/PayrollDetailScreen";
+import PayslipScreen from "../../Screen/Payroll/PayslipScreen";
+import TaxReportScreen from "../../Screen/Payroll/TaxReportScreen";
 import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
 import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
@@ -331,6 +335,50 @@ function DrawerNavigator() {
               <ScreenWrapper 
                 {...props} 
                 component={TaxModule} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Payroll">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={PayrollScreen} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="PayrollDetail">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={PayrollDetailScreen} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Payslip">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={PayslipScreen} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="TaxReport">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={TaxReportScreen} 
                 onMenuPress={openDrawer}
               />
             </RouteProvider>

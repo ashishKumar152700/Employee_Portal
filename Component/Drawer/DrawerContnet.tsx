@@ -83,6 +83,11 @@ export const CustomDrawerContent = ({
       icon: "fact-check",
       route: "LeaveRequest",
     },
+    {
+      name: "Payroll",
+      icon: "payments",
+      route: "Payroll",
+    },
   ];
 
   const checkMachineStatus = async () => {
