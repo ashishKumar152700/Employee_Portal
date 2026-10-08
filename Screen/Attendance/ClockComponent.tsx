@@ -1,147 +1,82 @@
-// import React, { useEffect, useState } from 'react';
-// import { Dimensions, StyleSheet, Text, View } from 'react-native';
-// const { width } = Dimensions.get('window');
-
-// const scaleFont = (size: any) => {
-//   const scale = width / 375;
-//   return Math.round(size * scale);
-// };
-
-// const scaleSize = (size: any) => {
-//   const scale = width / 375;
-//   return Math.round(size * scale);
-// };
-
-// const ClockComponent = () => {
-//   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
-//   const [currentDate, setCurrentDate] = useState(new Date().toLocaleDateString('en-US', {
-//     year: 'numeric',
-//     month: 'long',
-//     day: 'numeric',
-//   }));
-//   const [currentDay, setCurrentDay] = useState(new Date().toLocaleString('en-US', { weekday: 'long' }));
-
-//   useEffect(() => {
-//     const intervalId = setInterval(() => {
-//       const now = new Date();
-//       setCurrentTime(
-//         now.toLocaleTimeString('en-US', { hour12: false }) 
-//       );
-//       setCurrentDate(
-//         now.toLocaleDateString('en-US', {
-//           year: 'numeric',
-//           month: 'long',
-//           day: 'numeric',
-//         })
-//       );
-//       setCurrentDay(
-//         now.toLocaleString('en-US', { weekday: 'long' })
-//       );
-//     }, 1000);
-
-//     return () => clearInterval(intervalId);
-//   }, []);
-
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.liveTime}>{currentTime}</Text>
-//       <View style={styles.dateContainer}>
-//         <Text style={styles.dayText}>{currentDay}</Text>
-//         <Text style={styles.dateText}>{currentDate}</Text>
-//       </View>
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     alignItems: 'center',
-//     marginBottom: scaleSize(12),
-//   },
-//   liveTime: {
-//     fontSize: scaleFont(42),
-//     fontWeight: '800',
-//     color: '#002957',
-//     // marginBottom: scaleSize(5),
-//     letterSpacing: 1,
-//   },
-//   dateContainer: {
-//     alignItems: 'center',
-//   },
-//   dateText: {
-//     fontSize: scaleFont(16),
-//     color: '#6c757d',
-//     marginBottom: scaleSize(2),
-//   },
-//   dayText: {
-//     fontSize: scaleFont(18),
-//     fontWeight: '600',
-//     color: '#002957',
-//   },
-// });
-
-// export default ClockComponent;
-
 import React, { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, Text } from 'react-native';
-const { width, height } = Dimensions.get('window');
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
+const { width } = Dimensions.get('window');
 
-const scaleFont = (size: any) => {
-  const scale = width / 375;
-  return Math.round(size * scale);
-};
+const scaleFont = (size: any) => Math.round(size * (width / 375));
 
-const scaleSize = (size: any) => {
-  const scale = width / 375;
-  return Math.round(size * scale);
-};
+const pad = (n: number) => String(n).padStart(2, '0');
 
-const ClockComponent = () => {
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }) );
-  const [currentDate, setCurrentDate] = useState(new Date().toLocaleDateString('en-US', {
+const formatDate = (now: Date) =>
+  now.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }) + ' - ' + new Date().toLocaleString('en-US', { weekday: 'long' }));
+  }) +
+  ' - ' +
+  now.toLocaleString('en-US', { weekday: 'long' });
+
+/**
+ * Live 24h digital clock. Ticks in its own state so the parent screen
+ * doesn't re-render every second.
+ */
+const ClockComponent = () => {
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString('en-US', { hour12: false }) 
-      );
-      setCurrentDate(
-        now.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }) + ' - ' + now.toLocaleString('en-US', { weekday: 'long' })
-      );
-    }, 1000);
-
+    const intervalId = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(intervalId);
   }, []);
 
   return (
-    <>
-      <Text style={styles.liveTime}>{currentTime}</Text>
-      <Text style={styles.dateText}>{currentDate}</Text>
-    </>
+    <View style={styles.container}>
+      <View style={styles.timeRow}>
+        <Text style={styles.liveTime}>
+          {pad(now.getHours())}
+          <Text style={styles.colon}>:</Text>
+          {pad(now.getMinutes())}
+        </Text>
+        <Text style={styles.seconds}>{pad(now.getSeconds())}</Text>
+      </View>
+      <Text style={styles.dateText}>{formatDate(now)}</Text>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
   liveTime: {
-    fontSize: scaleFont(36),
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: 'rgb(0, 41, 87)',
+    fontSize: scaleFont(54),
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+    fontVariant: ['tabular-nums'],
+    textShadowColor: 'rgba(125, 211, 252, 0.55)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 18,
+  },
+  colon: {
+    color: 'rgba(125, 211, 252, 0.95)',
+  },
+  seconds: {
+    fontSize: scaleFont(20),
+    fontWeight: '700',
+    color: 'rgba(125, 211, 252, 0.95)',
+    marginLeft: 6,
+    marginBottom: scaleFont(10),
+    fontVariant: ['tabular-nums'],
   },
   dateText: {
-    fontSize: scaleFont(16),
+    fontSize: scaleFont(13),
     textAlign: 'center',
-    color: 'rgb(0, 41, 87)',
-    marginBottom: scaleSize(20),
+    color: 'rgba(255, 255, 255, 0.75)',
+    letterSpacing: 0.4,
+    marginTop: 2,
   },
 });
 
