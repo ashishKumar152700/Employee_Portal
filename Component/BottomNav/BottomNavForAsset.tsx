@@ -1,8 +1,14 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import AssetModule from '../../Screen/Asset/AssetRequest';
 import MyTickets from '../../Screen/Asset/MyTickets';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import {
+  sharedTabBarStyle,
+  sharedTabBarLabelStyle,
+  sharedActiveTintColor,
+  sharedInactiveTintColor,
+  TabIcon,
+} from './TabBarTheme';
 
 const Tab = createBottomTabNavigator();
 
@@ -10,36 +16,27 @@ function BottomNavForAsset() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarStyle: {
-          backgroundColor: 'white', // Dark blue background
-          height: 66,
-          paddingBottom: 8,
-          flexDirection: 'row',
-          position: 'absolute',
-        },
-        tabBarActiveTintColor: 'rgb(0, 41, 87)', // Theme-consistent dark blue
-        tabBarInactiveTintColor: 'grey',  // Default white color for inactive tabs
-      }}
-    >
-      <Tab.Screen 
-        name="Asset" 
-        component={AssetModule} 
+        tabBarStyle: sharedTabBarStyle,
+        tabBarLabelStyle: sharedTabBarLabelStyle,
+        tabBarItemStyle: {paddingTop: 4},
+        tabBarActiveTintColor: sharedActiveTintColor,
+        tabBarInactiveTintColor: sharedInactiveTintColor,
+      }}>
+      <Tab.Screen
+        name="Asset"
+        component={AssetModule}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="briefcase" color={color} size={28} />
-          ),
+          tabBarIcon: ({focused}) => <TabIcon name="briefcase" focused={focused} />,
         }}
       />
-      <Tab.Screen 
-        name="My Tickets" 
-        component={MyTickets} 
+      <Tab.Screen
+        name="My Tickets"
+        component={MyTickets}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="ticket" color={color} size={28} />
-          ),
-        }} 
+          tabBarIcon: ({focused}) => <TabIcon name="ticket" focused={focused} />,
+        }}
       />
     </Tab.Navigator>
   );

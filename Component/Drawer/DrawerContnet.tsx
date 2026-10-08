@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   View,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSelector, useDispatch } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
+import LottieView from "lottie-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { clearAllCache } from "../../Services/Timesheet/timesheetService";
 
@@ -53,9 +53,15 @@ export const CustomDrawerContent = ({
   const userInfo = {
     username: userDetails?.user?.name || "User",
     email: userDetails?.user?.email || "email@example.com",
-    profilePic:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsGAgOHc7MixFJidTH-Ng1Z_y-iq_w82rGIt93WsTFMRTsmwZtuCgTgAh1KE5uDMzOjPk&usqp=CAU",
+    role: userDetails?.user?.role || "Employee",
   };
+
+  const initials = userInfo.username
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word: string) => (word[0] ? word[0].toUpperCase() : ""))
+    .join("");
 
   const menuItems = [
     {
@@ -102,50 +108,55 @@ export const CustomDrawerContent = ({
       setStatusLoading(false);
     }
   };
-  
+
   const renderMenuItem = (item: any) => {
-    // Direct comparison - currentRoute should be the actual screen name
     const isActive = currentRoute === item.route;
 
-    // console.log(`[Drawer] Rendering ${item.route}, isActive: ${isActive}, currentRoute: ${currentRoute}`);
+    const row = (
+      <View style={styles.menuItemContent}>
+        <View style={[styles.iconTile, isActive && styles.iconTileActive]}>
+          <MaterialIcons
+            name={item.icon as any}
+            size={18}
+            color={isActive ? "#FFFFFF" : "rgb(0, 41, 87)"}
+          />
+        </View>
+        <Text
+          style={[styles.menuText, isActive && styles.activeMenuText]}
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+        <MaterialIcons
+          name="chevron-right"
+          size={20}
+          color={isActive ? "rgba(255,255,255,0.9)" : "rgba(0,41,87,0.35)"}
+        />
+      </View>
+    );
 
     return (
       <TouchableOpacity
         key={item.route}
-        style={[
-          styles.menuItem,
-          isActive && styles.activeMenuItem,
-          isActive && { borderWidth: 4, borderColor: "#FFFFFF" }, // Debug border
-        ]}
+        style={styles.menuItem}
         onPress={() => {
-          // console.log(`[Drawer] Navigating to ${item.route}`);
-          setCurrentRoute(item.route); // Add this line to update immediately
+          setCurrentRoute(item.route);
           navigation.navigate(item.route as never);
           onClose();
         }}
-        activeOpacity={0.7}
+        activeOpacity={0.75}
       >
-        <View style={styles.menuItemContent}>
-          <MaterialIcons
-            name={item.icon as any}
-            size={22}
-            color={isActive ? "#FFFFFF" : "#555555"}
-            style={styles.menuIcon}
-          />
-          <Text
-            style={[
-              styles.menuText,
-              isActive && styles.activeMenuText,
-              // isActive && { fontWeight: 'bold', fontSize: 17 } // Make it more obvious
-            ]}
+        {isActive ? (
+          <LinearGradient
+            colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.menuItemInner}
           >
-            {item.name}
-          </Text>
-        </View>
-        {isActive && (
-          <View style={styles.activeIndicator}>
-            <View style={styles.activeIndicatorInner} />
-          </View>
+            {row}
+          </LinearGradient>
+        ) : (
+          <View style={styles.menuItemInner}>{row}</View>
         )}
       </TouchableOpacity>
     );
@@ -156,37 +167,32 @@ export const CustomDrawerContent = ({
 
     return (
       <View style={styles.statusContainer}>
-        <View style={styles.statusHeader}>
-          <Text style={styles.statusHeaderText}>System Status</Text>
-        </View>
+        <Text style={styles.sectionLabel}>System Status</Text>
         <TouchableOpacity
-          style={styles.statusItem}
+          style={styles.statusCard}
           onPress={checkMachineStatus}
-          activeOpacity={0.7}
+          activeOpacity={0.75}
         >
-          <View style={styles.statusItemContent}>
-            <MaterialIcons
-              name="memory"
-              size={22}
-              color="#666666"
-              style={styles.menuIcon}
-            />
+          <View style={styles.statusIconTile}>
+            <MaterialIcons name="memory" size={18} color="rgb(0, 41, 87)" />
+          </View>
+          <View style={styles.statusTextBlock}>
             <Text style={styles.statusText}>Biometric Device</Text>
             <View style={styles.statusIndicatorContainer}>
               {statusLoading ? (
-                <MaterialIcons name="refresh" size={16} color="#ffa500" />
+                <MaterialIcons name="refresh" size={12} color="#E6A100" />
               ) : (
                 <View
                   style={[
                     styles.statusDot,
-                    { backgroundColor: machineStatus ? "#28a745" : "#dc3545" },
+                    { backgroundColor: machineStatus ? "#28A745" : "#DC3545" },
                   ]}
                 />
               )}
               <Text
                 style={[
                   styles.statusLabel,
-                  { color: machineStatus ? "#28a745" : "#dc3545" },
+                  { color: machineStatus ? "#28A745" : "#DC3545" },
                 ]}
               >
                 {statusLoading
@@ -255,37 +261,74 @@ export const CustomDrawerContent = ({
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["rgba(0, 41, 87, 0.95)", "rgba(0, 41, 87, 0.85)"]}
+        colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.headerGradient}
       >
+        <LottieView
+          source={require("../../assets/animations/header.json")}
+          autoPlay
+          loop
+          style={styles.headerLottie}
+        />
+        <View style={styles.headerOverlay} />
         <View style={styles.userInfoContainer}>
-          <Image
-            source={{ uri: userInfo.profilePic }}
-            style={styles.profilePic}
-          />
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarInitials}>{initials || "U"}</Text>
+            </View>
+          </View>
           <View style={styles.userTextContainer}>
-            <Text style={styles.username}>{userInfo.username}</Text>
-            <Text style={styles.userRole}>Employee</Text>
-            <Text style={styles.email}>{userInfo.email}</Text>
+            <Text style={styles.username} numberOfLines={1}>
+              {userInfo.username}
+            </Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleBadgeText}>
+                {String(userInfo.role).toUpperCase()}
+              </Text>
+            </View>
+            <Text style={styles.email} numberOfLines={1}>
+              {userInfo.email}
+            </Text>
           </View>
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.drawerContent}>
+      <ScrollView
+        style={styles.drawerContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.menuContainer}>
+          <Text style={styles.sectionLabel}>Menu</Text>
           {renderMachineStatus()}
           {menuItems.map((item) => renderMenuItem(item))}
+          <View style={styles.menuFooter}>
+            <MaterialIcons
+              name="verified-user"
+              size={13}
+              color="rgba(0,41,87,0.4)"
+            />
+            <Text style={styles.menuFooterText}>Employee Self Service</Text>
+          </View>
         </View>
       </ScrollView>
 
       <View style={styles.logoutContainer}>
         <TouchableOpacity
-          style={styles.logoutButton}
           onPress={handleLogout}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
+          style={styles.logoutTouch}
         >
-          <MaterialIcons name="logout" size={22} color="white" />
-          <Text style={styles.logoutButtonText}>Logout</Text>
+          <LinearGradient
+            colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.logoutButton}
+          >
+            <MaterialIcons name="logout" size={20} color="white" />
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
@@ -298,171 +341,230 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   headerGradient: {
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingTop: 34,
+    paddingBottom: 34,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "rgba(0, 41, 87, 0.45)",
+  },
+  headerLottie: {
+    position: "absolute",
+    left: -20,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    opacity: 0.25,
+    width: "160%",
+  },
+  headerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 41, 87, 0.45)",
   },
   userInfoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
   },
-  profilePic: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 3,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+  avatarRing: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInitials: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 1,
   },
   userTextContainer: {
-    marginLeft: 15,
+    marginLeft: 14,
     flex: 1,
   },
   username: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
-    marginBottom: 2,
+    marginBottom: 5,
   },
-  userRole: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginBottom: 2,
+  roleBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 5,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.8,
   },
   email: {
     fontSize: 12,
-    color: "rgba(255, 255, 255, 0.7)",
+    color: "rgba(255, 255, 255, 0.75)",
   },
   drawerContent: {
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
   menuContainer: {
-    paddingTop: 10,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(0, 41, 87, 0.45)",
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    marginHorizontal: 26,
+    marginBottom: 8,
   },
   menuItem: {
-    marginHorizontal: 12,
-    marginVertical: 2,
-    borderRadius: 12,
+    marginHorizontal: 14,
+    marginVertical: 3,
+    borderRadius: 14,
     overflow: "hidden",
-    position: "relative",
   },
-  activeMenuItem: {
-    backgroundColor: "rgb(0, 41, 87)",
-    shadowColor: "rgb(0, 41, 87)",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+  menuItemInner: {
+    backgroundColor: "#F7F9FC",
   },
   menuItemContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 15,
-    paddingHorizontal: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
   },
-  menuIcon: {
+  iconTile: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(0, 41, 87, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
-    width: 22,
+  },
+  iconTileActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   menuText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
-    color: "#333333",
+    color: "#1F2A37",
     flex: 1,
+    marginRight: 8,
   },
   activeMenuText: {
     color: "#FFFFFF",
     fontWeight: "600",
   },
-  activeIndicator: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 6,
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 3,
-    borderBottomLeftRadius: 3,
-    justifyContent: "center",
+  menuFooter: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    marginTop: 18,
+    marginBottom: 6,
   },
-  activeIndicatorInner: {
-    width: 4,
-    height: "70%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 2,
+  menuFooterText: {
+    fontSize: 11,
+    color: "rgba(0, 41, 87, 0.4)",
+    marginLeft: 6,
+    letterSpacing: 0.3,
   },
   logoutContainer: {
-    margin: 12,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 18,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 41, 87, 0.07)",
+  },
+  logoutTouch: {
+    borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "rgba(0, 41, 87, 0.95)",
+    shadowColor: "rgb(0, 41, 87)",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
+    justifyContent: "center",
+    paddingVertical: 14,
     paddingHorizontal: 16,
   },
   logoutButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: "white",
-    marginLeft: 12,
+    marginLeft: 10,
+    letterSpacing: 0.3,
   },
   statusContainer: {
-    marginHorizontal: 12,
-    marginTop: 20,
-    marginBottom: 10,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    overflow: "hidden",
+    marginBottom: 6,
   },
-  statusHeader: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#e9ecef",
-    borderBottomWidth: 1,
-    borderBottomColor: "#dee2e6",
-  },
-  statusHeaderText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#495057",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  statusItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  statusItemContent: {
+  statusCard: {
     flexDirection: "row",
     alignItems: "center",
+    marginHorizontal: 14,
+    marginBottom: 4,
+    backgroundColor: "#F7F9FC",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0, 41, 87, 0.07)",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  statusIconTile: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(0, 41, 87, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  statusTextBlock: {
+    flex: 1,
   },
   statusText: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333333",
-    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F2A37",
+    marginBottom: 2,
   },
   statusIndicatorContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
   statusDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
-    marginRight: 6,
+    marginRight: 5,
   },
   statusLabel: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginLeft: 3,
   },
 });
 

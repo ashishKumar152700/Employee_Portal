@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f7fa",
-    marginBottom: 55,
+    paddingBottom: 95,
   },
   calendarHeader: {
     flexDirection: "row",

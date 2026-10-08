@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
-    marginBottom: 60,
+    paddingBottom: 95,
   },
   header: {
     alignItems: "center",

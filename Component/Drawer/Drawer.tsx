@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Modal, Pressable, Animated } from "react-native";
+import { Modal, Pressable, Animated, useWindowDimensions } from "react-native";
 import {
   View,
   Text,
@@ -107,8 +107,16 @@ const ScreenWrapper = ({ component: Component, onMenuPress, ...props }) => {
 function DrawerNavigator() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [slideAnim] = useState(new Animated.Value(-300));
   const [currentRoute, setCurrentRoute] = useState('Timesheet');
+  const { width: windowWidth } = useWindowDimensions();
+  const drawerWidth = Math.min(340, Math.max(280, windowWidth * 0.85));
+  const [slideAnim] = useState(new Animated.Value(-drawerWidth));
+
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      slideAnim.setValue(-drawerWidth);
+    }
+  }, [drawerWidth]);
 
   useEffect(() => {
     async function preloadFonts() {
@@ -130,13 +138,13 @@ function DrawerNavigator() {
     if (isDrawerOpen) {
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 250,
+        duration: 280,
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(slideAnim, {
-        toValue: -300,
-        duration: 200,
+        toValue: -drawerWidth,
+        duration: 220,
         useNativeDriver: true,
       }).start();
     }
@@ -398,10 +406,10 @@ function DrawerNavigator() {
           style={styles.modalContainer} 
           onPress={closeDrawer}
         >
-          <Animated.View 
+          <Animated.View
             style={[
               styles.drawerContainer,
-              { transform: [{ translateX: slideAnim }] }
+              { width: drawerWidth, transform: [{ translateX: slideAnim }] },
             ]}
             onStartShouldSetResponder={() => true}
           >
@@ -482,20 +490,22 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(1, 18, 42, 0.55)',
   },
   drawerContainer: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    width: 300,
     backgroundColor: 'white',
+    borderTopRightRadius: 26,
+    borderBottomRightRadius: 26,
+    overflow: 'hidden',
     elevation: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowColor: '#001A38',
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
   },
 });
 

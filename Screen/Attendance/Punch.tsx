@@ -784,8 +784,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
     padding: scaleSize(13),
     alignItems: "center",
-    paddingBottom: scaleSize(5),
-    marginBottom: scaleSize(55),
+    paddingBottom: scaleSize(95),
   },
   scrollContainer: {
     flexGrow: 1,
