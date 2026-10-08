@@ -5,6 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const ResignationForm: React.FC = () => {
   const [lastWorkingDay, setLastWorkingDay] = useState("");
@@ -87,7 +88,7 @@ const ResignationForm: React.FC = () => {
           multiline
         />
 
-        <Button title="Submit" onPress={handleSubmit} color="rgb(0, 41, 87)" />
+        <Button title="Submit" onPress={handleSubmit} color={C.accent} />
       </ScrollView>
       <FAB
         style={styles.fab}
@@ -102,13 +103,13 @@ const ResignationForm: React.FC = () => {
 
 export default ResignationForm;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "white" },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.surface },
   fab: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: c.primary,
     borderRadius: 50,
   },
   row: {
@@ -123,9 +124,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "600",
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     marginBottom: 30,
     textAlign: "center",
   },
-  input: { marginBottom: 20, backgroundColor: "white" },
-});
+  input: { marginBottom: 20, backgroundColor: c.surface },
+}));

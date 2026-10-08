@@ -7,6 +7,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 import { useSelector } from "react-redux";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const LoanRequestForm: React.FC = () => {
   // const [name, setName] = useState<string>("");
@@ -91,8 +92,8 @@ const LoanRequestForm: React.FC = () => {
             // onChangeText={setName}
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: "white" } }}
           />
           <TextInput
@@ -102,8 +103,8 @@ const LoanRequestForm: React.FC = () => {
             disabled
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: "white" } }}
           />
         </View>
@@ -116,8 +117,8 @@ const LoanRequestForm: React.FC = () => {
             disabled
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: "white" } }}
           />
           <TextInput
@@ -127,8 +128,8 @@ const LoanRequestForm: React.FC = () => {
             // onChangeText={setDepartment}
             style={[styles.input, styles.halfWidth]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: "white" } }}
           />
         </View>
@@ -140,8 +141,8 @@ const LoanRequestForm: React.FC = () => {
           onChangeText={setLoanAmount}
           style={styles.input}
           mode="outlined"
-          activeOutlineColor="rgb(0, 41, 87)"
-          outlineColor="rgb(0, 41, 87)"
+          activeOutlineColor={C.accent}
+          outlineColor={C.accent}
           theme={{ colors: { background: "white" } }}
         />
         <TextInput
@@ -150,8 +151,8 @@ const LoanRequestForm: React.FC = () => {
           onChangeText={setReason}
           style={styles.input}
           mode="outlined"
-          activeOutlineColor="rgb(0, 41, 87)"
-          outlineColor="rgb(0, 41, 87)"
+          activeOutlineColor={C.accent}
+          outlineColor={C.accent}
           theme={{ colors: { background: "white" } }}
         />
         <TextInput
@@ -161,8 +162,8 @@ const LoanRequestForm: React.FC = () => {
           onChangeText={setMonthlyIncome}
           style={styles.input}
           mode="outlined"
-          activeOutlineColor="rgb(0, 41, 87)"
-          outlineColor="rgb(0, 41, 87)"
+          activeOutlineColor={C.accent}
+          outlineColor={C.accent}
           theme={{ colors: { background: "white" } }}
         />
         <TextInput
@@ -172,8 +173,8 @@ const LoanRequestForm: React.FC = () => {
           onChangeText={setRepaymentPeriod}
           style={styles.input}
           mode="outlined"
-          activeOutlineColor="rgb(0, 41, 87)"
-          outlineColor="rgb(0, 41, 87)"
+          activeOutlineColor={C.accent}
+          outlineColor={C.accent}
           theme={{ colors: { background: "white" } }}
         />
 
@@ -196,8 +197,8 @@ const LoanRequestForm: React.FC = () => {
             onChangeText={setOtherLoanReason}
             style={styles.input}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: "white" } }}
           />
         )}
@@ -207,7 +208,7 @@ const LoanRequestForm: React.FC = () => {
           <Button
             title="Upload Document"
             onPress={handleDocumentUpload}
-            color="rgb(0, 41, 87)"
+            color={C.accent}
           />
           {documents.length > 0 ? (
             <View style={styles.documentList}>
@@ -226,7 +227,7 @@ const LoanRequestForm: React.FC = () => {
         <Button
           title="Submit Request"
           onPress={handleSubmit}
-          color="rgb(0, 41, 87)"
+          color={C.accent}
         />
       </ScrollView>
 
@@ -241,10 +242,10 @@ const LoanRequestForm: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: c.surface,
   },
   scrollView: {
     padding: 20,
@@ -253,17 +254,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: "bold",
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     marginBottom: 30,
     textAlign: "center",
   },
   input: {
     marginBottom: 20,
-    backgroundColor: "white",
+    backgroundColor: c.surface,
   },
   label: {
     fontSize: 18,
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     marginBottom: 15,
   },
   row: {
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 50,
-    borderColor: "rgb(0, 41, 87)",
+    borderColor: c.accent,
     borderWidth: 1,
     borderRadius: 8,
     marginBottom: 20,
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgb(0, 41, 87)",
+    borderColor: c.accent,
   },
   documentList: {
     marginTop: 10,
@@ -296,11 +297,11 @@ const styles = StyleSheet.create({
   },
   documentName: {
     fontSize: 14,
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
   },
   documentText: {
     fontSize: 18,
-    color: "black",
+    color: c.text,
     marginTop: 10,
     marginBottom: 10,
     fontStyle: "italic",
@@ -309,9 +310,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 20,
     right: 20,
-    backgroundColor: "rgb(0, 41, 87)",
+    backgroundColor: c.primary,
     borderRadius: 50,
   },
-});
+}));
 
 export default LoanRequestForm;

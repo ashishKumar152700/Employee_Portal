@@ -19,6 +19,7 @@ import {
   PhotoQuality 
 } from 'react-native-image-picker';
 import Toast from 'react-native-toast-message';
+import { themedStyles } from "../../Global/ThemeContext";
 
 interface FaceCaptureProps {
   onImageCaptured: (imageBase64: string) => void;
@@ -210,16 +211,16 @@ export default function FaceCaptureComponent({ onImageCaptured, onCancel }: Face
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
   },
   instructionCard: {
     marginBottom: 20,
     elevation: 2,
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
   },
   title: {
     textAlign: 'center',
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
   instructions: {
     textAlign: 'center',
     lineHeight: 24,
-    color: '#666',
+    color: c.textSoft,
   },
   captureSection: {
     flex: 1,
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   guideText: {
-    color: '#666',
+    color: c.textSoft,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
   },
   statusCard: {
     marginBottom: 20,
-    backgroundColor: '#e8f5e8',
+    backgroundColor: c.successBg,
   },
   statusText: {
     textAlign: 'center',
@@ -306,4 +307,4 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
   },
-});
+}));

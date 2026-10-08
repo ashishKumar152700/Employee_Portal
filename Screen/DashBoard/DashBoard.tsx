@@ -3,6 +3,7 @@ import { ScrollView, View, Text, StyleSheet, Dimensions, useWindowDimensions } f
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import RNPickerSelect from 'react-native-picker-select';
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState('February');
@@ -19,7 +20,7 @@ const Dashboard = () => {
   };
 
   const chartConfig = {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: C.surfaceAlt,
     backgroundGradientFrom: '#f9f9f9',
     backgroundGradientTo: '#f9f9f9',
     decimalPlaces: 0,
@@ -53,7 +54,7 @@ const Dashboard = () => {
         <RNPickerSelect
           onValueChange={(value) => setSelectedMonth(value)}
           items={['January', 'February', 'March', 'April'].map((m) => ({ label: m, value: m }))}
-          style={pickerSelectStyles}
+          style={getPickerSelectStyles()}
           value={selectedMonth}
         />
       </View>
@@ -63,24 +64,25 @@ const Dashboard = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9f9f9' },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.surfaceAlt },
   header: { height: 160, justifyContent: 'center', alignItems: 'center', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   headerTitle: { fontSize: 28, color: '#fff', fontWeight: 'bold', textShadowColor: '#000', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 4 },
   statsContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: -60, marginHorizontal: 10 },
-  statCard: { backgroundColor: '#fff', borderRadius: 15, paddingVertical: 20, alignItems: 'center', margin: 10, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 6 },
-  statLabel: { marginTop: 10, fontSize: 16, color: '#333', fontWeight: '600' },
-  statValue: { marginTop: 5, fontSize: 22, fontWeight: 'bold', color: '#333' },
+  statCard: { backgroundColor: c.surface, borderRadius: 15, paddingVertical: 20, alignItems: 'center', margin: 10, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 6 },
+  statLabel: { marginTop: 10, fontSize: 16, color: c.text, fontWeight: '600' },
+  statValue: { marginTop: 5, fontSize: 22, fontWeight: 'bold', color: c.text },
   statIcon: { marginBottom: 10 },
-  graphContainer: { marginTop: 30, marginHorizontal: 10, backgroundColor: '#fff', borderRadius: 15, padding: 15, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 1 }, shadowRadius: 4 },
-  sectionTitle: { fontSize: 22, fontWeight: '600', marginBottom: 10, color: '#333', textAlign: 'center' },
+  graphContainer: { marginTop: 30, marginHorizontal: 10, backgroundColor: c.surface, borderRadius: 15, padding: 15, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 1 }, shadowRadius: 4 },
+  sectionTitle: { fontSize: 22, fontWeight: '600', marginBottom: 10, color: c.text, textAlign: 'center' },
   chartStyle: { borderRadius: 16 },
   pickerContainer: { marginHorizontal: 10, marginTop: 20 },
-});
+}));
 
-const pickerSelectStyles = {
-  inputIOS: { fontSize: 18, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, backgroundColor: '#fff', color: '#333', marginTop: 5 },
-  inputAndroid: { fontSize: 18, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, backgroundColor: '#fff', color: '#333', marginTop: 5 },
-};
+// A function so the picker follows the active light / dark theme.
+const getPickerSelectStyles = () => ({
+  inputIOS: { fontSize: 18, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: C.border, borderRadius: 8, backgroundColor: C.surface, color: C.text, marginTop: 5 },
+  inputAndroid: { fontSize: 18, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: C.border, borderRadius: 8, backgroundColor: C.surface, color: C.text, marginTop: 5 },
+});
 
 export default Dashboard;

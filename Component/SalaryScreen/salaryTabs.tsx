@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -132,7 +133,7 @@ export default function SalaryAdTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: "rgb(0, 41, 87)",
+          backgroundColor: C.primary,
           height: 66,
           paddingBottom: 8,
           position: "absolute",
@@ -169,7 +170,7 @@ export default function SalaryAdTabNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   noDataText: {
     textAlign: "center",
     color: "gray",
@@ -181,14 +182,14 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     marginHorizontal: 8,
     borderRadius: 12,
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 5,
     borderWidth: 0.5,
-    borderColor: "#ccc",
+    borderColor: c.border,
   },
   headerRow: {
     flexDirection: "row",
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#444",
+    color: c.text,
   },
   appliedDateText: {
     fontSize: 14,
@@ -208,17 +209,17 @@ const styles = StyleSheet.create({
   amountText: {
     fontSize: 12,
     marginBottom: 4,
-    color: "#808080",
+    color: c.textSoft,
     fontWeight: "500",
   },
   reasonText: {
     fontSize: 12,
-    color: "#666",
+    color: c.textSoft,
     fontWeight: "500",
   },
   contentContainer: {
     paddingBottom: 50,
-    backgroundColor: "white",
+    backgroundColor: c.surface,
     height: "100%",
   },
   loader: {
@@ -232,4 +233,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginVertical: 20,
   },
-});
+}));

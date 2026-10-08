@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import PayrollStatusBadge from "./PayrollStatusBadge";
 import { PayrollHistoryItem } from "../../types/payroll.types";
+import { themedStyles } from "../../Global/ThemeContext";
 
 interface Props {
   item: PayrollHistoryItem;
@@ -67,7 +68,7 @@ const PayrollSummaryCard: React.FC<Props> = ({ item, onPress }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   card: {
     borderRadius: 16,
     padding: 20,
@@ -152,6 +153,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-});
+}));
 
 export default PayrollSummaryCard;

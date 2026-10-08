@@ -5,6 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const AddEmployeeRequestForm: React.FC = () => {
   const [designation, setDesignation] = useState("");
@@ -104,7 +105,7 @@ const AddEmployeeRequestForm: React.FC = () => {
         <Button
           title="Submit Request"
           onPress={handleSubmit}
-          color="rgb(0, 41, 87)"
+          color={C.accent}
         />
       </ScrollView>
 
@@ -121,31 +122,31 @@ const AddEmployeeRequestForm: React.FC = () => {
 
 export default AddEmployeeRequestForm;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "white" },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.surface },
   scrollView: { padding: 20, paddingBottom: 100 },
   title: {
     fontSize: 24,
     fontWeight: "600",
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     marginBottom: 20,
     textAlign: "center",
   },
-  input: { marginBottom: 15, backgroundColor: "white" },
+  input: { marginBottom: 15, backgroundColor: c.surface },
   radioTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     marginBottom: 10,
   },
   radioGroup: { marginBottom: 20 },
   radioRow: { flexDirection: "row", alignItems: "center" },
-  radioLabel: { fontSize: 16, marginLeft: 5, marginRight: 20 },
+  radioLabel: { fontSize: 16, marginLeft: 5, marginRight: 20, color: c.text },
   fab: {
     position: "absolute",
     bottom: 20,
     right: 20,
-    backgroundColor: "rgb(0, 41, 87)",
+    backgroundColor: c.primary,
     borderRadius: 50,
   },
-});
+}));

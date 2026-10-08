@@ -19,6 +19,7 @@ import {
 } from "../../Services/Payroll/payroll.service";
 import { TaxReport, TaxMonthlyRecord } from "../../types/payroll.types";
 import { downloadPdf, openPdfExternally } from "../../src/utils/pdfUtils";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const PRIMARY = "rgb(0, 41, 87)";
 
@@ -141,7 +142,7 @@ const TaxReportScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={PRIMARY} />
+          <ActivityIndicator size="large" color={C.accent} />
           <Text style={styles.loadingText}>Loading tax report…</Text>
           <View style={styles.skeletonCard} />
           <View style={[styles.skeletonCard, { height: 160 }]} />
@@ -155,7 +156,7 @@ const TaxReportScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.centerBox}>
-          <MaterialIcons name="cloud-off" size={56} color="#CED4DA" />
+          <MaterialIcons name="cloud-off" size={56} color={C.textFaint} />
           <Text style={styles.errorTitle}>Unable to load payroll.</Text>
           <Text style={styles.errorSubtitle}>{error || "Something went wrong."}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchReport}>
@@ -173,7 +174,7 @@ const TaxReportScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />
         }
       >
         <View style={styles.backRow}>
@@ -182,7 +183,7 @@ const TaxReportScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <MaterialIcons name="arrow-back" size={20} color={PRIMARY} />
+            <MaterialIcons name="arrow-back" size={20} color={C.accent} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -290,10 +291,10 @@ const TaxReportScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: c.background,
   },
   scrollContent: {
     padding: 16,
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: "#EEF3FB",
+    backgroundColor: c.primaryFaint,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 14,
     fontWeight: "600",
-    color: PRIMARY,
+    color: c.accent,
     marginLeft: 4,
   },
   headerCard: {
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
@@ -371,13 +372,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: PRIMARY,
+    color: c.accent,
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   divider: {
     height: 1.5,
-    backgroundColor: "#E9ECEF",
+    backgroundColor: c.surfaceAlt,
     marginBottom: 4,
   },
   row: {
@@ -387,46 +388,46 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   rowHighlight: {
-    backgroundColor: "#EEF3FB",
+    backgroundColor: c.primaryFaint,
     marginHorizontal: -8,
     paddingHorizontal: 8,
     borderRadius: 8,
   },
   rowLabel: {
     fontSize: 14,
-    color: "#6C757D",
+    color: c.textSoft,
     fontWeight: "500",
     flex: 1,
     marginRight: 8,
   },
   rowLabelHighlight: {
-    color: PRIMARY,
+    color: c.accent,
     fontWeight: "700",
   },
   rowValue: {
     fontSize: 14,
-    color: "#212529",
+    color: c.text,
     fontWeight: "600",
     textAlign: "right",
   },
   rowValueHighlight: {
-    color: PRIMARY,
+    color: c.accent,
     fontWeight: "800",
   },
   separator: {
     height: 1,
-    backgroundColor: "#E9ECEF",
+    backgroundColor: c.surfaceAlt,
     marginVertical: 6,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#343A40",
+    color: c.text,
     marginBottom: 10,
     marginTop: 6,
   },
   monthCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -439,12 +440,12 @@ const styles = StyleSheet.create({
   monthTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#212529",
+    color: c.text,
     marginBottom: 6,
   },
   monthDivider: {
     height: 1,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: c.surfaceAlt,
     marginBottom: 6,
   },
   monthRow: {
@@ -454,17 +455,17 @@ const styles = StyleSheet.create({
   },
   monthLabel: {
     fontSize: 13,
-    color: "#6C757D",
+    color: c.textSoft,
     fontWeight: "500",
   },
   monthValue: {
     fontSize: 13,
-    color: "#212529",
+    color: c.text,
     fontWeight: "600",
   },
   noDataText: {
     fontSize: 14,
-    color: "#6C757D",
+    color: c.textSoft,
     fontStyle: "italic",
     textAlign: "center",
     paddingVertical: 10,
@@ -498,26 +499,26 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#6C757D",
+    color: c.textSoft,
     marginBottom: 24,
   },
   skeletonCard: {
     width: "100%",
     height: 120,
-    backgroundColor: "#E9ECEF",
+    backgroundColor: c.surfaceAlt,
     borderRadius: 14,
     marginBottom: 14,
   },
   errorTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#343A40",
+    color: c.text,
     marginTop: 16,
     marginBottom: 6,
   },
   errorSubtitle: {
     fontSize: 13,
-    color: "#6C757D",
+    color: c.textSoft,
     textAlign: "center",
     marginBottom: 20,
   },
@@ -535,6 +536,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-});
+}));
 
 export default TaxReportScreen;

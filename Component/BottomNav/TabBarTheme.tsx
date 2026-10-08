@@ -5,12 +5,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
+import { C, themedStyles } from "../../Global/ThemeContext";
 
-export const PRIMARY = BRAND.primary;
-export const PRIMARY_MUTED = BRAND.primaryMuted;
 
-export const sharedActiveTintColor = PRIMARY;
-export const sharedInactiveTintColor = PRIMARY_MUTED;
+// Tint colours are read at render time so they follow light / dark mode.
+const activeTint = () => C.accent;
+const inactiveTint = () => C.primaryMuted;
 
 const BAR_RADIUS = 30;
 export const TAB_BAR_HEIGHT = 68;
@@ -35,8 +35,6 @@ export const useTabBarClearance = () => {
 // Single source of truth for every bottom-tab navigator in the app.
 export const sharedTabScreenOptions = {
   headerShown: false,
-  tabBarActiveTintColor: sharedActiveTintColor,
-  tabBarInactiveTintColor: sharedInactiveTintColor,
   tabBarHideOnKeyboard: true,
 };
 
@@ -81,8 +79,8 @@ export const GlassTabBar = ({ state, descriptors, navigation }: BottomTabBarProp
               ? options.tabBarLabel
               : options.title ?? route.name;
           const tint = focused
-            ? options.tabBarActiveTintColor ?? sharedActiveTintColor
-            : options.tabBarInactiveTintColor ?? sharedInactiveTintColor;
+            ? options.tabBarActiveTintColor ?? activeTint()
+            : options.tabBarInactiveTintColor ?? inactiveTint();
 
           const onPress = () => {
             const event = navigation.emit({
@@ -153,12 +151,12 @@ export const TabIcon = ({ name, focused, size = 18 }: TabIconProps) => {
 
   return (
     <View style={styles.pill}>
-      <Icon name={name} size={size} color={PRIMARY_MUTED} />
+      <Icon name={name} size={size} color={C.primaryMuted} />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   wrapper: {
     position: "absolute",
     left: 0,
@@ -173,7 +171,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     // Slightly opaque base so Android can cast the elevation shadow;
     // the glass gradient inside GlassSurface sits on top of it.
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
+    backgroundColor: c.tabBar,
     elevation: 14,
     shadowColor: BRAND.shadow,
     shadowOffset: { width: 0, height: 10 },
@@ -217,4 +215,4 @@ const styles = StyleSheet.create({
     height: 15,
     backgroundColor: "rgba(255, 255, 255, 0.12)",
   },
-});
+}));

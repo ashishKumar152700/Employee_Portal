@@ -34,9 +34,9 @@ import {
   getProjects,
 } from "../../Services/Timesheet/timesheetService";
 import { BRAND } from "../../Global/GlassTheme";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const PRIMARY = BRAND.primary;
-const GRADIENT = BRAND.primaryGradient;
 const PAGE_BG = "#F4F7FB";
 const DAILY_TARGET_MINUTES = 8 * 60;
 const MAX_MINUTES = 24 * 60;
@@ -114,7 +114,7 @@ const DaySummary = ({
 
   return (
     <LinearGradient
-      colors={GRADIENT}
+      colors={C.primaryGradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.summary}
@@ -181,7 +181,7 @@ const FieldLabel = ({
   trailing?: React.ReactNode;
 }) => (
   <View style={styles.fieldLabelRow}>
-    <MaterialCommunityIcons name={icon} size={15} color={PRIMARY} />
+    <MaterialCommunityIcons name={icon} size={15} color={C.accent} />
     <Text style={styles.fieldLabel}>
       {label}
       {required && <Text style={styles.required}> *</Text>}
@@ -218,7 +218,7 @@ const InputField = forwardRef<TextInput, InputFieldProps>(
           ref={ref}
           {...rest}
           multiline={multiline}
-          placeholderTextColor="#A3AEBD"
+          placeholderTextColor={C.placeholder}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -257,7 +257,7 @@ const ProjectChip = ({
   >
     {selected ? (
       <LinearGradient
-        colors={GRADIENT}
+        colors={C.primaryGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.chipInner}
@@ -270,7 +270,7 @@ const ProjectChip = ({
     ) : (
       <View style={[styles.chipInner, styles.chipIdle]}>
         {icon && (
-          <MaterialCommunityIcons name={icon} size={14} color={PRIMARY} />
+          <MaterialCommunityIcons name={icon} size={14} color={C.accent} />
         )}
         <Text style={styles.chipText} numberOfLines={1}>
           {label}
@@ -304,7 +304,7 @@ const DurationControl = ({
           accessibilityLabel="Decrease by 15 minutes"
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <MaterialCommunityIcons name="minus" size={22} color={PRIMARY} />
+          <MaterialCommunityIcons name="minus" size={22} color={C.accent} />
         </TouchableOpacity>
 
         <View style={styles.durationDisplay}>
@@ -328,7 +328,7 @@ const DurationControl = ({
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <LinearGradient
-            colors={GRADIENT}
+            colors={C.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.stepButton}
@@ -385,7 +385,7 @@ const BillableToggle = ({
           {active ? (
             <LinearGradient
               colors={
-                option.key ? (["#047857", "#10B981"] as const) : GRADIENT
+                option.key ? (["#047857", "#10B981"] as const) : C.primaryGradient
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -434,7 +434,7 @@ const TaskCard = ({
   return (
     <View style={[styles.taskCard, editing && styles.taskCardEditing]}>
       <LinearGradient
-        colors={GRADIENT}
+        colors={C.primaryGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.taskTime}
@@ -458,7 +458,7 @@ const TaskCard = ({
             accessibilityLabel="Edit task"
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <MaterialCommunityIcons name="pencil-outline" size={17} color={PRIMARY} />
+            <MaterialCommunityIcons name="pencil-outline" size={17} color={C.accent} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onDelete}
@@ -498,7 +498,7 @@ const TaskCard = ({
             <MaterialCommunityIcons
               name={billable ? "cash-multiple" : "briefcase-outline"}
               size={12}
-              color={billable ? "#047857" : BRAND.primaryMuted}
+              color={billable ? C.successText : BRAND.primaryMuted}
             />
             <Text
               style={[styles.metaChipText, billable && styles.metaChipTextBillable]}
@@ -553,7 +553,7 @@ const ProjectSheet = ({
         <View style={styles.sheetHead}>
           <Text style={styles.sheetTitle}>Select project</Text>
           <TouchableOpacity onPress={onClose} style={styles.sheetClose}>
-            <MaterialCommunityIcons name="close" size={18} color={PRIMARY} />
+            <MaterialCommunityIcons name="close" size={18} color={C.accent} />
           </TouchableOpacity>
         </View>
 
@@ -563,12 +563,12 @@ const ProjectSheet = ({
             value={query}
             onChangeText={setQuery}
             placeholder="Search projects"
-            placeholderTextColor="#A3AEBD"
+            placeholderTextColor={C.placeholder}
             style={styles.searchInput}
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery("")}>
-              <MaterialCommunityIcons name="close-circle" size={16} color="#A3AEBD" />
+              <MaterialCommunityIcons name="close-circle" size={16} color={C.textFaint} />
             </TouchableOpacity>
           )}
         </View>
@@ -590,7 +590,7 @@ const ProjectSheet = ({
                     <MaterialCommunityIcons
                       name={project.projectId === 0 ? "folder-off-outline" : "folder-outline"}
                       size={16}
-                      color={selected ? "#FFFFFF" : PRIMARY}
+                      color={selected ? "#FFFFFF" : C.accent}
                     />
                   </View>
                   <Text
@@ -600,7 +600,7 @@ const ProjectSheet = ({
                     {project.projectName}
                   </Text>
                   {selected && (
-                    <MaterialCommunityIcons name="check-circle" size={18} color={PRIMARY} />
+                    <MaterialCommunityIcons name="check-circle" size={18} color={C.accent} />
                   )}
                 </TouchableOpacity>
               );
@@ -664,7 +664,7 @@ const AlertDialog = ({
           ) : (
             <TouchableOpacity style={styles.alertBtn} onPress={onConfirm}>
               <LinearGradient
-                colors={GRADIENT}
+                colors={C.primaryGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.alertGradientBtn}
@@ -918,7 +918,7 @@ function TimesheetForm({
   if (loading) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color={PRIMARY} />
+        <ActivityIndicator size="large" color={C.accent} />
         <Text style={styles.loadingScreenText}>Loading your day...</Text>
       </View>
     );
@@ -973,7 +973,7 @@ function TimesheetForm({
                 <MaterialCommunityIcons
                   name={editingTaskId ? "close" : "refresh"}
                   size={14}
-                  color={PRIMARY}
+                  color={C.accent}
                 />
                 <Text style={styles.resetText}>
                   {editingTaskId ? "Cancel" : "Clear"}
@@ -1104,7 +1104,7 @@ function TimesheetForm({
             style={styles.submitTouch}
           >
             <LinearGradient
-              colors={GRADIENT}
+              colors={C.primaryGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.submit}
@@ -1153,7 +1153,7 @@ function TimesheetForm({
               <MaterialCommunityIcons
                 name="calendar-blank-outline"
                 size={30}
-                color={PRIMARY}
+                color={C.accent}
               />
             </View>
             <Text style={styles.emptyText}>No tasks logged yet</Text>
@@ -1204,10 +1204,10 @@ export default memo(TimesheetForm);
 // ════════════════════════════════════════════════════════════════════════
 //  STYLES
 // ════════════════════════════════════════════════════════════════════════
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   root: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
   },
   scrollContent: {
     padding: 16,
@@ -1218,12 +1218,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
     gap: 12,
   },
   loadingScreenText: {
     fontSize: 15,
-    color: PRIMARY,
+    color: c.accent,
     fontWeight: "600",
   },
 
@@ -1310,7 +1310,7 @@ const styles = StyleSheet.create({
 
   // Composer card
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 22,
     padding: 16,
     marginTop: 16,
@@ -1362,7 +1362,7 @@ const styles = StyleSheet.create({
   resetText: {
     fontSize: 12,
     fontWeight: "700",
-    color: PRIMARY,
+    color: c.accent,
   },
 
   // Fields
@@ -1391,8 +1391,8 @@ const styles = StyleSheet.create({
   inputBox: {
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "rgba(0, 41, 87, 0.1)",
-    backgroundColor: "#F8FAFD",
+    borderColor: c.border,
+    backgroundColor: c.surfaceAlt,
     paddingHorizontal: 14,
   },
   inputBoxMultiline: {
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
   },
   inputBoxFocused: {
     borderColor: BRAND.primaryLight,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
   },
   inputBoxError: {
     borderColor: "rgba(214, 69, 69, 0.6)",
@@ -1459,7 +1459,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 13,
     fontWeight: "600",
-    color: PRIMARY,
+    color: c.accent,
     flexShrink: 1,
   },
   chipTextSelected: {
@@ -1470,8 +1470,8 @@ const styles = StyleSheet.create({
   durationCard: {
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: "rgba(0, 41, 87, 0.1)",
-    backgroundColor: "#F8FAFD",
+    borderColor: c.border,
+    backgroundColor: c.surfaceAlt,
     padding: 12,
   },
   durationRow: {
@@ -1484,7 +1484,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: BRAND.primaryBorder,
   },
@@ -1502,7 +1502,7 @@ const styles = StyleSheet.create({
   durationNumber: {
     fontSize: 34,
     fontWeight: "800",
-    color: PRIMARY,
+    color: c.accent,
     fontVariant: ["tabular-nums"],
   },
   durationUnit: {
@@ -1528,18 +1528,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: BRAND.primaryBorder,
   },
   presetActive: {
     backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
+    borderColor: c.accent,
   },
   presetText: {
     fontSize: 13,
     fontWeight: "700",
-    color: PRIMARY,
+    color: c.accent,
   },
   presetTextActive: {
     color: "#FFFFFF",
@@ -1550,7 +1550,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 4,
     borderRadius: 16,
-    backgroundColor: "#F1F5FA",
+    backgroundColor: c.surfaceAlt,
     borderWidth: 1,
     borderColor: BRAND.primaryBorder,
   },
@@ -1636,7 +1636,7 @@ const styles = StyleSheet.create({
   countChipText: {
     fontSize: 12,
     fontWeight: "700",
-    color: PRIMARY,
+    color: c.accent,
   },
   listTotal: {
     fontSize: 13,
@@ -1645,7 +1645,7 @@ const styles = StyleSheet.create({
   },
   taskCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 18,
     marginBottom: 12,
     overflow: "hidden",
@@ -1719,10 +1719,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "#F1F5FA",
+    backgroundColor: c.surfaceAlt,
   },
   metaChipBillable: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: c.successBg,
   },
   metaChipText: {
     fontSize: 11.5,
@@ -1731,7 +1731,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   metaChipTextBillable: {
-    color: "#047857",
+    color: c.successText,
     fontWeight: "700",
   },
 
@@ -1741,10 +1741,10 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
     paddingHorizontal: 20,
     borderRadius: 18,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(0, 41, 87, 0.18)",
+    borderColor: c.border,
   },
   emptyIcon: {
     width: 60,
@@ -1770,14 +1770,14 @@ const styles = StyleSheet.create({
   // Project sheet
   sheetOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 22, 48, 0.5)",
+    backgroundColor: c.overlay,
   },
   sheet: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     paddingHorizontal: 16,
@@ -1788,7 +1788,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(0, 41, 87, 0.15)",
+    backgroundColor: c.primaryFaint,
     marginBottom: 12,
   },
   sheetHead: {
@@ -1816,7 +1816,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: "#F1F5FA",
+    backgroundColor: c.surfaceAlt,
     marginBottom: 8,
   },
   searchInput: {
@@ -1860,19 +1860,19 @@ const styles = StyleSheet.create({
   },
   sheetOptionTextSelected: {
     fontWeight: "700",
-    color: PRIMARY,
+    color: c.accent,
   },
 
   // Alert
   alertOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 22, 48, 0.55)",
+    backgroundColor: c.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   alertBox: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 24,
     padding: 22,
     alignItems: "center",
@@ -1891,7 +1891,7 @@ const styles = StyleSheet.create({
   alertTitle: {
     fontSize: 19,
     fontWeight: "700",
-    color: PRIMARY,
+    color: c.accent,
     marginTop: 4,
     textAlign: "center",
   },
@@ -1915,7 +1915,7 @@ const styles = StyleSheet.create({
   },
   alertCancelBtn: {
     borderWidth: 1.5,
-    borderColor: "rgba(0, 41, 87, 0.18)",
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
@@ -1923,7 +1923,7 @@ const styles = StyleSheet.create({
   alertCancelText: {
     fontSize: 15,
     fontWeight: "600",
-    color: PRIMARY,
+    color: c.accent,
   },
   alertGradientBtn: {
     alignItems: "center",
@@ -1935,4 +1935,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
   },
-});
+}));

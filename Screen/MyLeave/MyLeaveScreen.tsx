@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const getLeaveIcon = (leaveCode: string) => {
   switch (leaveCode) {
@@ -82,7 +83,7 @@ const getLeaveColor = (leaveCode: string) => {
       return "#8E24AA"; // Purple
 
     default:
-      return "#002957";
+      return C.accent;
   }
 };
 
@@ -209,8 +210,8 @@ export default function MyLeaveScreen() {
                 progress={summary.progress}
                 showsText
                 formatText={() => `${summary.remaining}`}
-                color="#002957"
-                unfilledColor="#e9f0f7"
+                color={C.accent}
+                unfilledColor={C.primaryFaint}
                 thickness={10}
                 borderWidth={2}
                 textStyle={styles.progressText}
@@ -247,8 +248,8 @@ export default function MyLeaveScreen() {
                     <Progress.Circle
                       size={50}
                       progress={item.progress ?? 0}
-                      color="#002957"
-                      unfilledColor="#e9f0f7"
+                      color={C.accent}
+                      unfilledColor={C.primaryFaint}
                       thickness={8}
                       borderWidth={2}
                     />
@@ -298,10 +299,10 @@ export default function MyLeaveScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: c.background,
   },
   safeArea: {
     flex: 1,
@@ -315,15 +316,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: "#6c757d",
+    color: c.textSoft,
   },
   balanceCard: {
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 10,
@@ -342,10 +343,10 @@ const styles = StyleSheet.create({
   balanceTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
   },
   balanceBadge: {
-    backgroundColor: "#e9f0f7",
+    backgroundColor: c.primaryFaint,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   balanceBadgeText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
   },
   progressContainer: {
     alignItems: "center",
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#002957",
+    color: c.accent,
   },
   statsContainer: {
     flexDirection: "row",
@@ -375,11 +376,11 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 4,
   },
   usedStat: {
-    color: "#1a4a7a",
+    color: c.accent,
   },
   statLabel: {
     fontSize: 11,
@@ -387,7 +388,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   leaveTypesContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 25,
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 14,
   },
   leaveTypeRow: {
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
   // leaveTypeItem: {
   //   flexDirection: 'row',
   //   alignItems: 'center',
-  //   backgroundColor: '#f8f9fa',
+  //   backgroundColor: c.background,
   //   borderRadius: 12,
   //   padding: 14,
   //   width: '48%',
@@ -437,12 +438,12 @@ const styles = StyleSheet.create({
   leaveTypeName: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 4,
   },
   leaveTypeStats: {
     fontSize: 12,
-    color: "#6c757d",
+    color: c.textSoft,
     marginBottom: 2,
   },
   leaveLeftText: {
@@ -453,7 +454,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 16,
-    backgroundColor: "#002957",
+    backgroundColor: c.primary,
   },
   progressWithIcon: {
     position: "relative",
@@ -471,7 +472,7 @@ const styles = StyleSheet.create({
   leaveTypeItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: c.background,
     borderRadius: 12,
     padding: 12,
     width: "48%",
@@ -481,7 +482,7 @@ const styles = StyleSheet.create({
   },
   leaveMonthlyText: {
     fontSize: 10,
-    color: "#6c757d",
+    color: c.textSoft,
     marginBottom: 2,
   },
-});
+}));

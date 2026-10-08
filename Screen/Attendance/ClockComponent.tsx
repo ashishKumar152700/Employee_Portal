@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { themedStyles } from "../../Global/ThemeContext";
 const { width } = Dimensions.get('window');
 
 const scaleFont = (size: any) => Math.round(size * (width / 375));
@@ -42,7 +43,7 @@ const ClockComponent = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     alignItems: 'center',
   },
@@ -78,6 +79,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     marginTop: 2,
   },
-});
+}));
 
 export default ClockComponent;

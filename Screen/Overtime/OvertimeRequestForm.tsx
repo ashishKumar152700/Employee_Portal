@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { NativeStackNavigationProp  } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../Global/Types';
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const OvertimeRequestForm: React.FC = () => {
   const [date, setDate] = useState('');
@@ -50,7 +51,7 @@ const OvertimeRequestForm: React.FC = () => {
         <TextInput label="Reason" value={reason} onChangeText={setReason} style={styles.input} mode="outlined" multiline />
         <TextInput label="Project Name" value={projectName} onChangeText={setProjectName} style={styles.input} mode="outlined" />
 
-        <Button title="Submit" onPress={handleSubmit} color="rgb(0, 41, 87)" />
+        <Button title="Submit" onPress={handleSubmit} color={C.accent} />
       </ScrollView>
       <FAB
         style={styles.fab}
@@ -65,8 +66,8 @@ const OvertimeRequestForm: React.FC = () => {
 
 export default OvertimeRequestForm;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'white' },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.surface },
   halfInput: {
     flex: 1,
     marginRight: 10,
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: c.primary,
     borderRadius: 50,
   },
   row: {
@@ -83,6 +84,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   scrollView: { padding: 20, paddingBottom: 100 },
-  title: { fontSize: 24, fontWeight: '600', color: 'rgb(0, 41, 87)', marginBottom: 20, textAlign: 'center' },
-  input: { marginBottom: 15, backgroundColor: 'white' },
-});
+  title: { fontSize: 24, fontWeight: '600', color: c.accent, marginBottom: 20, textAlign: 'center' },
+  input: { marginBottom: 15, backgroundColor: c.surface },
+}));

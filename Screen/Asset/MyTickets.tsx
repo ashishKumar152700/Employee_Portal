@@ -39,6 +39,7 @@ import {
   ViewMode,
   ViewToggle,
 } from "./AssetUI";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const VIEW_MODE_KEY = "myTicketsViewMode";
 const GUTTER = 16;
@@ -56,50 +57,50 @@ type StatusConfig = {
 const getStatusConfig = (status: string): StatusConfig => {
   const configs: { [key: string]: StatusConfig } = {
     "pending for allocation": {
-      bg: "#fef3c7",
-      color: "#92400e",
+      bg: C.warningBg,
+      color: C.warningText,
       border: "#f59e0b",
       icon: "clock-o",
       short: "Pending allocation",
     },
     "waiting for approval by manager": {
-      bg: "#e0e7ff",
-      color: "#3730a3",
+      bg: C.infoBg,
+      color: C.infoText,
       border: "#4f46e5",
       icon: "user",
       short: "Awaiting manager",
     },
     allocated: {
-      bg: "#dcfce7",
-      color: "#166534",
+      bg: C.successBg,
+      color: C.successText,
       border: "#16a34a",
       icon: "check-circle",
       short: "Allocated",
     },
     approved: {
-      bg: "#dcfce7",
-      color: "#166534",
+      bg: C.successBg,
+      color: C.successText,
       border: "#16a34a",
       icon: "check-circle",
       short: "Approved",
     },
     manager: {
-      bg: "#dcfce7",
-      color: "#166534",
+      bg: C.successBg,
+      color: C.successText,
       border: "#16a34a",
       icon: "check",
       short: "Approved",
     },
     rejected: {
-      bg: "#fee2e2",
-      color: "#991b1b",
+      bg: C.dangerBg,
+      color: C.dangerText,
       border: "#dc2626",
       icon: "times-circle",
       short: "Rejected",
     },
     cancelled: {
-      bg: "#f3f4f6",
-      color: "#374151",
+      bg: C.surfaceAlt,
+      color: C.text,
       border: "#6b7280",
       icon: "ban",
       short: "Cancelled",
@@ -108,8 +109,8 @@ const getStatusConfig = (status: string): StatusConfig => {
 
   return (
     configs[status.toLowerCase()] || {
-      bg: "#f3f4f6",
-      color: "#374151",
+      bg: C.surfaceAlt,
+      color: C.text,
       border: "#6b7280",
       icon: "question-circle",
       short: status,
@@ -737,7 +738,7 @@ export default function MyTickets() {
           <FontAwesome
             name="search"
             size={15}
-            color={searchFocused ? BRAND.primary : BRAND.primaryMuted}
+            color={searchFocused ? C.accent : BRAND.primaryMuted}
           />
           <TextInput
             style={styles.searchInput}
@@ -746,7 +747,7 @@ export default function MyTickets() {
             onChangeText={setSearchQuery}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={C.placeholder}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity
@@ -776,7 +777,7 @@ export default function MyTickets() {
   const listEmpty =
     ticketLoading && myTickets.length === 0 ? (
       <View style={styles.stateBox}>
-        <ActivityIndicator size="large" color={BRAND.primary} />
+        <ActivityIndicator size="large" color={C.accent} />
         <Text style={styles.loadingText}>Loading your requests...</Text>
       </View>
     ) : (
@@ -785,7 +786,7 @@ export default function MyTickets() {
           <FontAwesome
             name={myTickets.length === 0 ? "ticket" : "search"}
             size={30}
-            color={BRAND.primary}
+            color={C.accent}
           />
         </View>
         <Text style={styles.emptyStateTitle}>
@@ -819,8 +820,8 @@ export default function MyTickets() {
           <RefreshControl
             refreshing={ticketLoading}
             onRefresh={loadTickets}
-            colors={["rgb(0, 41, 87)"]}
-            tintColor="rgb(0, 41, 87)"
+            colors={[C.accent]}
+            tintColor={C.accent}
           />
         }
       />
@@ -857,10 +858,10 @@ export default function MyTickets() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
   },
   // Extra bottom room so the search bar can overlap the hero.
   hero: {
@@ -910,7 +911,7 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 16,
     paddingHorizontal: 16,
     height: 48,
@@ -968,7 +969,7 @@ const styles = StyleSheet.create({
   countChipText: {
     fontSize: 12,
     fontWeight: "700",
-    color: BRAND.primary,
+    color: c.accent,
   },
 
   // Shared pills
@@ -998,7 +999,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(0, 41, 87, 0.1)",
+    backgroundColor: c.primaryFaint,
     overflow: "hidden",
   },
 
@@ -1006,7 +1007,7 @@ const styles = StyleSheet.create({
   listRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1049,7 +1050,7 @@ const styles = StyleSheet.create({
     marginBottom: GRID_GAP,
   },
   gridCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1,
@@ -1117,14 +1118,14 @@ const styles = StyleSheet.create({
   // Detail sheet
   sheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 22, 48, 0.55)",
+    backgroundColor: c.overlay,
   },
   sheet: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     overflow: "hidden",
@@ -1212,7 +1213,7 @@ const styles = StyleSheet.create({
   sheetSection: {
     fontSize: 11,
     fontWeight: "700",
-    color: "rgba(0, 41, 87, 0.45)",
+    color: c.primaryMuted,
     textTransform: "uppercase",
     letterSpacing: 1.1,
     marginTop: 14,
@@ -1223,7 +1224,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   sheetCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
@@ -1279,7 +1280,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepNodeCurrent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 2,
     borderColor: BRAND.primaryLight,
   },
@@ -1290,18 +1291,18 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.primaryLight,
   },
   stepNodeIdle: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 2,
-    borderColor: "rgba(0, 41, 87, 0.15)",
+    borderColor: c.border,
   },
   stepLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "rgba(0, 41, 87, 0.4)",
+    color: c.primaryMuted,
     marginTop: 6,
   },
   stepLabelActive: {
-    color: BRAND.primary,
+    color: c.accent,
   },
   connectorTrack: {
     flex: 1,
@@ -1309,7 +1310,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: 10,
     marginHorizontal: -18,
-    backgroundColor: "rgba(0, 41, 87, 0.1)",
+    backgroundColor: c.primaryFaint,
     overflow: "hidden",
   },
 
@@ -1324,7 +1325,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 15,
-    color: BRAND.primary,
+    color: c.accent,
     fontWeight: "600",
     marginTop: 8,
   },
@@ -1350,4 +1351,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 21,
   },
-});
+}));

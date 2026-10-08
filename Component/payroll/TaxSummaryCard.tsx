@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { PayrollTaxDetail } from "../../types/payroll.types";
+import { themedStyles } from "../../Global/ThemeContext";
 
 interface Props {
   tax: PayrollTaxDetail;
@@ -49,13 +50,13 @@ const TaxSummaryCard: React.FC<Props> = ({ tax }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#E9ECEF",
+    borderColor: c.border,
   },
   row: {
     flexDirection: "row",
@@ -64,37 +65,37 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   rowBold: {
-    backgroundColor: "#EEF3FB",
+    backgroundColor: c.primaryFaint,
     marginHorizontal: -8,
     paddingHorizontal: 8,
     borderRadius: 8,
   },
   rowLabel: {
     fontSize: 14,
-    color: "#6C757D",
+    color: c.textSoft,
     fontWeight: "500",
     flex: 1,
     marginRight: 8,
   },
   rowLabelBold: {
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     fontWeight: "700",
   },
   rowValue: {
     fontSize: 14,
-    color: "#212529",
+    color: c.text,
     fontWeight: "600",
     textAlign: "right",
   },
   rowValueBold: {
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     fontWeight: "800",
   },
   separator: {
     height: 1,
-    backgroundColor: "#E9ECEF",
+    backgroundColor: c.surfaceAlt,
     marginVertical: 6,
   },
-});
+}));
 
 export default TaxSummaryCard;

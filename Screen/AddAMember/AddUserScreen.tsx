@@ -20,6 +20,7 @@ import Toast from 'react-native-toast-message';
 import { BiometricUserService } from '../../Services/BiometricService/BiometricUserService';
 import { CreateUserRequest } from '../../Global/BiometricUser';
 import FaceCaptureComponent from '../../Component/AddMemberScreen/FaceCaptureComponent';
+import { themedStyles } from "../../Global/ThemeContext";
 
 
 interface FormData {
@@ -397,10 +398,10 @@ export default function AddUserScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
   },
   formCard: {
     margin: 16,
@@ -415,12 +416,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 20,
     marginBottom: 12,
-    color: '#333',
+    color: c.text,
     fontWeight: '600',
   },
   input: {
     marginBottom: 8,
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
   },
   errorText: {
     color: '#f44336',
@@ -429,12 +430,12 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
+    color: c.textSoft,
     fontStyle: 'italic',
     marginBottom: 8,
   },
   disabledText: {
-    color: '#999',
+    color: c.textFaint,
   },
   radioGroup: {
     flexDirection: 'row',
@@ -467,5 +468,5 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingVertical: 8,
   },
-});
+}));
 

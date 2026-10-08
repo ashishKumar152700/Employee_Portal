@@ -35,6 +35,7 @@ import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
 import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { themedStyles } from "../../Global/ThemeContext";
 
 const Stack = createNativeStackNavigator();
 
@@ -109,8 +110,12 @@ const ScreenWrapper = ({ component: Component, onMenuPress, ...props }) => {
   );
 };
 
+// Survives remounts (e.g. switching light/dark theme) so the font loader
+// doesn't flash again once the icon fonts are in.
+let iconFontsReady = false;
+
 function DrawerNavigator() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [fontsLoaded, setFontsLoaded] = useState(iconFontsReady);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currentRoute, setCurrentRoute] = useState('Timesheet');
   const insets = useSafeAreaInsets();
@@ -131,6 +136,7 @@ function DrawerNavigator() {
           Ionicons: require("react-native-vector-icons/Fonts/Ionicons.ttf"),
           FontAwesome: require("react-native-vector-icons/Fonts/FontAwesome.ttf"),
         });
+        iconFontsReady = true;
         setFontsLoaded(true);
       } catch (error) {
         console.error("Error loading fonts:", error);
@@ -433,11 +439,11 @@ function DrawerNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgb(0, 41, 87)",
+    backgroundColor: c.primary,
     paddingHorizontal: 16,
     paddingVertical: 12,
     elevation: 8,
@@ -483,7 +489,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: c.surface,
   },
   loadingLottie: {
     width: 150,
@@ -492,24 +498,24 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     fontWeight: "500",
   },
   modalContainer: {
     flex: 1,
     // Navy-tinted scrim keeps the backdrop on-brand instead of plain grey.
-    backgroundColor: 'rgba(0, 22, 48, 0.5)',
+    backgroundColor: c.overlay,
   },
   drawerContainer: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: '#F2F6FB',
+    backgroundColor: c.background,
     borderTopRightRadius: 28,
     borderBottomRightRadius: 28,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255, 255, 255, 0.6)',
+    borderRightColor: c.glassHighlight,
     overflow: 'hidden',
     elevation: 18,
     shadowColor: '#001A38',
@@ -517,7 +523,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 18,
   },
-});
+}));
 
 export default DrawerNavigator;
 

@@ -31,6 +31,7 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { useSelector, useDispatch } from 'react-redux';
 import LottieView from 'lottie-react-native';
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -147,7 +148,7 @@ const TimesheetCalendar: React.FC = () => {
     const base: MarkedDates = {};
 
     if (selectedDate) {
-      base[selectedDate] = { selected: true, selectedColor: "rgb(0, 41, 87)" };
+      base[selectedDate] = { selected: true, selectedColor: C.accent };
     }
 
     Object.keys(hourCountSummary).forEach((date) => {
@@ -201,7 +202,7 @@ const TimesheetCalendar: React.FC = () => {
   const LoadingOverlay = ({ message }: { message: string }) => (
     <View style={styles.loadingOverlay}>
       <View style={styles.loadingCard}>
-        <ActivityIndicator size="large" color="rgb(0, 41, 87)" />
+        <ActivityIndicator size="large" color={C.accent} />
         <Text style={styles.loadingText}>{message}</Text>
       </View>
     </View>
@@ -247,17 +248,17 @@ const TimesheetCalendar: React.FC = () => {
         markingType="dot"
         maxDate={today}
         theme={{
-          calendarBackground: '#ffffff',
-          textSectionTitleColor: 'rgb(0, 41, 87)',
-          selectedDayBackgroundColor: 'rgb(0, 41, 87)',
+          calendarBackground: C.surface,
+          textSectionTitleColor: C.accent,
+          selectedDayBackgroundColor: C.primary,
           selectedDayTextColor: '#ffffff',
           todayTextColor: '#FF6B35',
-          dayTextColor: '#2d4150',
-          textDisabledColor: '#9CA3AF',
-          dotColor: 'rgb(0, 41, 87)',
+          dayTextColor: C.text,
+          textDisabledColor: C.textFaint,
+          dotColor: C.accent,
           selectedDotColor: '#ffffff',
-          arrowColor: 'rgb(0, 41, 87)',
-          monthTextColor: 'rgb(0, 41, 87)',
+          arrowColor: C.accent,
+          monthTextColor: C.accent,
           textDayFontWeight: '600',
           textMonthFontWeight: 'bold',
         }}
@@ -292,7 +293,7 @@ const TimesheetCalendar: React.FC = () => {
       {/* Summary */}
       <View style={styles.summaryContainer}>
         <View style={styles.summaryCard}>
-          <FontAwesome name="clock-o" size={20} color="rgb(0, 41, 87)" />
+          <FontAwesome name="clock-o" size={20} color={C.accent} />
           <Text style={styles.summaryValue}>{monthlyTotals.hours.toFixed(1)}h</Text>
           <Text style={styles.summaryLabel}>Month Hours</Text>
         </View>
@@ -300,7 +301,7 @@ const TimesheetCalendar: React.FC = () => {
         <View style={styles.summaryDivider} />
 
         <View style={styles.summaryCard}>
-          <FontAwesome name="calendar-check-o" size={20} color="rgb(0, 41, 87)" />
+          <FontAwesome name="calendar-check-o" size={20} color={C.accent} />
           <Text style={styles.summaryValue}>{monthlyTotals.days}</Text>
           <Text style={styles.summaryLabel}>Days Logged</Text>
         </View>
@@ -308,7 +309,7 @@ const TimesheetCalendar: React.FC = () => {
         <View style={styles.summaryDivider} />
 
         <View style={styles.summaryCard}>
-          <FontAwesome name="tasks" size={20} color="rgb(0, 41, 87)" />
+          <FontAwesome name="tasks" size={20} color={C.accent} />
           <Text style={styles.summaryValue}>{monthlyTotals.tasks}</Text>
           <Text style={styles.summaryLabel}>Total Tasks</Text>
         </View>
@@ -395,7 +396,7 @@ const TimesheetCalendar: React.FC = () => {
       {refreshing && (
         <View style={styles.refreshingOverlay}>
           <View style={styles.refreshingCard}>
-            <ActivityIndicator size="small" color="rgb(0, 41, 87)" />
+            <ActivityIndicator size="small" color={C.accent} />
             <Text style={styles.refreshingText}>Refreshing...</Text>
           </View>
         </View>
@@ -406,10 +407,10 @@ const TimesheetCalendar: React.FC = () => {
 
 /* ------------------------------- STYLES ------------------------------- */
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: c.primary,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
     shadowColor: '#000',
@@ -444,11 +445,11 @@ const styles = StyleSheet.create({
     height: 360,
   },
   legend: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.surface,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: c.border,
     gap: 8,
   },
   legendRow: {
@@ -467,13 +468,13 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSoft,
     fontWeight: '600',
   },
   summaryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
     paddingVertical: 20,
     paddingHorizontal: 20,
     shadowColor: '#000',
@@ -489,18 +490,18 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'rgb(0, 41, 87)',
+    color: c.accent,
     marginTop: 4,
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: c.textSoft,
     fontWeight: '600',
   },
   summaryDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: c.surfaceAlt,
     marginHorizontal: 16,
   },
   illustrationContainer: {
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
   // ===== FIXED MODAL STYLES =====
   modalSafeArea: {
     flex: 1,
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: c.primary,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? 16 : 12,
     paddingBottom: 16,
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: c.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -566,18 +567,18 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.background,
   },
   
   // Loading & Refreshing Overlays
   loadingOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: c.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingCard: {
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
     borderRadius: 20,
     padding: 30,
     alignItems: 'center',
@@ -590,7 +591,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: 'rgb(0, 41, 87)',
+    color: c.accent,
     fontWeight: '600',
   },
   refreshingOverlay: {
@@ -602,7 +603,7 @@ const styles = StyleSheet.create({
   refreshingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
     borderRadius: 25,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -615,9 +616,9 @@ const styles = StyleSheet.create({
   },
   refreshingText: {
     fontSize: 14,
-    color: 'rgb(0, 41, 87)',
+    color: c.accent,
     fontWeight: '600',
   },
-});
+}));
 
 export default TimesheetCalendar;

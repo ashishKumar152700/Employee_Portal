@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Dimensions } from "react-native";
 import LottieView from "lottie-react-native";
+import { themedStyles } from "../../Global/ThemeContext";
 
 const { width } = Dimensions.get("window");
 const scaleFont = (size: number) => Math.round(size * (width / 375));
@@ -36,10 +37,10 @@ const PunchScreenComingSoon = () => {
 
 export default PunchScreenComingSoon;
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: "#f4f7fb",
+    backgroundColor: c.background,
     justifyContent: "center",
     alignItems: "center",
     padding: scaleSize(20),
@@ -53,32 +54,32 @@ const styles = StyleSheet.create({
   title: {
     fontSize: scaleFont(16),
     fontWeight: "700",
-    color: PRIMARY,
+    color: c.accent,
     marginBottom: scaleSize(8),
     textAlign: "center",
   },
   infoText: {
     fontSize: scaleFont(14),
-    color: PRIMARY,
+    color: c.accent,
     marginBottom: scaleSize(10),
     textAlign: "center",
      fontWeight: "700",
   },
   secondaryText: {
     fontSize: scaleFont(12),
-    color: "#555",
+    color: c.textSoft,
     textAlign: "center",
     paddingHorizontal: scaleSize(20),
     lineHeight: scaleFont(20),
   },
   highlight: {
-    color: PRIMARY,
+    color: c.accent,
     fontWeight: "700",
   },
   footerNote: {
     marginTop: scaleSize(25),
     fontSize: scaleFont(13),
-    color: "#777",
+    color: c.textSoft,
      fontWeight: "700",
   },
-});
+}));

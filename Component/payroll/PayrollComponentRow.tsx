@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { PayrollComponent } from "../../types/payroll.types";
+import { themedStyles } from "../../Global/ThemeContext";
 
 interface Props {
   component: PayrollComponent;
@@ -31,14 +32,14 @@ const PayrollComponentRow: React.FC<Props> = ({ component, isLast }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F3F5",
+    borderBottomColor: c.border,
   },
   lastRow: {
     borderBottomWidth: 0,
@@ -53,20 +54,20 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgb(0, 41, 87)",
+    backgroundColor: c.primary,
     marginRight: 10,
   },
   label: {
     fontSize: 14,
-    color: "#495057",
+    color: c.textSoft,
     fontWeight: "500",
     flex: 1,
   },
   amount: {
     fontSize: 14,
-    color: "#002957",
+    color: c.accent,
     fontWeight: "700",
   },
-});
+}));
 
 export default PayrollComponentRow;

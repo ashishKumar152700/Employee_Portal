@@ -27,6 +27,7 @@ import { RootStackParamList } from "../../Global/Types";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ActivityIndicator } from "react-native";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const LeaveApplicationScreen: React.FC = () => {
   const { contentPaddingBottom } = useTabBarClearance();
@@ -170,7 +171,7 @@ const LeaveApplicationScreen: React.FC = () => {
         case "warning":
           return "#ffc107";
         default:
-          return "#002957";
+          return C.primary;
       }
     };
 
@@ -249,7 +250,7 @@ const LeaveApplicationScreen: React.FC = () => {
         [date]: {
           startingDay: true,
           endingDay: true,
-          color: "#002957",
+          color: C.accent,
           textColor: "#FFFFFF",
         },
       });
@@ -270,7 +271,7 @@ const LeaveApplicationScreen: React.FC = () => {
       [date]: {
         startingDay: true,
         endingDay: true,
-        color: "#002957",
+        color: C.accent,
         textColor: "#FFFFFF",
       },
     });
@@ -309,7 +310,7 @@ const LeaveApplicationScreen: React.FC = () => {
       <Modal transparent visible={visible} animationType="fade">
         <View style={styles.loaderOverlay}>
           <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#002957" />
+            <ActivityIndicator size="large" color={C.accent} />
             <Text style={styles.loaderText}>{message || "Submitting..."}</Text>
           </View>
         </View>
@@ -568,9 +569,9 @@ const LeaveApplicationScreen: React.FC = () => {
             onPress={() => setIsCalendarModalVisible(true)}
             style={styles.dateButton}
           >
-            <Icon name="event" size={20} color="#002957" />
+            <Icon name="event" size={20} color={C.accent} />
             <Text style={styles.dateButtonText}>{showDateRange()}</Text>
-            <Icon name="keyboard-arrow-down" size={24} color="#002957" />
+            <Icon name="keyboard-arrow-down" size={24} color={C.accent} />
           </TouchableOpacity>
 
           {selectedStartDate && !selectedEndDate && (
@@ -649,7 +650,7 @@ const LeaveApplicationScreen: React.FC = () => {
                 onPress={() => setIsCalendarModalVisible(false)}
                 style={styles.closeCalendarButton}
               >
-                <Icon name="close" size={24} color="#002957" />
+                <Icon name="close" size={24} color={C.accent} />
               </TouchableOpacity>
             </View>
 
@@ -659,12 +660,12 @@ const LeaveApplicationScreen: React.FC = () => {
               markedDates={markedDates}
               minDate={todayISO}
               theme={{
-                todayBackgroundColor: "#e9f0f7",
-                todayTextColor: "#000",
-                selectedDayBackgroundColor: "#002957",
+                todayBackgroundColor: C.primaryFaint,
+                todayTextColor: C.text,
+                selectedDayBackgroundColor: C.primary,
                 selectedDayTextColor: "#FFFFFF",
                 textDayFontWeight: "500",
-                arrowColor: "#002957",
+                arrowColor: C.accent,
               }}
             />
 
@@ -691,10 +692,10 @@ const LeaveApplicationScreen: React.FC = () => {
     </Animated.View>
   );
 };
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: c.background,
   },
   scrollContainer: {
     padding: 16,
@@ -702,12 +703,12 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 16,
     textAlign: "center",
   },
   infoCard: {
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
@@ -726,16 +727,16 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: "#6c757d",
+    color: c.textSoft,
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
   },
   section: {
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
@@ -748,7 +749,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 14,
   },
   radioButtonContainer: {
@@ -761,37 +762,37 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#dee2e6",
+    borderColor: c.border,
     marginBottom: 8,
     alignItems: "center",
     justifyContent: "center",
   },
   radioButtonSelected: {
-    backgroundColor: "#e9f0f7",
-    borderColor: "#002957",
+    backgroundColor: c.primaryFaint,
+    borderColor: c.accent,
   },
   radioButtonText: {
     fontSize: 14,
-    color: "#495057",
+    color: c.textSoft,
     fontWeight: "500",
   },
   radioButtonTextSelected: {
-    color: "#002957",
+    color: c.accent,
     fontWeight: "600",
   },
   dateButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: c.background,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#dee2e6",
+    borderColor: c.border,
   },
   dateButtonText: {
     fontSize: 16,
-    color: "#002957",
+    color: c.accent,
     fontWeight: "500",
     flex: 1,
     marginHorizontal: 12,
@@ -801,7 +802,7 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: "#dee2e6",
+    borderColor: c.border,
     borderRadius: 12,
     overflow: "visible",
   },
@@ -812,26 +813,26 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#e9f0f7",
+    backgroundColor: c.primaryFaint,
     borderRadius: 12,
     alignItems: "center",
   },
   daysText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
   },
   textInput: {
     height: 80,
     borderWidth: 1,
-    borderColor: "#dee2e6",
+    borderColor: c.border,
     borderRadius: 12,
     padding: 14,
     textAlignVertical: "top",
     fontSize: 14,
   },
   submitButton: {
-    backgroundColor: "#002957",
+    backgroundColor: c.primary,
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
@@ -845,11 +846,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: c.overlay,
   },
   calendarContainer: {
     width: "95%",
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     borderRadius: 16,
     padding: 14,
   },
@@ -862,13 +863,13 @@ const styles = StyleSheet.create({
   calendarTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
   },
   closeCalendarButton: {
     padding: 4,
   },
   confirmButton: {
-    backgroundColor: "#002957",
+    backgroundColor: c.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
@@ -880,15 +881,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   radioButtonDisabled: {
-    backgroundColor: "#f8f9fa",
-    borderColor: "#dee2e6",
+    backgroundColor: c.background,
+    borderColor: c.border,
     opacity: 0.6,
   },
   radioButtonContent: {
     alignItems: "center",
   },
   radioButtonTextDisabled: {
-    color: "#6c757d",
+    color: c.textSoft,
   },
   leaveCountText: {
     fontSize: 12,
@@ -910,14 +911,14 @@ const styles = StyleSheet.create({
   // Alert Styles
   alertOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    // backgroundColor: "#002957",
+    backgroundColor: c.overlay,
+    // backgroundColor: c.primary,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   alertContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     borderRadius: 16,
     width: "100%",
     overflow: "hidden",
@@ -931,7 +932,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#002957",
+    backgroundColor: c.primary,
   },
   alertTitle: {
     fontSize: 18,
@@ -944,7 +945,7 @@ const styles = StyleSheet.create({
   },
   alertMessage: {
     fontSize: 16,
-    color: "#495057",
+    color: c.textSoft,
     lineHeight: 22,
   },
   alertFooter: {
@@ -952,12 +953,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     padding: 5,
     // borderTopWidth: 1,
-    // borderTopColor: "#002957",
+    // borderTopColor: c.accent,
   },
   alertButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "#002957",
+    backgroundColor: c.primary,
     borderRadius: 8,
     marginLeft: 8,
     minWidth: 80,
@@ -966,7 +967,7 @@ const styles = StyleSheet.create({
   alertButtonCancel: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#6c757d",
+    borderColor: c.borderStrong,
   },
   alertButtonText: {
     color: "#fff",
@@ -974,18 +975,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   alertButtonCancelText: {
-    color: "#6c757d",
+    color: c.textSoft,
   },
 
   // Loader Styles
   loaderOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: c.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   loaderContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     padding: 30,
     borderRadius: 16,
     alignItems: "center",
@@ -999,10 +1000,10 @@ const styles = StyleSheet.create({
   loaderText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#002957",
+    color: c.accent,
     fontWeight: "500",
     textAlign: "center",
   },
-});
+}));
 
 export default LeaveApplicationScreen;

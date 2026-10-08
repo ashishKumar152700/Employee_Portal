@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -69,7 +70,7 @@ export default function ReimbursementTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: "rgb(0, 41, 87)",
+          backgroundColor: C.primary,
           height: 66,
           paddingBottom: 8,
           position: "absolute",
@@ -106,18 +107,18 @@ export default function ReimbursementTabNavigator() {
   );
 }
 
-export const styles = StyleSheet.create({
+export const styles = themedStyles((c) => ({
   noDataText: {
     textAlign: "center",
     marginTop: 20,
     fontSize: 16,
-    color: "#555",
+    color: c.textSoft,
   },
   contentContainer: {
     paddingBottom: 20,
   },
   itemContainer: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: c.surfaceAlt,
     padding: 12,
     borderRadius: 8,
     marginVertical: 8,
@@ -131,7 +132,7 @@ export const styles = StyleSheet.create({
   itemText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
+    color: c.text,
   },
   appliedDateText: {
     fontSize: 14,
@@ -145,10 +146,10 @@ export const styles = StyleSheet.create({
   },
   reasonText: {
     fontSize: 14,
-    color: "#555",
+    color: c.textSoft,
     marginTop: 4,
   },
-});
+}));
 
 
 // import React, { useEffect, useState } from "react";

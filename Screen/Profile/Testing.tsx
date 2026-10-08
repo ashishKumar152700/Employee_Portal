@@ -24,9 +24,9 @@ import { changePassword } from "../../Services/User/User.service";
 import { useSelector, shallowEqual } from "react-redux";
 import moment from "moment";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
+import { themedStyles, C, PALETTES, ThemeMode, useTheme } from "../../Global/ThemeContext";
 
 const PAGE_BG = "#F4F7FB";
-const GRADIENT = BRAND.primaryGradient;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -62,11 +62,11 @@ const getPasswordStrength = (password: string): Strength => {
   if (/\d/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
   const levels: Strength[] = [
-    { score: 1, label: "Weak", color: "#DC2626" },
-    { score: 1, label: "Weak", color: "#DC2626" },
-    { score: 2, label: "Fair", color: "#D97706" },
+    { score: 1, label: "Weak", color: C.dangerText },
+    { score: 1, label: "Weak", color: C.dangerText },
+    { score: 2, label: "Fair", color: C.warningText },
     { score: 3, label: "Good", color: "#2563EB" },
-    { score: 4, label: "Strong", color: "#059669" },
+    { score: 4, label: "Strong", color: C.successText },
   ];
   return levels[score];
 };
@@ -110,7 +110,7 @@ const InfoRow = ({
   return (
     <View style={[styles.infoRow, last && styles.infoRowLast]}>
       <View style={styles.infoIcon}>
-        <MaterialCommunityIcons name={icon} size={18} color={BRAND.primary} />
+        <MaterialCommunityIcons name={icon} size={18} color={C.accent} />
       </View>
       <View style={styles.infoText}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -161,10 +161,62 @@ const ContactButton = ({
     activeOpacity={0.8}
     style={[styles.contactButton, disabled && styles.contactButtonDisabled]}
   >
-    <MaterialCommunityIcons name={icon} size={16} color={BRAND.primary} />
+    <MaterialCommunityIcons name={icon} size={16} color={C.accent} />
     <Text style={styles.contactButtonText}>{label}</Text>
   </TouchableOpacity>
 );
+
+// ─── Appearance picker: preview tiles for each theme ─────────────────────
+const AppearancePicker = () => {
+  const { mode, setMode } = useTheme();
+  const options: { key: ThemeMode; label: string; icon: any }[] = [
+    { key: "light", label: "Light", icon: "white-balance-sunny" },
+    { key: "dark", label: "Dark", icon: "weather-night" },
+  ];
+  return (
+    <View style={styles.appearanceRow}>
+      {options.map((option) => {
+        const palette = PALETTES[option.key];
+        const active = mode === option.key;
+        return (
+          <TouchableOpacity
+            key={option.key}
+            onPress={() => !active && setMode(option.key)}
+            activeOpacity={0.85}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+            style={[styles.appearanceOption, active && styles.appearanceOptionActive]}
+          >
+            {/* Mini preview drawn with that theme's own palette */}
+            <View style={[styles.preview, { backgroundColor: palette.background }]}>
+              <LinearGradient
+                colors={palette.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.previewHeader}
+              />
+              <View style={[styles.previewCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+                <View style={[styles.previewLine, { backgroundColor: palette.accent, width: "55%" }]} />
+                <View style={[styles.previewLine, { backgroundColor: palette.textFaint, width: "80%" }]} />
+              </View>
+            </View>
+            <View style={styles.appearanceLabelRow}>
+              <MaterialCommunityIcons
+                name={active ? "radiobox-marked" : "radiobox-blank"}
+                size={18}
+                color={active ? C.accent : C.textFaint}
+              />
+              <MaterialCommunityIcons name={option.icon} size={16} color={C.textSoft} />
+              <Text style={[styles.appearanceLabel, active && styles.appearanceLabelActive]}>
+                {option.label}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
 
 type PasswordFieldProps = TextInputProps & {
   label: string;
@@ -197,7 +249,7 @@ const PasswordField = forwardRef<TextInput, PasswordFieldProps>(
             secureTextEntry={!visible}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholderTextColor="#A3AEBD"
+            placeholderTextColor={C.placeholder}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             style={styles.pwInput}
@@ -312,7 +364,7 @@ const ChangePasswordSheet = ({
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHead}>
             <LinearGradient
-              colors={GRADIENT}
+              colors={C.primaryGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.sheetIcon}
@@ -326,7 +378,7 @@ const ChangePasswordSheet = ({
               </Text>
             </View>
             <TouchableOpacity onPress={close} style={styles.sheetClose} accessibilityLabel="Close">
-              <MaterialCommunityIcons name="close" size={18} color={BRAND.primary} />
+              <MaterialCommunityIcons name="close" size={18} color={C.accent} />
             </TouchableOpacity>
           </View>
 
@@ -374,8 +426,8 @@ const ChangePasswordSheet = ({
               hint={
                 matches ? (
                   <View style={styles.pwErrorRow}>
-                    <MaterialCommunityIcons name="check-circle" size={13} color="#059669" />
-                    <Text style={[styles.pwErrorText, { color: "#059669" }]}>
+                    <MaterialCommunityIcons name="check-circle" size={13} color={C.successText} />
+                    <Text style={[styles.pwErrorText, { color: C.successText }]}>
                       Passwords match
                     </Text>
                   </View>
@@ -394,7 +446,7 @@ const ChangePasswordSheet = ({
                 style={styles.primaryTouch}
               >
                 <LinearGradient
-                  colors={GRADIENT}
+                  colors={C.primaryGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.primaryButton}
@@ -451,7 +503,7 @@ const ProfilePage = () => {
       >
         {/* ── Hero ───────────────────────────────────────────────── */}
         <LinearGradient
-          colors={GRADIENT}
+          colors={C.primaryGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
@@ -509,7 +561,7 @@ const ProfilePage = () => {
           <SectionCard title="Reporting to" icon="account-supervisor-outline">
             <View style={styles.managerRow}>
               <LinearGradient
-                colors={GRADIENT}
+                colors={C.primaryGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.managerAvatar}
@@ -547,6 +599,10 @@ const ProfilePage = () => {
           </SectionCard>
 
           {/* ── Security ─────────────────────────────────────────── */}
+          <SectionCard title="Appearance" icon="palette-outline">
+            <AppearancePicker />
+          </SectionCard>
+
           <SectionCard title="Security" icon="shield-account-outline">
             <TouchableOpacity
               onPress={() => setPasswordModalVisible(true)}
@@ -554,7 +610,7 @@ const ProfilePage = () => {
               style={styles.actionRow}
             >
               <LinearGradient
-                colors={GRADIENT}
+                colors={C.primaryGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.actionIcon}
@@ -565,7 +621,7 @@ const ProfilePage = () => {
                 <Text style={styles.actionTitle}>Change password</Text>
                 <Text style={styles.actionSubtitle}>Keep your account secure</Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(0,41,87,0.3)" />
+              <MaterialCommunityIcons name="chevron-right" size={22} color={C.primaryMuted} />
             </TouchableOpacity>
           </SectionCard>
         </View>
@@ -579,10 +635,10 @@ const ProfilePage = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
   },
   scrollContent: {
     paddingBottom: 28,
@@ -710,7 +766,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -727,7 +783,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 11,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(0,41,87,0.1)",
+    borderBottomColor: c.border,
   },
   infoRowLast: {
     borderBottomWidth: 0,
@@ -758,7 +814,7 @@ const styles = StyleSheet.create({
   infoValueEmpty: {
     fontWeight: "400",
     fontStyle: "italic",
-    color: "rgba(20,33,61,0.35)",
+    color: c.textFaint,
   },
 
   // Manager
@@ -817,7 +873,7 @@ const styles = StyleSheet.create({
   contactButtonText: {
     fontSize: 13.5,
     fontWeight: "700",
-    color: BRAND.primary,
+    color: c.accent,
   },
 
   // Security
@@ -845,17 +901,71 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
+  // Appearance
+  appearanceRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 10,
+  },
+  appearanceOption: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    padding: 8,
+  },
+  appearanceOptionActive: {
+    borderColor: c.accent,
+    backgroundColor: c.primaryFaint,
+  },
+  preview: {
+    height: 74,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  previewHeader: {
+    height: 22,
+  },
+  previewCard: {
+    marginHorizontal: 8,
+    marginTop: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 7,
+    gap: 5,
+  },
+  previewLine: {
+    height: 5,
+    borderRadius: 3,
+  },
+  appearanceLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 2,
+  },
+  appearanceLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: c.textSoft,
+  },
+  appearanceLabelActive: {
+    color: c.text,
+    fontWeight: "700",
+  },
+
   // Password sheet
   sheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 22, 48, 0.55)",
+    backgroundColor: c.overlay,
   },
   sheetWrap: {
     flex: 1,
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     paddingHorizontal: 18,
@@ -867,7 +977,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(0,41,87,0.15)",
+    backgroundColor: c.primaryFaint,
     marginBottom: 14,
   },
   sheetHead: {
@@ -917,12 +1027,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "rgba(0,41,87,0.1)",
-    backgroundColor: "#F8FAFD",
+    borderColor: c.border,
+    backgroundColor: c.surfaceAlt,
   },
   pwBoxFocused: {
     borderColor: BRAND.primaryLight,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
   },
   pwBoxError: {
     borderColor: "rgba(214,69,69,0.6)",
@@ -959,7 +1069,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(0,41,87,0.1)",
+    backgroundColor: c.primaryFaint,
   },
   strengthLabel: {
     fontSize: 12,
@@ -979,12 +1089,12 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "rgba(0,41,87,0.18)",
+    borderColor: c.border,
   },
   secondaryButtonText: {
     fontSize: 15,
     fontWeight: "600",
-    color: BRAND.primary,
+    color: c.accent,
   },
   primaryTouch: {
     flex: 1.6,
@@ -1003,6 +1113,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
   },
-});
+}));
 
 export default ProfilePage;

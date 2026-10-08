@@ -34,6 +34,7 @@ import {
   ViewMode,
   ViewToggle,
 } from "./AssetUI";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const VIEW_MODE_KEY = "myAssetsViewMode";
 const GUTTER = 16;
@@ -91,8 +92,8 @@ const getWarranty = (asset: MyAsset): WarrantyInfo => {
       state: "unknown",
       short: "No warranty info",
       label: "Warranty details not available",
-      color: "#6B7280",
-      bg: "#F3F4F6",
+      color: C.textSoft,
+      bg: C.surfaceAlt,
       icon: "shield-off-outline",
       elapsed: 0,
     };
@@ -112,8 +113,8 @@ const getWarranty = (asset: MyAsset): WarrantyInfo => {
       state: "expired",
       short: "Warranty expired",
       label: `Expired ${formatSpan(-daysLeft)} ago`,
-      color: "#B91C1C",
-      bg: "#FEE2E2",
+      color: C.dangerText,
+      bg: C.dangerBg,
       icon: "shield-alert",
       elapsed: 1,
     };
@@ -123,8 +124,8 @@ const getWarranty = (asset: MyAsset): WarrantyInfo => {
       state: "expiring",
       short: `Expires in ${daysLeft}d`,
       label: `Expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
-      color: "#92400E",
-      bg: "#FEF3C7",
+      color: C.warningText,
+      bg: C.warningBg,
       icon: "shield-alert",
       elapsed,
     };
@@ -133,8 +134,8 @@ const getWarranty = (asset: MyAsset): WarrantyInfo => {
     state: "active",
     short: `${formatSpan(daysLeft)} warranty`,
     label: `In warranty · ${formatSpan(daysLeft)} left`,
-    color: "#166534",
-    bg: "#DCFCE7",
+    color: C.successText,
+    bg: C.successBg,
     icon: "shield-check",
     elapsed,
   };
@@ -246,7 +247,7 @@ const AssetListRow = ({
       <MaterialCommunityIcons
         name="chevron-right"
         size={22}
-        color="rgba(0, 41, 87, 0.3)"
+        color={C.primaryMuted}
       />
     </TouchableOpacity>
   );
@@ -267,7 +268,7 @@ const DetailRow = ({
   return (
     <View style={styles.detailRow}>
       <View style={styles.detailIcon}>
-        <MaterialCommunityIcons name={icon} size={16} color={BRAND.primary} />
+        <MaterialCommunityIcons name={icon} size={16} color={C.accent} />
       </View>
       <Text style={styles.detailLabel}>{label}</Text>
       <Text
@@ -599,7 +600,7 @@ export default function MyAssets() {
     if (loading) {
       return (
         <View style={styles.centerState}>
-          <ActivityIndicator size="large" color={BRAND.primary} />
+          <ActivityIndicator size="large" color={C.accent} />
           <Text style={styles.stateText}>Loading your assets...</Text>
         </View>
       );
@@ -609,7 +610,7 @@ export default function MyAssets() {
       return (
         <View style={styles.centerState}>
           <View style={styles.stateIconRing}>
-            <MaterialCommunityIcons name="cloud-alert" size={36} color={BRAND.primary} />
+            <MaterialCommunityIcons name="cloud-alert" size={36} color={C.accent} />
           </View>
           <Text style={styles.stateTitle}>Couldn't load assets</Text>
           <Text style={styles.stateText}>{error}</Text>
@@ -656,7 +657,7 @@ export default function MyAssets() {
               <MaterialCommunityIcons
                 name="package-variant"
                 size={36}
-                color={BRAND.primary}
+                color={C.accent}
               />
             </View>
             <Text style={styles.stateTitle}>No assets allocated</Text>
@@ -674,8 +675,8 @@ export default function MyAssets() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadAssets(true)}
-            colors={[BRAND.primary]}
-            tintColor={BRAND.primary}
+            colors={[C.accent]}
+            tintColor={C.accent}
           />
         }
       />
@@ -701,10 +702,10 @@ export default function MyAssets() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
   },
 
   // Hero
@@ -761,7 +762,7 @@ const styles = StyleSheet.create({
   countChipText: {
     fontSize: 12,
     fontWeight: "700",
-    color: BRAND.primary,
+    color: c.accent,
   },
   // Shared bits
   warrantyPill: {
@@ -802,7 +803,7 @@ const styles = StyleSheet.create({
   codeChipText: {
     fontSize: 10.5,
     fontWeight: "700",
-    color: BRAND.primary,
+    color: c.accent,
     letterSpacing: 0.4,
   },
 
@@ -812,7 +813,7 @@ const styles = StyleSheet.create({
     marginBottom: GRID_GAP,
   },
   gridCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 20,
     overflow: "hidden",
     elevation: 4,
@@ -860,7 +861,7 @@ const styles = StyleSheet.create({
   listRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 18,
     padding: 12,
     marginBottom: 10,
@@ -945,14 +946,14 @@ const styles = StyleSheet.create({
   // Sheet
   sheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 22, 48, 0.55)",
+    backgroundColor: c.overlay,
   },
   sheet: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: "hidden",
@@ -1047,7 +1048,7 @@ const styles = StyleSheet.create({
 
   // Warranty card
   warrantyCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
@@ -1081,7 +1082,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(0, 41, 87, 0.08)",
+    backgroundColor: c.primaryFaint,
     marginTop: 14,
     overflow: "hidden",
   },
@@ -1106,14 +1107,14 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "rgba(0, 41, 87, 0.45)",
+    color: c.primaryMuted,
     textTransform: "uppercase",
     letterSpacing: 1.1,
     marginBottom: 8,
     marginLeft: 4,
   },
   sectionCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -1125,7 +1126,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(0, 41, 87, 0.08)",
+    borderBottomColor: c.border,
   },
   detailIcon: {
     width: 30,
@@ -1151,7 +1152,7 @@ const styles = StyleSheet.create({
   detailValueEmpty: {
     fontWeight: "400",
     fontStyle: "italic",
-    color: "rgba(20, 33, 61, 0.35)",
+    color: c.textFaint,
   },
   emptyNote: {
     fontSize: 13,
@@ -1165,4 +1166,4 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingVertical: 12,
   },
-});
+}));

@@ -24,6 +24,7 @@ import LottieView from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const { width } = Dimensions.get("window");
 const scaleFont = (size: any) => Math.round(size * (width / 375));
@@ -54,32 +55,33 @@ interface PhaseConfig {
   bgAccent: string;
 }
 
-const PHASE_CONFIG: Record<NonNullable<PunchPhase>, PhaseConfig> = {
+// A function (not a constant) so colours follow the active light / dark theme.
+const getPhaseConfig = (): Record<NonNullable<PunchPhase>, PhaseConfig> => ({
   locating: {
     label: "Getting your location",
     sublabel: "Please stay still for a moment…",
-    animColor: "#0066C2",
-    bgAccent: "#E8F1FC",
+    animColor: C.link,
+    bgAccent: C.primaryFaint,
   },
   processing: {
     label: "Recording punch",
     sublabel: "Sending to server…",
-    animColor: BRAND.primary,
-    bgAccent: "#EAF0F8",
+    animColor: C.accent,
+    bgAccent: C.primaryFaint,
   },
   success: {
     label: "Punch recorded!",
     sublabel: "Your attendance is saved",
-    animColor: "#059669",
-    bgAccent: "#E7F7EF",
+    animColor: C.successText,
+    bgAccent: C.successBg,
   },
   error: {
     label: "Something went wrong",
     sublabel: "Please try again",
-    animColor: "#DC2626",
-    bgAccent: "#FDECEC",
+    animColor: C.dangerText,
+    bgAccent: C.dangerBg,
   },
-};
+});
 
 // Parses the "HH:mm:ss"-style times the API returns (same approach the
 // duration fallback uses). Returns null for anything unparseable.
@@ -146,7 +148,7 @@ const PunchOverlay: React.FC<PunchOverlayProps> = ({ phase, punchType }) => {
 
   if (!phase) return null;
 
-  const config = PHASE_CONFIG[phase];
+  const config = getPhaseConfig()[phase];
   const actionLabel = punchType === "in" ? "Clock In" : "Clock Out";
   const steps: NonNullable<PunchPhase>[] = ["locating", "processing", "success"];
   const activeIndex = phase === "error" ? -1 : steps.indexOf(phase);
@@ -163,7 +165,7 @@ const PunchOverlay: React.FC<PunchOverlayProps> = ({ phase, punchType }) => {
         ]}
       >
         <LinearGradient
-          colors={[config.bgAccent, "#FFFFFF"]}
+          colors={[config.bgAccent, C.surface]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.overlayAccent}
@@ -741,14 +743,14 @@ const PunchScreen: React.FC = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[BRAND.primary]}
-            tintColor={BRAND.primary}
+            colors={[C.accent]}
+            tintColor={C.accent}
           />
         }
       >
         {/* ── Command center ─────────────────────────────────────────── */}
         <LinearGradient
-          colors={["#001A3A", BRAND.primary, "#0058A8"]}
+          colors={C.heroGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
@@ -826,7 +828,7 @@ const PunchScreen: React.FC = () => {
           <View style={styles.cardHead}>
             <Text style={styles.cardTitle}>Today's activity</Text>
             <View style={styles.totalChip}>
-              <MaterialCommunityIcons name="chart-timeline-variant" size={13} color={BRAND.primary} />
+              <MaterialCommunityIcons name="chart-timeline-variant" size={13} color={C.accent} />
               <Text style={styles.totalChipText}>{totalTime || "0h 0m"}</Text>
             </View>
           </View>
@@ -925,14 +927,14 @@ const PunchScreen: React.FC = () => {
                 />
               ) : (
                 <View style={styles.mapLoading}>
-                  <ActivityIndicator size="large" color={BRAND.primary} />
+                  <ActivityIndicator size="large" color={C.accent} />
                 </View>
               )}
             </View>
 
             <View style={styles.addressContainer}>
               <View style={styles.addressIcon}>
-                <MaterialCommunityIcons name="map-marker-outline" size={18} color={BRAND.primary} />
+                <MaterialCommunityIcons name="map-marker-outline" size={18} color={C.accent} />
               </View>
               <Text style={styles.addressText}>
                 {address || "Fetching address..."}
@@ -959,11 +961,11 @@ const PunchScreen: React.FC = () => {
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   // ── PunchOverlay ──
   overlayBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 18, 42, 0.78)",
+    backgroundColor: c.overlay,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 999,
@@ -972,7 +974,7 @@ const styles = StyleSheet.create({
     width: width * 0.8,
     maxWidth: 360,
     borderRadius: 28,
-    backgroundColor: "#ffffff",
+    backgroundColor: c.surface,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
@@ -1037,10 +1039,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(0,41,87,0.12)",
+    backgroundColor: c.primaryFaint,
   },
   dotDone: {
-    backgroundColor: "rgba(0,41,87,0.45)",
+    backgroundColor: c.primaryMuted,
   },
   dotActive: {
     width: 26,
@@ -1049,7 +1051,7 @@ const styles = StyleSheet.create({
   // ── Screen ──
   container: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -1172,7 +1174,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.45,
     shadowRadius: 18,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
   },
   orb: {
     width: ORB_SIZE,
@@ -1229,7 +1231,7 @@ const styles = StyleSheet.create({
 
   // Activity card
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 22,
     padding: 16,
     marginTop: 20,
@@ -1265,7 +1267,7 @@ const styles = StyleSheet.create({
   totalChipText: {
     fontSize: 12.5,
     fontWeight: "800",
-    color: BRAND.primary,
+    color: c.accent,
   },
   track: {
     flexDirection: "row",
@@ -1279,9 +1281,9 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 2,
-    borderColor: "rgba(0,41,87,0.15)",
+    borderColor: c.border,
   },
   trackNodeDone: {
     backgroundColor: IN_GRADIENT[1],
@@ -1296,7 +1298,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginHorizontal: 6,
-    backgroundColor: "rgba(0,41,87,0.08)",
+    backgroundColor: c.primaryFaint,
     overflow: "hidden",
   },
   footer: {
@@ -1311,7 +1313,7 @@ const styles = StyleSheet.create({
   footerDivider: {
     width: StyleSheet.hairlineWidth,
     height: 30,
-    backgroundColor: "rgba(0,41,87,0.15)",
+    backgroundColor: c.primaryFaint,
   },
   footerValue: {
     fontSize: scaleFont(14),
@@ -1329,14 +1331,14 @@ const styles = StyleSheet.create({
   // Map modal
   modalContainer: {
     flex: 1,
-    backgroundColor: "rgba(0, 22, 48, 0.6)",
+    backgroundColor: c.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   mapContainer: {
     width: "92%",
     height: "80%",
-    backgroundColor: "white",
+    backgroundColor: c.surface,
     borderRadius: 24,
     overflow: "hidden",
   },
@@ -1379,9 +1381,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     padding: 14,
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(0,41,87,0.12)",
+    borderTopColor: c.border,
   },
   addressIcon: {
     width: 34,
@@ -1412,6 +1414,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-});
+}));
 
 export default PunchScreen;

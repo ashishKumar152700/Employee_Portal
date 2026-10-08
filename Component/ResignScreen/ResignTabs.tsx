@@ -2,6 +2,7 @@ import React from "react";
 import { FlatList, View, Text, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -81,7 +82,7 @@ export default function ResignNavigator() {
 
 const tabScreenOptions = {
   tabBarStyle: {
-    backgroundColor: "rgb(0,47,81)",
+    backgroundColor: C.primary,
     height: 66,
     paddingBottom: 8,
   },
@@ -94,7 +95,7 @@ const getTabIcon =
   ({ color }: { color: string }) =>
     <Icon name={iconName} color={color} size={25} />;
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   noDataText: {
     textAlign: "center",
     color: "gray",
@@ -105,15 +106,15 @@ const styles = StyleSheet.create({
     padding: 15,
     margin: 10,
     borderRadius: 10,
-    backgroundColor: "#fff",
+    backgroundColor: c.surface,
     elevation: 5,
   },
   headerRow: { flexDirection: "row", justifyContent: "space-between" },
-  itemText: { fontSize: 13, fontWeight: "600", color: "#444" },
+  itemText: { fontSize: 13, fontWeight: "600", color: c.text },
   statusText: { fontSize: 14, fontWeight: "bold" },
-  reasonText: { fontSize: 12, color: "#666", fontWeight: "500" },
+  reasonText: { fontSize: 12, color: c.textSoft, fontWeight: "500" },
   contentContainer: { paddingBottom: 50 },
-});
+}));
 
 const getStatusColor = (status: string) => ({
   color:

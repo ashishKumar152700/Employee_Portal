@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
 import LottieView from "lottie-react-native";
 import { BRAND } from "../../Global/GlassTheme";
+import { themedStyles } from "../../Global/ThemeContext";
 
 export const PAGE_BG = "#F4F7FB";
 
@@ -368,12 +369,12 @@ export const AssetDialog = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   toggle: {
     flexDirection: "row",
     padding: 3,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: BRAND.primaryBorder,
   },
@@ -478,11 +479,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "rgba(0, 41, 87, 0.18)",
-    backgroundColor: "#FFFFFF",
+    borderColor: c.border,
+    backgroundColor: c.surface,
   },
   secondaryText: {
-    color: BRAND.primary,
+    color: c.accent,
     fontSize: 15,
     fontWeight: "600",
   },
@@ -493,12 +494,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
-    backgroundColor: "rgba(0, 22, 48, 0.55)",
+    backgroundColor: c.overlay,
   },
   dialogCard: {
     width: "100%",
     maxWidth: 380,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingTop: 22,
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
   dialogTitle: {
     fontSize: 19,
     fontWeight: "700",
-    color: BRAND.primary,
+    color: c.accent,
     textAlign: "center",
   },
   dialogMessage: {
@@ -554,4 +555,4 @@ const styles = StyleSheet.create({
   dialogButton: {
     flex: 1,
   },
-});
+}));

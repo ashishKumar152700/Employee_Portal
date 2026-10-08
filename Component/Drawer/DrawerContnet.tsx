@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { clearAllCache } from "../../Services/Timesheet/timesheetService";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
+import { themedStyles, C, useTheme } from "../../Global/ThemeContext";
 
 export const CustomDrawerContent = ({
   onClose,
@@ -25,6 +26,7 @@ export const CustomDrawerContent = ({
   // The drawer Modal is edge-to-edge (RN 0.81 forces translucent system bars),
   // so the header and footer pad for the status bar and gesture bar themselves.
   const insets = useSafeAreaInsets();
+  const { isDark, toggle: toggleTheme } = useTheme();
 
   const [machineStatus, setMachineStatus] = useState<boolean>(true);
   const [statusLoading, setStatusLoading] = useState<boolean>(false);
@@ -122,7 +124,7 @@ export const CustomDrawerContent = ({
           <MaterialIcons
             name={item.icon as any}
             size={18}
-            color={isActive ? "#FFFFFF" : BRAND.primary}
+            color={isActive ? "#FFFFFF" : C.accent}
           />
         </View>
         <Text
@@ -134,7 +136,7 @@ export const CustomDrawerContent = ({
         <MaterialIcons
           name="chevron-right"
           size={20}
-          color={isActive ? "rgba(255,255,255,0.85)" : "rgba(0,41,87,0.28)"}
+          color={isActive ? "rgba(255,255,255,0.85)" : C.primaryMuted}
         />
       </View>
     );
@@ -182,7 +184,7 @@ export const CustomDrawerContent = ({
         <TouchableOpacity onPress={checkMachineStatus} activeOpacity={0.8}>
           <GlassSurface radius={16} style={styles.statusCard}>
             <View style={styles.iconTile}>
-              <MaterialIcons name="memory" size={18} color={BRAND.primary} />
+              <MaterialIcons name="memory" size={18} color={C.accent} />
             </View>
             <View style={styles.statusTextBlock}>
               <Text style={styles.statusText}>Biometric Device</Text>
@@ -262,7 +264,7 @@ export const CustomDrawerContent = ({
 
   return (
     <LinearGradient
-      colors={["#F2F6FB", "#FFFFFF"]}
+      colors={[C.surfaceAlt, C.surface]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}
@@ -290,7 +292,34 @@ export const CustomDrawerContent = ({
         </View>
 
         <View style={styles.headerTopRow}>
-          <Text style={styles.brandText}>Employee Self Service</Text>
+          <Text style={styles.brandText} numberOfLines={1} adjustsFontSizeToFit>
+            Employee Self Service
+          </Text>
+          {/* Light / dark switch */}
+          <TouchableOpacity
+            onPress={toggleTheme}
+            activeOpacity={0.85}
+            style={styles.themeToggle}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: isDark }}
+            accessibilityLabel="Dark mode"
+          >
+            <View style={[styles.themeKnob, isDark ? styles.themeKnobRight : styles.themeKnobLeft]} />
+            <View style={styles.themeIcon}>
+              <MaterialIcons
+                name="light-mode"
+                size={14}
+                color={isDark ? "rgba(255,255,255,0.6)" : C.primary}
+              />
+            </View>
+            <View style={styles.themeIcon}>
+              <MaterialIcons
+                name="dark-mode"
+                size={14}
+                color={isDark ? C.primary : "rgba(255,255,255,0.6)"}
+              />
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={onClose}
             style={styles.closeButton}
@@ -350,7 +379,7 @@ export const CustomDrawerContent = ({
             <MaterialIcons
               name="chevron-right"
               size={20}
-              color="rgba(0,41,87,0.28)"
+              color={C.primaryMuted}
             />
           </GlassSurface>
         </TouchableOpacity>
@@ -358,7 +387,7 @@ export const CustomDrawerContent = ({
           <MaterialIcons
             name="verified-user"
             size={12}
-            color="rgba(0,41,87,0.38)"
+            color={C.primaryMuted}
           />
           <Text style={styles.footerMetaText}>Secured session</Text>
         </View>
@@ -371,7 +400,7 @@ const H_GUTTER = 16;
 const HEADER_RADIUS = 28;
 const HEADER_BOTTOM_PADDING = 22;
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
   },
@@ -424,11 +453,44 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   brandText: {
+    flex: 1,
+    marginRight: 8,
     fontSize: 11,
     fontWeight: "700",
     color: "rgba(255, 255, 255, 0.7)",
     letterSpacing: 1.4,
     textTransform: "uppercase",
+  },
+  themeToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: 60,
+    height: 30,
+    borderRadius: 15,
+    padding: 3,
+    marginRight: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.22)",
+  },
+  themeKnob: {
+    position: "absolute",
+    top: 3,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  themeKnobLeft: {
+    left: 3,
+  },
+  themeKnobRight: {
+    left: 31,
+  },
+  themeIcon: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   closeButton: {
     width: 32,
@@ -516,7 +578,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "rgba(0, 41, 87, 0.42)",
+    color: c.primaryMuted,
     textTransform: "uppercase",
     letterSpacing: 1.2,
     marginHorizontal: H_GUTTER + 4,
@@ -661,10 +723,10 @@ const styles = StyleSheet.create({
   },
   footerMetaText: {
     fontSize: 11,
-    color: "rgba(0, 41, 87, 0.4)",
+    color: c.primaryMuted,
     marginLeft: 5,
     letterSpacing: 0.3,
   },
-});
+}));
 
 export default CustomDrawerContent;

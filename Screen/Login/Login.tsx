@@ -26,6 +26,7 @@ import { useDispatch } from "react-redux";
 import LottieView from "lottie-react-native";
 import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
 import {saveUserCredentials,getUserCredentials} from "../../src/utils/secureStorage";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 
 const { width, height } = Dimensions.get("window");
@@ -347,7 +348,7 @@ const LoginScreen = () => {
     <>
       <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
       <LinearGradient
-        colors={["rgb(0, 41, 87)", "rgba(0, 41, 87, 0.8)", "#FFFFFF"]}
+        colors={["rgb(0, 41, 87)", "rgba(0, 41, 87, 0.8)", C.background]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -408,10 +409,7 @@ const LoginScreen = () => {
             {/* Login Card */}
             <View style={styles.loginCard}>
               <LinearGradient
-                colors={[
-                  "rgba(255, 255, 255, 0.95)",
-                  "rgba(255, 255, 255, 0.9)",
-                ]}
+                colors={C.glass}
                 style={styles.cardGradient}
               >
                 <View style={styles.cardHeader}>
@@ -430,23 +428,23 @@ const LoginScreen = () => {
                       onChangeText={setEmployeecode}
                       style={styles.input}
                       mode="outlined"
-                      activeOutlineColor="rgb(0, 41, 87)"
-                      outlineColor="#E0E0E0"
+                      activeOutlineColor={C.accent}
+                      outlineColor={C.border}
                       theme={{
                         colors: {
-                          background: "#FFFFFF",
-                          onSurfaceVariant: "#999",
-                          outline: "#E0E0E0",
-                          primary: "rgb(0, 41, 87)",
-                          placeholder: "#999",
-                          onSurface: "#000",
-                          surface: "#FFFFFF",
+                          background: C.surface,
+                          onSurfaceVariant: C.textFaint,
+                          outline: C.border,
+                          primary: C.accent,
+                          placeholder: C.placeholder,
+                          onSurface: C.text,
+                          surface: C.surface,
                         },
                       }}
                       left={
                         <TextInput.Icon
                           icon="badge-account"
-                          color="rgb(0, 41, 87)"
+                          color={C.accent}
                         />
                       }
                       keyboardType="numeric"
@@ -465,23 +463,23 @@ const LoginScreen = () => {
                       secureTextEntry={secureTextEntry}
                       style={styles.input}
                       mode="outlined"
-                      activeOutlineColor="rgb(0, 41, 87)"
-                      outlineColor="#E0E0E0"
+                      activeOutlineColor={C.accent}
+                      outlineColor={C.border}
                       theme={{
                         colors: {
-                          background: "#FFFFFF",
-                          onSurfaceVariant: "#999",
-                          outline: "#E0E0E0",
-                          primary: "rgb(0, 41, 87)",
-                          placeholder: "#999",
-                          onSurface: "#000",
-                          surface: "#FFFFFF",
+                          background: C.surface,
+                          onSurfaceVariant: C.textFaint,
+                          outline: C.border,
+                          primary: C.accent,
+                          placeholder: C.placeholder,
+                          onSurface: C.text,
+                          surface: C.surface,
                         },
                       }}
                       left={
                         <TextInput.Icon
                           icon="lock-outline"
-                          color="rgb(0, 41, 87)"
+                          color={C.accent}
                         />
                       }
                       right={
@@ -489,7 +487,7 @@ const LoginScreen = () => {
                           icon={
                             secureTextEntry ? "eye-off-outline" : "eye-outline"
                           }
-                          color="rgb(0, 41, 87)"
+                          color={C.accent}
                           onPress={togglePasswordVisibility}
                         />
                       }
@@ -567,7 +565,7 @@ const LoginScreen = () => {
                       style={{
                         marginTop: 12,
                         padding: 12,
-                        backgroundColor: "#fee2e2",
+                        backgroundColor: C.dangerBg,
                         borderRadius: 8,
                         borderLeftWidth: 4,
                         borderLeftColor: "#dc2626",
@@ -575,7 +573,7 @@ const LoginScreen = () => {
                     >
                       <Text
                         style={{
-                          color: "#dc2626",
+                          color: C.dangerText,
                           fontSize: 12,
                           fontWeight: "600",
                         }}
@@ -591,7 +589,7 @@ const LoginScreen = () => {
                       style={{
                         marginTop: 16,
                         padding: 12,
-                        backgroundColor: "#fee2e2",
+                        backgroundColor: C.dangerBg,
                         borderRadius: 8,
                         borderLeftWidth: 4,
                         borderLeftColor: "#dc2626",
@@ -599,7 +597,7 @@ const LoginScreen = () => {
                     >
                       <Text
                         style={{
-                          color: "#dc2626",
+                          color: C.dangerText,
                           fontSize: 12,
                           fontWeight: "600",
                         }}
@@ -655,7 +653,7 @@ const LoginScreen = () => {
                   <Text
                     style={[
                       styles.loadingText,
-                      { color: "#dc2626", marginTop: -10 },
+                      { color: C.dangerText, marginTop: -10 },
                     ]}
                   >
                     Login Failed
@@ -665,7 +663,7 @@ const LoginScreen = () => {
                     style={[
                       styles.loadingSubtext,
                       {
-                        color: "#dc2626",
+                        color: C.dangerText,
                         fontWeight: "600",
                         marginTop: 6,
                         textAlign: "center",
@@ -685,7 +683,7 @@ const LoginScreen = () => {
                     }}
                     style={{
                       marginTop: 20,
-                      backgroundColor: "rgb(0, 41, 87)",
+                      backgroundColor: C.primary,
                       paddingVertical: 12,
                       paddingHorizontal: 26,
                       borderRadius: 12,
@@ -711,7 +709,7 @@ const LoginScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
   },
@@ -793,7 +791,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 41, 87, 0.1)",
+    borderBottomColor: c.border,
   },
   cardLogo: {
     width: 100,
@@ -807,12 +805,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     marginBottom: 8,
   },
   subtitleText: {
     fontSize: 16,
-    color: "#666",
+    color: c.textSoft,
     textAlign: "center",
   },
   formContainer: {
@@ -825,7 +823,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   inputContent: {
-    color: "#000",
+    color: c.text,
   },
   inputOutline: {
     borderRadius: 12,
@@ -876,7 +874,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: c.overlay,
   },
   loadingCard: {
     backgroundColor: "rgba(255, 255, 255, 0.98)",
@@ -899,18 +897,18 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 20,
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
   },
   loadingSubtext: {
     marginTop: 8,
-    color: "#666",
+    color: c.textSoft,
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
   },
-});
+}));
 
 export default LoginScreen;

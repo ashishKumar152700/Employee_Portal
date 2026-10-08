@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { PayrollAttendance } from "../../types/payroll.types";
+import { themedStyles } from "../../Global/ThemeContext";
 
 interface Props {
   attendance: PayrollAttendance;
@@ -38,7 +39,7 @@ const AttendanceSummary: React.FC<Props> = ({ attendance }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   grid: {
     gap: 10,
   },
@@ -48,37 +49,37 @@ const styles = StyleSheet.create({
   },
   tile: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: c.background,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#E9ECEF",
+    borderColor: c.border,
     alignItems: "center",
   },
   tileAccent: {
-    backgroundColor: "#EEF3FB",
-    borderColor: "rgba(0, 41, 87, 0.15)",
+    backgroundColor: c.primaryFaint,
+    borderColor: c.border,
   },
   tileLabel: {
     fontSize: 12,
-    color: "#6C757D",
+    color: c.textSoft,
     fontWeight: "500",
     marginBottom: 6,
     textAlign: "center",
   },
   tileLabelAccent: {
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
     fontWeight: "600",
   },
   tileValue: {
     fontSize: 22,
-    color: "#343A40",
+    color: c.text,
     fontWeight: "800",
   },
   tileValueAccent: {
-    color: "rgb(0, 41, 87)",
+    color: c.accent,
   },
-});
+}));
 
 export default AttendanceSummary;

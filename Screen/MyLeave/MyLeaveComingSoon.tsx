@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../Global/Types";
 import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 export default function MyLeaveScreen() {
     const [leaveDetails, setLeaveDetails] = useState(null);
@@ -214,7 +215,7 @@ export default function MyLeaveScreen() {
             name: "Paid",
             left: paidLeavesLeft,
             icon: "work",
-            color: "#002957",
+            color: C.accent,
             anim: cardAnimations[0],
             iconAnim: iconScaleAnims[0],
         },
@@ -222,7 +223,7 @@ export default function MyLeaveScreen() {
             name: "Casual",
             left: casualLeavesLeft,
             icon: "beach-access",
-            color: "#002957",
+            color: C.accent,
             anim: cardAnimations[1],
             iconAnim: iconScaleAnims[1],
         },
@@ -230,7 +231,7 @@ export default function MyLeaveScreen() {
             name: "Sick",
             left: sickLeavesLeft,
             icon: "local-hospital",
-            color: "#002957",
+            color: C.accent,
             anim: cardAnimations[2],
             iconAnim: iconScaleAnims[2],
         },
@@ -238,7 +239,7 @@ export default function MyLeaveScreen() {
             name: "Optional",
             left: optionalLeavesLeft,
             icon: "event-available",
-            color: "#002957",
+            color: C.accent,
             anim: cardAnimations[3],
             iconAnim: iconScaleAnims[3],
         },
@@ -270,12 +271,12 @@ export default function MyLeaveScreen() {
                                     { transform: [{ rotate: rotateInterpolate }] },
                                 ]}
                             >
-                                <Icon name="build" size={36} color="#002957" />
-                                {/*<Icon name="schedule" size={36} color="#002957" />*/}
-                                <Icon name="settings" size={36} color="#002957" />
-                                {/*<Icon name="hourglass-empty" size={36} color="#002957" />*/}
-                                {/*<Icon name="update" size={36} color="#002957" />*/}
-                                {/*<Icon name="rocket-launch" size={36} color="#002957" />*/}
+                                <Icon name="build" size={36} color={C.accent} />
+                                {/*<Icon name="schedule" size={36} color={C.accent} />*/}
+                                <Icon name="settings" size={36} color={C.accent} />
+                                {/*<Icon name="hourglass-empty" size={36} color={C.accent} />*/}
+                                {/*<Icon name="update" size={36} color={C.accent} />*/}
+                                {/*<Icon name="rocket-launch" size={36} color={C.accent} />*/}
 
                             </Animated.View>
                         </Animated.View>
@@ -385,10 +386,10 @@ export default function MyLeaveScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: "#f8f9fa",
+        backgroundColor: c.background,
     },
     safeArea: {
         flex: 1,
@@ -404,10 +405,10 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 26,
         fontWeight: "bold",
-        color: "#002957",
+        color: c.accent,
     },
     comingSoonCard: {
-        backgroundColor: "#fff",
+        backgroundColor: c.surface,
         borderRadius: 14,
         padding: 16,
         marginTop: 12,
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
         width: 84,
         height: 84,
         borderRadius: 32,
-        backgroundColor: "#e9f0f7",
+        backgroundColor: c.primaryFaint,
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 12,
@@ -435,13 +436,13 @@ const styles = StyleSheet.create({
     comingSoonTitle: {
         fontSize: 17,
         fontWeight: "bold",
-        color: "#002957",
+        color: c.accent,
         marginBottom: 4,
         textAlign: "center",
     },
     comingSoonSubtitle: {
         fontSize: 12,
-        color: "#6c757d",
+        color: c.textSoft,
         textAlign: "center",
     },
     balanceOverview: {
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#002957",
+        color: c.accent,
         marginBottom: 12,
     },
     leaveGrid: {
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
     },
     leaveCard: {
         width: "48%",
-        backgroundColor: "#fff",
+        backgroundColor: c.surface,
         borderRadius: 12,
         padding: 12,
         marginBottom: 10,
@@ -482,13 +483,13 @@ const styles = StyleSheet.create({
     leaveName: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#002957",
+        color: c.accent,
         marginBottom: 4,
     },
     leaveBalance: {
         fontSize: 22,
         fontWeight: "bold",
-        color: "#002957",
+        color: c.accent,
         lineHeight: 26,
     },
     leaveBalanceLabel: {
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     infoCard: {
-        backgroundColor: "#fff",
+        backgroundColor: c.surface,
         borderRadius: 12,
         padding: 12,
         shadowColor: "#000",
@@ -517,14 +518,14 @@ const styles = StyleSheet.create({
     infoText: {
         flex: 1,
         fontSize: 12,
-        color: "#495057",
+        color: c.textSoft,
         lineHeight: 16,
     },
     fab: {
         position: "absolute",
         right: 16,
         bottom: 26,
-        backgroundColor: "#002957",
+        backgroundColor: c.primary,
     },
-});
+}));
 

@@ -16,6 +16,7 @@ import {useSelector} from "react-redux";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import {managerLeaveRequestClass} from "../../Services/LeaveRequest/LeaveRequest.service";
 import {useFocusEffect} from "@react-navigation/native";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const {width} = Dimensions.get('window');
 
@@ -179,14 +180,14 @@ const LeaveRequest = () => {
         <View style={[styles.card, processingRequest === item.id && styles.processingCard]}>
           {index === 0 && (
               <View style={styles.instructionContainer}>
-                <Icon name="swipe" size={20} color="#002957"/>
+                <Icon name="swipe" size={20} color={C.accent}/>
                 <Text style={styles.instructionText}>Swipe left to approve or reject</Text>
               </View>
           )}
 
           {processingRequest === item.id ? (
               <View style={styles.processingContainer}>
-                <ActivityIndicator size="large" color="#002957"/>
+                <ActivityIndicator size="large" color={C.accent}/>
                 <Text style={styles.processingText}>
                   {confirmationModal.type === 'approve' ? 'Approving...' : 'Rejecting...'}
                 </Text>
@@ -195,12 +196,12 @@ const LeaveRequest = () => {
               <>
                 <View style={styles.cardHeader}>
                   <View style={styles.avatar}>
-                    <Icon name="person" size={24} color="#002957"/>
+                    <Icon name="person" size={24} color={C.accent}/>
                   </View>
                   <View style={styles.headerContent}>
                     <Text style={styles.name}>{item.user?.name || "N/A"}</Text>
                     <View style={styles.dateContainer}>
-                      <Icon name="event" size={16} color="#6c757d"/>
+                      <Icon name="event" size={16} color={C.textSoft}/>
                       <Text style={styles.date}>
                         {formatDate(item.leavestart)} to {formatDate(item.leaveend)}
                       </Text>
@@ -210,14 +211,14 @@ const LeaveRequest = () => {
 
                 <View style={styles.cardBody}>
                   <View style={styles.detailRow}>
-                    <Icon name="work-outline" size={18} color="#6c757d"/>
+                    <Icon name="work-outline" size={18} color={C.textSoft}/>
                     <Text style={styles.detailText}>
                       {item.leavetype} • {item.leavepart}
                     </Text>
                   </View>
 
                   <View style={styles.detailRow}>
-                    <Icon name="chat-bubble-outline" size={18} color="#6c757d"/>
+                    <Icon name="chat-bubble-outline" size={18} color={C.textSoft}/>
                     <Text style={styles.detailText}>{item.reason}</Text>
                   </View>
                 </View>
@@ -243,7 +244,7 @@ const LeaveRequest = () => {
   if (loading) {
     return (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#002957"/>
+          <ActivityIndicator size="large" color={C.accent}/>
         </View>
     );
   }
@@ -268,7 +269,7 @@ const LeaveRequest = () => {
               />
           ) : (
               <View style={styles.emptyContainer}>
-                <Icon name="inbox" size={64} color="#dee2e6"/>
+                <Icon name="inbox" size={64} color={C.textFaint}/>
                 <Text style={styles.emptyText}>No leave requests available</Text>
                 <Text style={styles.emptySubtext}>
                   All leave requests have been processed
@@ -290,7 +291,7 @@ const LeaveRequest = () => {
                     {confirmationModal.type === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
                   </Text>
                   <TouchableOpacity onPress={hideConfirmation} style={styles.closeButton}>
-                    <Icon name="close" size={24} color="#002957"/>
+                    <Icon name="close" size={24} color={C.accent}/>
                   </TouchableOpacity>
                 </View>
 
@@ -351,29 +352,29 @@ const LeaveRequest = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: c.background,
   },
   animatedContainer: {
     flex: 1,
   },
   header: {
     padding: 16,
-    backgroundColor: "white",
+    backgroundColor: c.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
+    borderBottomColor: c.border,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: "#6c757d",
+    color: c.textSoft,
   },
   listContainer: {
     padding: 16,
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: c.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -401,14 +402,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e9f0f7",
+    backgroundColor: c.primaryFaint,
     padding: 8,
     borderRadius: 8,
     marginBottom: 12,
   },
   instructionText: {
     fontSize: 14,
-    color: "#002957",
+    color: c.accent,
     marginLeft: 8,
     fontWeight: "500",
   },
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#e9f0f7",
+    backgroundColor: c.primaryFaint,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -432,7 +433,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
     marginBottom: 4,
   },
   dateContainer: {
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 14,
-    color: "#6c757d",
+    color: c.textSoft,
     marginLeft: 4,
   },
   cardBody: {
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 14,
-    color: "#495057",
+    color: c.textSoft,
     marginLeft: 8,
     flex: 1,
   },
@@ -469,22 +470,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   pendingBadge: {
-    backgroundColor: "#fff3cd",
+    backgroundColor: c.warningBg,
   },
   approvedBadge: {
-    backgroundColor: "#d4edda",
+    backgroundColor: c.successBg,
   },
   rejectedBadge: {
-    backgroundColor: "#f8d7da",
+    backgroundColor: c.dangerBg,
   },
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
   },
   applyDate: {
     fontSize: 12,
-    color: "#6c757d",
+    color: c.textSoft,
   },
   actions: {
     flexDirection: "column",
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   approve: {
-    backgroundColor: "#002957",
+    backgroundColor: c.primary,
     justifyContent: "center",
     alignItems: "center",
     width: 80,
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 16,
   },
   reject: {
-    backgroundColor: "#1a4a7a",
+    backgroundColor: c.primary,
     justifyContent: "center",
     alignItems: "center",
     width: 80,
@@ -526,13 +527,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#6c757d",
+    color: c.textSoft,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#adb5bd",
+    color: c.textFaint,
     textAlign: "center",
   },
   processingContainer: {
@@ -543,19 +544,19 @@ const styles = StyleSheet.create({
   processingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#002957",
+    color: c.accent,
     fontWeight: "500",
   },
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: c.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: "white",
+    backgroundColor: c.surface,
     borderRadius: 16,
     width: "100%",
     maxWidth: 400,
@@ -567,12 +568,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
+    borderBottomColor: c.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#002957",
+    color: c.accent,
   },
   closeButton: {
     padding: 4,
@@ -582,23 +583,23 @@ const styles = StyleSheet.create({
   },
   modalMessage: {
     fontSize: 16,
-    color: "#495057",
+    color: c.textSoft,
     marginBottom: 16,
   },
   requestDetails: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: c.background,
     borderRadius: 8,
     padding: 12,
   },
   detailLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#002957",
+    color: c.accent,
     marginTop: 8,
   },
   detailValue: {
     fontSize: 14,
-    color: "#495057",
+    color: c.textSoft,
     marginBottom: 4,
   },
   modalFooter: {
@@ -606,17 +607,17 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: "#e9ecef",
+    borderTopColor: c.border,
   },
   cancelButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: c.background,
   },
   cancelButtonText: {
-    color: "#6c757d",
+    color: c.textSoft,
     fontWeight: "600",
   },
   confirmButton: {
@@ -625,7 +626,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   approveButton: {
-    backgroundColor: "#002957",
+    backgroundColor: c.primary,
   },
   rejectButton: {
     backgroundColor: "#dc3545",
@@ -634,7 +635,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "600",
   },
-});
+}));
 
 export default LeaveRequest;
 
@@ -901,7 +902,7 @@ export default LeaveRequest;
 //           />
 //         ) : (
 //           <View style={styles.emptyContainer}>
-//             <Icon name="inbox" size={64} color="#dee2e6" />
+//             <Icon name="inbox" size={64} color={C.textFaint} />
 //             <Text style={styles.emptyText}>No leave requests available</Text>
 //             <Text style={styles.emptySubtext}>
 //               All leave requests have been processed

@@ -20,6 +20,7 @@ import PayrollStatusBadge from "../../Component/payroll/PayrollStatusBadge";
 import AttendanceSummary from "../../Component/payroll/AttendanceSummary";
 import TaxSummaryCard from "../../Component/payroll/TaxSummaryCard";
 import PayrollComponentRow from "../../Component/payroll/PayrollComponentRow";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const PRIMARY = "rgb(0, 41, 87)";
 
@@ -85,7 +86,7 @@ const PayrollDetailScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={PRIMARY} />
+          <ActivityIndicator size="large" color={C.accent} />
           <Text style={styles.loadingText}>Loading payroll details…</Text>
 
           <View style={styles.skeletonCard} />
@@ -100,7 +101,7 @@ const PayrollDetailScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.errorBox}>
-          <MaterialIcons name="error-outline" size={56} color="#CED4DA" />
+          <MaterialIcons name="error-outline" size={56} color={C.textFaint} />
           <Text style={styles.errorTitle}>Unable to load payroll.</Text>
           <Text style={styles.errorSubtitle}>{error || "Something went wrong."}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
@@ -118,7 +119,7 @@ const PayrollDetailScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />
         }
       >
         <View style={styles.backRow}>
@@ -127,7 +128,7 @@ const PayrollDetailScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <MaterialIcons name="arrow-back" size={20} color={PRIMARY} />
+            <MaterialIcons name="arrow-back" size={20} color={C.accent} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -254,7 +255,7 @@ const PayrollDetailScreen: React.FC = () => {
               })
             }
           >
-            <MaterialIcons name="file-download" size={18} color={PRIMARY} />
+            <MaterialIcons name="file-download" size={18} color={C.accent} />
             <Text style={styles.secondaryButtonText}>Download Payslip PDF</Text>
           </TouchableOpacity>
         </View>
@@ -263,10 +264,10 @@ const PayrollDetailScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: c.background,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -280,7 +281,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: "#EEF3FB",
+    backgroundColor: c.primaryFaint,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 14,
     fontWeight: "600",
-    color: PRIMARY,
+    color: c.accent,
     marginLeft: 4,
   },
   pageHeader: {
@@ -297,12 +298,12 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#212529",
+    color: c.text,
     marginBottom: 4,
   },
   pageSubtitle: {
     fontSize: 14,
-    color: "#6C757D",
+    color: c.textSoft,
     marginBottom: 10,
   },
   badgeRow: {
@@ -356,12 +357,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#343A40",
+    color: c.text,
     marginBottom: 10,
     marginTop: 6,
   },
   sectionCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 14,
     padding: 16,
     marginBottom: 18,
@@ -376,23 +377,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1.5,
-    borderTopColor: "#DEE2E6",
+    borderTopColor: c.border,
     paddingTop: 12,
     marginTop: 4,
   },
   totalLabel: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#343A40",
+    color: c.text,
   },
   totalValue: {
     fontSize: 16,
     fontWeight: "800",
-    color: PRIMARY,
+    color: c.accent,
   },
   noDataText: {
     fontSize: 14,
-    color: "#6C757D",
+    color: c.textSoft,
     fontStyle: "italic",
     textAlign: "center",
     paddingVertical: 10,
@@ -426,14 +427,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderWidth: 1.5,
-    borderColor: PRIMARY,
+    borderColor: c.accent,
     borderRadius: 12,
     paddingVertical: 14,
   },
   secondaryButtonText: {
-    color: PRIMARY,
+    color: c.accent,
     fontSize: 15,
     fontWeight: "600",
     marginLeft: 8,
@@ -447,13 +448,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#6C757D",
+    color: c.textSoft,
     marginBottom: 24,
   },
   skeletonCard: {
     width: "100%",
     height: 120,
-    backgroundColor: "#E9ECEF",
+    backgroundColor: c.surfaceAlt,
     borderRadius: 14,
     marginBottom: 14,
   },
@@ -466,13 +467,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#343A40",
+    color: c.text,
     marginTop: 16,
     marginBottom: 6,
   },
   errorSubtitle: {
     fontSize: 13,
-    color: "#6C757D",
+    color: c.textSoft,
     textAlign: "center",
     marginBottom: 20,
   },
@@ -490,6 +491,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-});
+}));
 
 export default PayrollDetailScreen;

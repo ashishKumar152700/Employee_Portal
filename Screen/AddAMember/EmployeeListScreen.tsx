@@ -24,6 +24,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { BiometricUserService } from '../../Services/BiometricService/BiometricUserService';
 import { BiometricUser } from '../../Global/BiometricUser';
 import EditUserModal from '../../Component/EditUserModal/EditUserModal';
+import { themedStyles } from "../../Global/ThemeContext";
 
 export default function EmployeeListScreen() {
   const [users, setUsers] = useState<BiometricUser[]>([]);
@@ -278,15 +279,15 @@ export default function EmployeeListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
   },
   searchbar: {
     margin: 16,
     elevation: 0,
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
   },
   listContainer: {
     padding: 16,
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
   userCard: {
     marginBottom: 12,
     elevation: 2,
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
   },
   userHeader: {
     flexDirection: 'row',
@@ -319,15 +320,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   userId: {
-    color: '#666',
+    color: c.textSoft,
     marginBottom: 8,
   },
   roleChip: {
     alignSelf: 'flex-start',
-    backgroundColor: '#e3f2fd',
+    backgroundColor: c.primaryFaint,
   },
   adminChip: {
-    backgroundColor: '#fff3e0',
+    backgroundColor: c.warningBg,
   },
   chipText: {
     fontSize: 12,
@@ -344,7 +345,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: c.text,
   },
   biometricChips: {
     flexDirection: 'row',
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   biometricChip: {
     marginRight: 8,
     marginBottom: 4,
-    backgroundColor: '#e8f5e8',
+    backgroundColor: c.successBg,
   },
   loadingContainer: {
     flex: 1,
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#666',
+    color: c.textSoft,
   },
   emptyContainer: {
     flex: 1,
@@ -371,6 +372,6 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
   },
   emptyText: {
-    color: '#666',
+    color: c.textSoft,
   },
-});
+}));

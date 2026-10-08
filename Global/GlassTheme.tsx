@@ -1,31 +1,62 @@
 import React from "react";
 import { StyleSheet, View, ViewStyle, StyleProp } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { C } from "./ThemeContext";
 
-// Primary brand palette shared by navigation surfaces (drawer, tab bars).
-export const BRAND = {
-  primary: "rgb(0, 41, 87)",
-  primaryLight: "rgb(0, 86, 160)",
-  primaryGradient: ["rgb(0, 41, 87)", "rgb(0, 86, 160)"] as const,
-  primaryMuted: "rgba(0, 41, 87, 0.48)",
-  primaryFaint: "rgba(0, 41, 87, 0.06)",
-  primaryBorder: "rgba(0, 41, 87, 0.08)",
-  ink: "#14213D",
-  inkSoft: "rgba(20, 33, 61, 0.62)",
-  shadow: "#001A38",
-  success: "#1E9E5A",
-  danger: "#D64545",
-  warning: "#E6A100",
+// Brand tokens used across navigation surfaces and redesigned screens.
+// Resolved against the active theme on every read, so they follow
+// light / dark mode. `primary` / `primaryGradient` are fills (navy in both
+// modes); use `accent` for navy-as-text so it stays readable in dark mode.
+type Brand = {
+  primary: string;
+  primaryLight: string;
+  primaryGradient: readonly [string, string];
+  primaryMuted: string;
+  primaryFaint: string;
+  primaryBorder: string;
+  accent: string;
+  ink: string;
+  inkSoft: string;
+  shadow: string;
+  success: string;
+  danger: string;
+  warning: string;
 };
+
+const brandGetters: { [K in keyof Brand]: () => Brand[K] } = {
+  primary: () => C.primary,
+  primaryLight: () => C.primaryLight,
+  primaryGradient: () => C.primaryGradient,
+  primaryMuted: () => C.primaryMuted,
+  primaryFaint: () => C.primaryFaint,
+  primaryBorder: () => C.border,
+  accent: () => C.accent,
+  ink: () => C.text,
+  inkSoft: () => C.textSoft,
+  shadow: () => C.shadow,
+  success: () => C.successSolid,
+  danger: () => C.dangerSolid,
+  warning: () => C.warningSolid,
+};
+
+export const BRAND: Brand = new Proxy({} as Brand, {
+  get: (_target, key) => brandGetters[key as keyof Brand]?.(),
+});
 
 // Frosted-glass tokens. Without a native blur, the "glass" look is built from
 // stacked translucent gradients, a bright top highlight and a tinted hairline.
 export const GLASS = {
-  light: ["rgba(255, 255, 255, 0.94)", "rgba(240, 245, 252, 0.88)"] as const,
+  get light() {
+    return C.glass;
+  },
   dark: ["rgba(255, 255, 255, 0.12)", "rgba(255, 255, 255, 0.1)"] as const,
-  highlightLight: "rgba(255, 255, 255, 0.95)",
+  get highlightLight() {
+    return C.glassHighlight;
+  },
   highlightDark: "rgba(255, 255, 255, 0.28)",
-  borderLight: "rgba(0, 41, 87, 0.08)",
+  get borderLight() {
+    return C.glassBorder;
+  },
   borderDark: "rgba(255, 255, 255, 0.2)",
 };
 

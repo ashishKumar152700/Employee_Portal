@@ -2,7 +2,7 @@
 (global as any).__reanimatedWorkletInit = () => {};
 import "react-native-reanimated";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -23,7 +23,17 @@ import AddMemberNavigator from "./Component/AddMemberScreen/addMemberTabs";
 import OvertimeNavigator from "./Component/OvertimeScreen/OvertimeTabs";
 import ResignNavigator from "./Component/ResignScreen/ResignTabs";
 import TimesheetCalendar from "./Screen/Timesheet/TimesheetCalendar";
-import { NavigationContainer } from "@react-navigation/native";
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+} from "@react-navigation/native";
+import {
+  MD3DarkTheme,
+  MD3LightTheme,
+  Provider as PaperProvider,
+} from "react-native-paper";
+import { C, ThemeProvider, useTheme } from "./Global/ThemeContext";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "react-native";
 import { useOTAUpdate } from "./src/hooks/useOTAUpdate";
@@ -90,9 +100,41 @@ function AppStackScreen() {
 function Navigation() {
   const userDetails = useSelector((state: any) => state.userDetails);
   const isLoggedIn = userDetails && userDetails.user;
+  const { mode, isDark } = useTheme();
+
+  // Switching theme remounts the navigator (key={mode}) so every screen
+  // re-renders with the new palette; the saved state puts the user back on
+  // the same screen.
+  const navStateRef = useRef<any>(undefined);
+  useEffect(() => {
+    // Auth and app stacks have different shapes; never restore across them.
+    navStateRef.current = undefined;
+  }, [isLoggedIn]);
+
+  const navTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: C.accent,
+        background: C.background,
+        card: C.surface,
+        text: C.text,
+        border: C.border,
+      },
+    };
+  }, [mode]);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      key={mode}
+      theme={navTheme}
+      initialState={navStateRef.current}
+      onStateChange={(state) => {
+        navStateRef.current = state;
+      }}
+    >
       <StatusBar
         barStyle="light-content"
         backgroundColor="rgb(0, 41, 87)"
@@ -104,20 +146,47 @@ function Navigation() {
   );
 }
 
+function ThemedRoot() {
+  const { mode, isDark } = useTheme();
+  const paperTheme = useMemo(() => {
+    const base = isDark ? MD3DarkTheme : MD3LightTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: C.accent,
+        background: C.background,
+        surface: C.surface,
+        onSurface: C.text,
+      },
+    };
+  }, [mode]);
+
+  return (
+    <PaperProvider theme={paperTheme}>
+      <SafeAreaView
+        edges={["top", "left", "right"]}
+        style={{
+          flex: 1,
+          // Status-bar strip: navy in both modes, matching every header.
+          backgroundColor: C.primary,
+        }}
+      >
+        <Navigation />
+      </SafeAreaView>
+    </PaperProvider>
+  );
+}
+
 export default function App() {
   useOTAUpdate();
 
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <SafeAreaView
-          edges={["top", "left", "right"]}
-          style={{
-            flex: 1,
-          }}
-        >
-          <Navigation />
-        </SafeAreaView>
+        <ThemeProvider>
+          <ThemedRoot />
+        </ThemeProvider>
       </SafeAreaProvider>
     </Provider>
   );

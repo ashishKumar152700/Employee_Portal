@@ -16,6 +16,7 @@ import {
   IconButton,
 } from 'react-native-paper';
 import { BiometricUser } from '../../Global/BiometricUser';
+import { themedStyles } from "../../Global/ThemeContext";
 ;
 
 interface EditUserModalProps {
@@ -145,10 +146,10 @@ export default function EditUserModal({ visible, user, onClose, onUpdate }: Edit
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
   },
   errorText: {
     color: '#f44336',
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 16,
     marginBottom: 12,
-    color: '#333',
+    color: c.text,
     fontWeight: '600',
   },
   radioGroup: {
@@ -207,6 +208,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   cancelButton: {
-    borderColor: '#666',
+    borderColor: c.borderStrong,
   },
-});
+}));

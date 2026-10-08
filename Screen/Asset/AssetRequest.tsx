@@ -30,6 +30,7 @@ import {
   PAGE_BG,
   PrimaryButton,
 } from "./AssetUI";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const GRID_GUTTER = 16;
 const GRID_GAP = 10;
@@ -95,7 +96,7 @@ const CategoryCard = ({
         style={styles.categoryCard}
       >
         <View style={styles.addMark}>
-          <FontAwesome name="plus" size={8} color={BRAND.primary} />
+          <FontAwesome name="plus" size={8} color={C.accent} />
         </View>
 
         <DeviceBadge category={item.category} size={44} />
@@ -106,7 +107,7 @@ const CategoryCard = ({
 
         {isRaising && (
           <View style={styles.raisingOverlay}>
-            <ActivityIndicator size="small" color={BRAND.primary} />
+            <ActivityIndicator size="small" color={C.accent} />
             <Text style={styles.raisingText}>Raising…</Text>
           </View>
         )}
@@ -323,7 +324,7 @@ export default function AssetRequest() {
       {assetCategories.length === 0 && !assetLoading ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIconRing}>
-            <FontAwesome name="cube" size={36} color={BRAND.primary} />
+            <FontAwesome name="cube" size={36} color={C.accent} />
           </View>
           <Text style={styles.emptyStateTitle}>No Categories Available</Text>
           <Text style={styles.emptyStateText}>
@@ -394,10 +395,10 @@ export default function AssetRequest() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: c.background,
   },
 
   // Hero stats
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
     marginBottom: GRID_GAP,
   },
   categoryCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 18,
     paddingTop: 16,
     paddingBottom: 12,
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   raisingText: {
     fontSize: 11,
     fontWeight: "600",
-    color: BRAND.primary,
+    color: c.accent,
   },
 
   // Empty state
@@ -562,4 +563,4 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.7)",
     marginTop: 4,
   },
-});
+}));

@@ -22,6 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import LottieView from "lottie-react-native";
 import { leaveHistoryPending } from "../../Services/Leave/Leave.service";
 import { managerLeaveRequestClass } from "../../Services/LeaveRequest/LeaveRequest.service";
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 if (
   Platform.OS === "android" &&
@@ -422,7 +423,7 @@ const LeaveCard = ({
                   {item.leavetype}
                 </Text>
                 <View style={styles.appliedRow}>
-                  <Icon name="calendar-plus-o" size={12} color="#8A96A3" />
+                  <Icon name="calendar-plus-o" size={12} color={C.textSoft} />
                   <Text style={styles.appliedText}>
                     Applied {formatDate(item.applydate)}
                   </Text>
@@ -444,7 +445,7 @@ const LeaveCard = ({
               <View style={styles.gridCol}>
                 <Text style={styles.gridLabel}>FROM</Text>
                 <View style={styles.gridValueRow}>
-                  <Icon name="calendar" size={13} color={PRIMARY} />
+                  <Icon name="calendar" size={13} color={C.accent} />
                   <Text style={styles.gridValue}>
                     {formatDate(item.leavestart)}
                   </Text>
@@ -456,7 +457,7 @@ const LeaveCard = ({
               <View style={styles.gridCol}>
                 <Text style={styles.gridLabel}>TO</Text>
                 <View style={styles.gridValueRow}>
-                  <Icon name="calendar" size={13} color={PRIMARY} />
+                  <Icon name="calendar" size={13} color={C.accent} />
                   <Text style={styles.gridValue}>
                     {formatDate(item.leaveend)}
                   </Text>
@@ -468,7 +469,7 @@ const LeaveCard = ({
               <View style={styles.gridCol}>
                 <Text style={styles.gridLabel}>DAY TYPE</Text>
                 <View style={styles.gridValueRow}>
-                  <Icon name="clock-o" size={13} color={PRIMARY} />
+                  <Icon name="clock-o" size={13} color={C.accent} />
                   {/* <Text style={styles.gridValue}>{item.leavepart}</Text> */}
                   <Text style={styles.gridValue}>
                     {formatLeavePart(item.leavepart)}
@@ -495,7 +496,7 @@ const LeaveCard = ({
             </View>
 
             <View style={styles.reasonBox}>
-    <Icon name="calendar-check-o" size={13} color="#8A96A3" />
+    <Icon name="calendar-check-o" size={13} color={C.textSoft} />
 
     <Text style={styles.reasonText}>
         Duration : {item.leaveDays ?? item.days ?? "--"} Day(s)
@@ -505,7 +506,7 @@ const LeaveCard = ({
 
             {!!item.reason && (
               <View style={styles.reasonBox}>
-                <Icon name="commenting-o" size={13} color="#8A96A3" />
+                <Icon name="commenting-o" size={13} color={C.textSoft} />
                 <Text style={styles.reasonText} numberOfLines={3}>
                   {item.reason}
                 </Text>
@@ -675,7 +676,7 @@ const LeaveRoute = ({ leaveType, navigation }) => {
   if (loading && !refreshing) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={PRIMARY} />
+        <ActivityIndicator size="large" color={C.accent} />
         <Text style={styles.loaderText}>Loading records…</Text>
       </View>
     );
@@ -703,7 +704,7 @@ const LeaveRoute = ({ leaveType, navigation }) => {
   return leaveData.length === 0 ? (
     <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim }]}>
       <View style={styles.emptyIconWrap}>
-        <Icon name="inbox" size={48} color="#B9C4D0" />
+        <Icon name="inbox" size={48} color={C.textFaint} />
       </View>
       <Text style={styles.emptyText}>No leave records available</Text>
       <Text style={styles.emptySubText}>
@@ -720,8 +721,8 @@ const LeaveRoute = ({ leaveType, navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[PRIMARY]}
-            tintColor={PRIMARY}
+            colors={[C.accent]}
+            tintColor={C.accent}
           />
         }
         contentContainerStyle={{ paddingBottom: 24, paddingTop: 8 }}
@@ -822,8 +823,8 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           outputRange: [1, 1.04],
         });
 
-        const iconColor = isFocused ? "#FFFFFF" : "#8A96A3";
-        const textColor = isFocused ? "#FFFFFF" : "#8A96A3";
+        const iconColor = isFocused ? "#FFFFFF" : C.textSoft;
+        const textColor = isFocused ? "#FFFFFF" : C.textSoft;
 
         return (
           <TouchableOpacity
@@ -894,8 +895,8 @@ export default function LeaveTabNavigator({ navigation }) {
 /* ---------------------------------------------------------
    Styles
 --------------------------------------------------------- */
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.background },
 
   /* Header */
   headerContainer: {
@@ -939,7 +940,7 @@ const styles = StyleSheet.create({
   loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   loaderText: {
     marginTop: 10,
-    color: "#8A96A3",
+    color: c.textSoft,
     fontSize: 13,
     fontWeight: "500",
   },
@@ -954,14 +955,14 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "#FDEDED",
+    backgroundColor: c.dangerBg,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 14,
   },
   errorText: {
     fontSize: 14,
-    color: "#495057",
+    color: c.textSoft,
     fontWeight: "600",
     textAlign: "center",
   },
@@ -992,15 +993,15 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#EEF2F7",
+    backgroundColor: c.surfaceAlt,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
   },
-  emptyText: { fontSize: 15.5, color: "#495057", fontWeight: "700" },
+  emptyText: { fontSize: 15.5, color: c.textSoft, fontWeight: "700" },
   emptySubText: {
     fontSize: 12.5,
-    color: "#8A96A3",
+    color: c.textSoft,
     marginTop: 4,
     textAlign: "center",
     fontWeight: "500",
@@ -1009,7 +1010,7 @@ const styles = StyleSheet.create({
   /* Card */
   card: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 18,
     overflow: "hidden",
     shadowColor: "#0A1F44",
@@ -1027,14 +1028,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   titleBlock: { flex: 1, marginRight: 10 },
-  cardTitle: { fontSize: 16.5, fontWeight: "800", color: PRIMARY },
+  cardTitle: { fontSize: 16.5, fontWeight: "800", color: c.accent },
   appliedRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 4,
     gap: 5,
   },
-  appliedText: { fontSize: 11.5, color: "#8A96A3", fontWeight: "500" },
+  appliedText: { fontSize: 11.5, color: c.textSoft, fontWeight: "500" },
 
   statusTag: {
     flexDirection: "row",
@@ -1044,14 +1045,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 5,
   },
-  pendingBadge: { backgroundColor: "#FFF4E0" },
-  approvedBadge: { backgroundColor: "#E4F7EC" },
-  rejectedBadge: { backgroundColor: "#FDEBEA" },
+  pendingBadge: { backgroundColor: c.warningBg },
+  approvedBadge: { backgroundColor: c.successBg },
+  rejectedBadge: { backgroundColor: c.dangerBg },
   statusTagText: { fontSize: 10.5, fontWeight: "800", letterSpacing: 0.3 },
 
   divider: {
     height: 1,
-    backgroundColor: "#EEF1F5",
+    backgroundColor: c.surfaceAlt,
     marginTop: 14,
     marginBottom: 12,
   },
@@ -1063,22 +1064,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   gridCol: { flex: 1 },
-  gridDivider: { width: 1, backgroundColor: "#EEF1F5", marginHorizontal: 14 },
+  gridDivider: { width: 1, backgroundColor: c.surfaceAlt, marginHorizontal: 14 },
   gridLabel: {
     fontSize: 10,
-    color: "#B0B9C4",
+    color: c.textFaint,
     fontWeight: "700",
     letterSpacing: 0.6,
     marginBottom: 5,
   },
   gridValueRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  gridValue: { fontSize: 13.5, color: "#2E3A4A", fontWeight: "700" },
+  gridValue: { fontSize: 13.5, color: c.text, fontWeight: "700" },
   miniDot: { width: 8, height: 8, borderRadius: 4 },
 
   reasonBox: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: "#F7F9FC",
+    backgroundColor: c.surfaceAlt,
     borderRadius: 12,
     padding: 10,
     gap: 8,
@@ -1087,7 +1088,7 @@ const styles = StyleSheet.create({
   reasonText: {
     flex: 1,
     fontSize: 12.5,
-    color: "#6B7684",
+    color: c.textSoft,
     lineHeight: 18,
     fontStyle: "italic",
   },
@@ -1137,7 +1138,7 @@ const styles = StyleSheet.create({
   /* Cancel confirmation modal */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,20,45,0.55)",
+    backgroundColor: c.overlay,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 28,
@@ -1145,7 +1146,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 360,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderRadius: 26,
     paddingTop: 8,
     paddingBottom: 22,
@@ -1171,13 +1172,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18.5,
     fontWeight: "800",
-    color: PRIMARY,
+    color: c.accent,
     textAlign: "center",
     marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: "#6B7684",
+    color: c.textSoft,
     textAlign: "center",
     lineHeight: 19,
     marginBottom: 24,
@@ -1192,14 +1193,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: "#F1F4F8",
+    backgroundColor: c.surfaceAlt,
     borderWidth: 1,
-    borderColor: "#E3E8EE",
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
   },
   modalKeepButtonText: {
-    color: PRIMARY,
+    color: c.accent,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1229,9 +1230,9 @@ const styles = StyleSheet.create({
   /* Custom tab bar */
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     borderTopWidth: 1,
-    borderTopColor: "#EEF1F5",
+    borderTopColor: c.border,
     paddingHorizontal: 10,
     paddingTop: 8,
     paddingBottom: Platform.OS === "ios" ? 22 : 10,
@@ -1249,4 +1250,4 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   tabLabel: { fontSize: 13 },
-});
+}));

@@ -5,6 +5,7 @@ import { TextInput, FAB } from 'react-native-paper';
 import { RootStackParamList } from '../../Global/Types';
 import { NativeStackNavigationProp  } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const SalaryAdvanceRequestForm: React.FC = () => {
   const [name, setName] = useState<string>('');
@@ -46,8 +47,8 @@ const SalaryAdvanceRequestForm: React.FC = () => {
             disabled
             style={[styles.input, styles.halfInput]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: 'white' } }}
           />
           <TextInput
@@ -57,8 +58,8 @@ const SalaryAdvanceRequestForm: React.FC = () => {
             disabled
             style={[styles.input, styles.halfInput]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: 'white' } }}
           />
         </View>
@@ -72,8 +73,8 @@ const SalaryAdvanceRequestForm: React.FC = () => {
             disabled
             style={[styles.input, styles.halfInput]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: 'white' } }}
           />
           <TextInput
@@ -83,8 +84,8 @@ const SalaryAdvanceRequestForm: React.FC = () => {
 
             style={[styles.input, styles.halfInput]}
             mode="outlined"
-            activeOutlineColor="rgb(0, 41, 87)"
-            outlineColor="rgb(0, 41, 87)"
+            activeOutlineColor={C.accent}
+            outlineColor={C.accent}
             theme={{ colors: { background: 'white' } }}
           />
         </View>
@@ -96,8 +97,8 @@ const SalaryAdvanceRequestForm: React.FC = () => {
           onChangeText={setAmount}
           style={styles.input}
           mode="outlined"
-          activeOutlineColor="rgb(0, 41, 87)"
-          outlineColor="rgb(0, 41, 87)"
+          activeOutlineColor={C.accent}
+          outlineColor={C.accent}
           theme={{ colors: { background: 'white' } }}
         />
         <TextInput
@@ -106,13 +107,13 @@ const SalaryAdvanceRequestForm: React.FC = () => {
           onChangeText={setReason}
           style={styles.input}
           mode="outlined"
-          activeOutlineColor="rgb(0, 41, 87)"
-          outlineColor="rgb(0, 41, 87)"
+          activeOutlineColor={C.accent}
+          outlineColor={C.accent}
           theme={{ colors: { background: 'white' } }}
         />
 
      
-                <Button title="Submit Request" onPress={handleSubmit} color="rgb(0, 41, 87)" />
+                <Button title="Submit Request" onPress={handleSubmit} color={C.accent} />
         
       </ScrollView>
 
@@ -127,10 +128,10 @@ const SalaryAdvanceRequestForm: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
   },
   scrollView: {
     padding: 20,
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '600',
-    color: 'rgb(0, 41, 87)',
+    color: c.accent,
     marginBottom: 30,
     textAlign: 'center',
   },
@@ -153,10 +154,10 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 20,
-    backgroundColor: 'white',
+    backgroundColor: c.surface,
   },
   submitButton: {
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: c.primary,
     borderRadius: 5,
     marginTop: 20,
   },
@@ -164,9 +165,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: 'rgb(0, 41, 87)',
+    backgroundColor: c.primary,
     borderRadius: 50,
   },
-});
+}));
 
 export default SalaryAdvanceRequestForm;

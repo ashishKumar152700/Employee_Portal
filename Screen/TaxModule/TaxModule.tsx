@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
 import { MaterialIcons } from '@expo/vector-icons';
+import { themedStyles, C } from "../../Global/ThemeContext";
 
 const TaxModule = () => {
   const currentDate = new Date();
@@ -34,7 +35,7 @@ const TaxModule = () => {
           onValueChange={(value) => setSelectedYear(value)}
           items={years}
           value={selectedYear}
-          style={pickerSelectStyles}
+          style={getPickerSelectStyles()}
         />
       </View>
       
@@ -54,9 +55,9 @@ const TaxModule = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#F7F9FC' },
-  title: { fontSize: 30, fontWeight: 'bold', marginBottom: 20, color: '#1F3A93', textAlign: 'center' },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, padding: 20, backgroundColor: c.surfaceAlt },
+  title: { fontSize: 30, fontWeight: 'bold', marginBottom: 20, color: c.accent, textAlign: 'center' },
   pickerContainer: {
     padding: 1,
     marginBottom: 15,
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.surface,
     borderRadius: 12,
     marginBottom: 10,
     shadowColor: '#000',
@@ -80,9 +81,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  monthText: { fontSize: 13, color: '#34495E', fontWeight: '600' },
+  monthText: { fontSize: 13, color: c.text, fontWeight: '600' },
   downloadButton: {
-    backgroundColor: 'rgb(0, 41,87)',
+    backgroundColor: c.primary,
     padding: 12,
     borderRadius: 5,
     shadowColor: '#1F3A93',
@@ -90,11 +91,12 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
-});
+}));
 
-const pickerSelectStyles = {
-  inputIOS: { fontSize: 16, padding: 12, backgroundColor: 'white', borderRadius: 8 },
-  inputAndroid: { fontSize: 16, padding: 12, backgroundColor: 'white', borderRadius: 8 },
-};
+// A function so the picker follows the active light / dark theme.
+const getPickerSelectStyles = () => ({
+  inputIOS: { fontSize: 16, padding: 12, backgroundColor: C.surface, borderRadius: 8, color: C.text },
+  inputAndroid: { fontSize: 16, padding: 12, backgroundColor: C.surface, borderRadius: 8, color: C.text },
+});
 
 export default TaxModule;
