@@ -12,10 +12,7 @@ class LoginServices {
       });
 
       if (response.status === 200) {
-        console.log(
-          "----------------------------------------",
-          response.data.data
-        );
+        // Don't log response.data: it contains the access token.
         const { accessToken, user } = response.data.data;
 
         await AsyncStorage.setItem("accessToken", accessToken);
@@ -40,7 +37,13 @@ class LoginServices {
         throw new Error(response.data.message || "Login failed");
       }
     } catch (error: any) {
-      console.error("Error during login:", error);
+      // Log only status + message: the raw axios error includes the request
+      // body, i.e. the user's plain-text password.
+      console.error(
+        "Error during login:",
+        error?.response?.status ?? "",
+        error?.message
+      );
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       } else {

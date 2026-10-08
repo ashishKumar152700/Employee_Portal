@@ -1,25 +1,29 @@
-import React, { useState, useEffect, useRef, memo } from "react";
-import { FontAwesome } from "@expo/vector-icons";
+import React, {
+  forwardRef,
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Switch,
+  ActivityIndicator,
+  Animated,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
-  Modal,
-  Dimensions,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  Animated,
-  KeyboardAvoidingView,
+  Text,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import LottieView from "lottie-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   TimesheetTask,
   Project,
@@ -28,21 +32,656 @@ import {
   updateTask,
   deleteTask,
   getProjects,
-  clearCache,
 } from "../../Services/Timesheet/timesheetService";
+import { BRAND } from "../../Global/GlassTheme";
 
-const { width, height } = Dimensions.get("window");
+const PRIMARY = BRAND.primary;
+const GRADIENT = BRAND.primaryGradient;
+const PAGE_BG = "#F4F7FB";
+const DAILY_TARGET_MINUTES = 8 * 60;
+const MAX_MINUTES = 24 * 60;
+const STEP_MINUTES = 15;
+const DURATION_PRESETS = [15, 30, 60, 120, 240, 480];
+const INLINE_PROJECT_LIMIT = 8;
 
-const PRIMARY = "rgb(0, 41, 87)";
-const PRIMARY_DARK = "rgb(0, 28, 60)";
-const PRIMARY_LIGHT = "rgb(0, 61, 117)";
-const PRIMARY_ULTRA_LIGHT = "rgba(0, 41, 87, 0.06)";
+const lottieAnimations = {
+  success: require("../../assets/animations/success.json"),
+  error: require("../../assets/animations/error.json"),
+  warning: require("../../assets/animations/cancel.json"),
+  confirm: require("../../assets/animations/cancel.json"),
+};
 
-const STEPS = [
-  { label: "Task Info", icon: "pencil" },
-  { label: "Project & Time", icon: "clock-o" },
-  { label: "Review", icon: "check-circle" },
-];
+type AlertConfig = {
+  type: "success" | "error" | "warning" | "confirm";
+  title: string;
+  message: string;
+  onConfirm?: () => void;
+};
+
+type FieldErrors = { title?: string; description?: string; time?: string };
+
+// ─── Pure helpers ─────────────────────────────────────────────────────────
+
+const formatMinutesToHoursAndMinutes = (totalMinutes: number): string => {
+  if (!totalMinutes || isNaN(totalMinutes)) return "0h 0m";
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}h ${m}m`;
+};
+
+const formatCompact = (totalMinutes: number): string => {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+};
+
+const getTaskMinutes = (task: TimesheetTask) =>
+  task.minutes || task.minutesSpend || 0;
+
+const isTaskBillable = (task: TimesheetTask) =>
+  typeof task.billable === "string"
+    ? task.billable.toLowerCase() === "yes"
+    : Boolean(task.billable);
+
+// ════════════════════════════════════════════════════════════════════════
+//  Building blocks
+//  These live at module level on purpose: components declared inside the
+//  form's render get a new identity on every keystroke, which remounts the
+//  TextInputs and dismisses the keyboard.
+// ════════════════════════════════════════════════════════════════════════
+
+// ─── Day summary ──────────────────────────────────────────────────────────
+const DaySummary = ({
+  totalMinutes,
+  taskCount,
+}: {
+  totalMinutes: number;
+  taskCount: number;
+}) => {
+  const progress = Math.min(totalMinutes / DAILY_TARGET_MINUTES, 1);
+  const fill = useRef(new Animated.Value(0)).current;
+  const remaining = DAILY_TARGET_MINUTES - totalMinutes;
+
+  useEffect(() => {
+    Animated.timing(fill, {
+      toValue: progress,
+      duration: 600,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  return (
+    <LinearGradient
+      colors={GRADIENT}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.summary}
+    >
+      <View style={[styles.summaryCircle, styles.summaryCircleA]} />
+      <View style={[styles.summaryCircle, styles.summaryCircleB]} />
+
+      <View style={styles.summaryTop}>
+        <View>
+          <Text style={styles.summaryLabel}>Logged today</Text>
+          <Text style={styles.summaryValue}>
+            {formatCompact(totalMinutes)}
+            <Text style={styles.summaryTarget}>
+              {"  "}/ {formatCompact(DAILY_TARGET_MINUTES)}
+            </Text>
+          </Text>
+        </View>
+        <View style={styles.summaryBadge}>
+          <MaterialCommunityIcons
+            name="format-list-checks"
+            size={14}
+            color="#FFFFFF"
+          />
+          <Text style={styles.summaryBadgeText}>
+            {taskCount} task{taskCount === 1 ? "" : "s"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.summaryTrack}>
+        <Animated.View
+          style={[
+            styles.summaryFill,
+            {
+              width: fill.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["0%", "100%"],
+              }),
+            },
+          ]}
+        />
+      </View>
+      <Text style={styles.summaryHint}>
+        {remaining > 0
+          ? `${formatCompact(remaining)} to reach your ${formatCompact(
+              DAILY_TARGET_MINUTES
+            )} day`
+          : "Daily target reached. Great work!"}
+      </Text>
+    </LinearGradient>
+  );
+};
+
+// ─── Section label ────────────────────────────────────────────────────────
+const FieldLabel = ({
+  icon,
+  label,
+  required,
+  trailing,
+}: {
+  icon: any;
+  label: string;
+  required?: boolean;
+  trailing?: React.ReactNode;
+}) => (
+  <View style={styles.fieldLabelRow}>
+    <MaterialCommunityIcons name={icon} size={15} color={PRIMARY} />
+    <Text style={styles.fieldLabel}>
+      {label}
+      {required && <Text style={styles.required}> *</Text>}
+    </Text>
+    <View style={{ flex: 1 }} />
+    {trailing}
+  </View>
+);
+
+const FieldError = ({ message }: { message?: string }) =>
+  message ? (
+    <View style={styles.errorRow}>
+      <MaterialCommunityIcons name="alert-circle" size={13} color={BRAND.danger} />
+      <Text style={styles.errorText}>{message}</Text>
+    </View>
+  ) : null;
+
+// ─── Text field with focus ring ───────────────────────────────────────────
+type InputFieldProps = TextInputProps & { error?: string };
+
+const InputField = forwardRef<TextInput, InputFieldProps>(
+  ({ error, multiline, style, onFocus, onBlur, ...rest }, ref) => {
+    const [focused, setFocused] = useState(false);
+    return (
+      <View
+        style={[
+          styles.inputBox,
+          multiline && styles.inputBoxMultiline,
+          focused && styles.inputBoxFocused,
+          !!error && styles.inputBoxError,
+        ]}
+      >
+        <TextInput
+          ref={ref}
+          {...rest}
+          multiline={multiline}
+          placeholderTextColor="#A3AEBD"
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          style={[
+            styles.input,
+            multiline && styles.inputMultiline,
+            style,
+          ]}
+        />
+      </View>
+    );
+  }
+);
+
+// ─── Project chips ────────────────────────────────────────────────────────
+const ProjectChip = ({
+  label,
+  selected,
+  onPress,
+  icon,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  icon?: any;
+}) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.8}
+    style={[styles.chip, selected && styles.chipSelectedShadow]}
+  >
+    {selected ? (
+      <LinearGradient
+        colors={GRADIENT}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.chipInner}
+      >
+        <MaterialCommunityIcons name="check" size={14} color="#FFFFFF" />
+        <Text style={[styles.chipText, styles.chipTextSelected]} numberOfLines={1}>
+          {label}
+        </Text>
+      </LinearGradient>
+    ) : (
+      <View style={[styles.chipInner, styles.chipIdle]}>
+        {icon && (
+          <MaterialCommunityIcons name={icon} size={14} color={PRIMARY} />
+        )}
+        <Text style={styles.chipText} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
+    )}
+  </TouchableOpacity>
+);
+
+// ─── Duration control ─────────────────────────────────────────────────────
+const DurationControl = ({
+  minutes,
+  onChange,
+  error,
+}: {
+  minutes: number;
+  onChange: (minutes: number) => void;
+  error?: string;
+}) => {
+  const clamp = (value: number) => Math.min(Math.max(value, 0), MAX_MINUTES);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+
+  return (
+    <View style={[styles.durationCard, !!error && styles.inputBoxError]}>
+      <View style={styles.durationRow}>
+        <TouchableOpacity
+          onPress={() => onChange(clamp(minutes - STEP_MINUTES))}
+          disabled={minutes <= 0}
+          style={[styles.stepButton, minutes <= 0 && styles.stepButtonDisabled]}
+          accessibilityLabel="Decrease by 15 minutes"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <MaterialCommunityIcons name="minus" size={22} color={PRIMARY} />
+        </TouchableOpacity>
+
+        <View style={styles.durationDisplay}>
+          <View style={styles.durationDigits}>
+            <Text style={styles.durationNumber}>{h}</Text>
+            <Text style={styles.durationUnit}>h</Text>
+            <Text style={[styles.durationNumber, { marginLeft: 10 }]}>
+              {String(m).padStart(2, "0")}
+            </Text>
+            <Text style={styles.durationUnit}>m</Text>
+          </View>
+          <Text style={styles.durationCaption}>
+            {minutes > 0 ? `${minutes} minutes` : "Tap a preset or use + / −"}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => onChange(clamp(minutes + STEP_MINUTES))}
+          disabled={minutes >= MAX_MINUTES}
+          accessibilityLabel="Increase by 15 minutes"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <LinearGradient
+            colors={GRADIENT}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.stepButton}
+          >
+            <MaterialCommunityIcons name="plus" size={22} color="#FFFFFF" />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.presetRow}>
+        {DURATION_PRESETS.map((preset) => {
+          const active = minutes === preset;
+          return (
+            <TouchableOpacity
+              key={preset}
+              onPress={() => onChange(preset)}
+              activeOpacity={0.8}
+              style={[styles.preset, active && styles.presetActive]}
+            >
+              <Text style={[styles.presetText, active && styles.presetTextActive]}>
+                {formatCompact(preset)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+// ─── Billable segmented control ───────────────────────────────────────────
+const BillableToggle = ({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) => (
+  <View style={styles.segment}>
+    {[
+      { key: false, label: "Non-billable", icon: "briefcase-outline" },
+      { key: true, label: "Billable", icon: "cash-multiple" },
+    ].map((option) => {
+      const active = value === option.key;
+      return (
+        <TouchableOpacity
+          key={option.label}
+          onPress={() => onChange(option.key)}
+          activeOpacity={0.85}
+          style={styles.segmentItem}
+          accessibilityRole="button"
+          accessibilityState={{ selected: active }}
+        >
+          {active ? (
+            <LinearGradient
+              colors={
+                option.key ? (["#047857", "#10B981"] as const) : GRADIENT
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.segmentActive}
+            >
+              <MaterialCommunityIcons
+                name={option.icon as any}
+                size={16}
+                color="#FFFFFF"
+              />
+              <Text style={styles.segmentTextActive}>{option.label}</Text>
+            </LinearGradient>
+          ) : (
+            <View style={styles.segmentIdle}>
+              <MaterialCommunityIcons
+                name={option.icon as any}
+                size={16}
+                color={BRAND.primaryMuted}
+              />
+              <Text style={styles.segmentText}>{option.label}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
+
+// ─── Logged task card ─────────────────────────────────────────────────────
+const TaskCard = ({
+  task,
+  editing,
+  deleting,
+  onEdit,
+  onDelete,
+}: {
+  task: TimesheetTask;
+  editing: boolean;
+  deleting: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => {
+  const taskMinutes = getTaskMinutes(task);
+  const billable = isTaskBillable(task);
+
+  return (
+    <View style={[styles.taskCard, editing && styles.taskCardEditing]}>
+      <LinearGradient
+        colors={GRADIENT}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.taskTime}
+      >
+        <MaterialCommunityIcons
+          name="clock-outline"
+          size={14}
+          color="rgba(255,255,255,0.8)"
+        />
+        <Text style={styles.taskTimeValue}>{formatCompact(taskMinutes)}</Text>
+      </LinearGradient>
+
+      <View style={styles.taskBody}>
+        <View style={styles.taskTop}>
+          <Text style={styles.taskTitle} numberOfLines={1}>
+            {task.taskTitle || "Untitled Task"}
+          </Text>
+          <TouchableOpacity
+            onPress={onEdit}
+            style={styles.iconButton}
+            accessibilityLabel="Edit task"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <MaterialCommunityIcons name="pencil-outline" size={17} color={PRIMARY} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onDelete}
+            disabled={deleting}
+            style={[styles.iconButton, styles.iconButtonDanger]}
+            accessibilityLabel="Delete task"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color={BRAND.danger} />
+            ) : (
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={17}
+                color={BRAND.danger}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.taskDesc} numberOfLines={2}>
+          {task.taskDescription || "No description provided"}
+        </Text>
+
+        <View style={styles.taskMeta}>
+          <View style={styles.metaChip}>
+            <MaterialCommunityIcons
+              name="folder-outline"
+              size={12}
+              color={BRAND.primaryMuted}
+            />
+            <Text style={styles.metaChipText} numberOfLines={1}>
+              {task.projectName || "No Project"}
+            </Text>
+          </View>
+          <View style={[styles.metaChip, billable && styles.metaChipBillable]}>
+            <MaterialCommunityIcons
+              name={billable ? "cash-multiple" : "briefcase-outline"}
+              size={12}
+              color={billable ? "#047857" : BRAND.primaryMuted}
+            />
+            <Text
+              style={[styles.metaChipText, billable && styles.metaChipTextBillable]}
+            >
+              {billable ? "Billable" : "Non-billable"}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// ─── Project search sheet ─────────────────────────────────────────────────
+const ProjectSheet = ({
+  visible,
+  projects,
+  selectedId,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  projects: Project[];
+  selectedId: number;
+  onSelect: (id: number) => void;
+  onClose: () => void;
+}) => {
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!visible) setQuery("");
+  }, [visible]);
+
+  const options = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = [{ projectId: 0, projectName: "No Project" }, ...projects];
+    return q ? list.filter((p) => p.projectName.toLowerCase().includes(q)) : list;
+  }, [projects, query]);
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.sheetOverlay} onPress={onClose} />
+      <View
+        style={[
+          styles.sheet,
+          { maxHeight: height * 0.75, paddingBottom: insets.bottom + 12 },
+        ]}
+      >
+        <View style={styles.sheetHandle} />
+        <View style={styles.sheetHead}>
+          <Text style={styles.sheetTitle}>Select project</Text>
+          <TouchableOpacity onPress={onClose} style={styles.sheetClose}>
+            <MaterialCommunityIcons name="close" size={18} color={PRIMARY} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchBox}>
+          <MaterialCommunityIcons name="magnify" size={18} color={BRAND.primaryMuted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search projects"
+            placeholderTextColor="#A3AEBD"
+            style={styles.searchInput}
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => setQuery("")}>
+              <MaterialCommunityIcons name="close-circle" size={16} color="#A3AEBD" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {options.length === 0 ? (
+            <Text style={styles.sheetEmpty}>No projects match "{query}"</Text>
+          ) : (
+            options.map((project) => {
+              const selected = project.projectId === selectedId;
+              return (
+                <TouchableOpacity
+                  key={project.projectId}
+                  onPress={() => onSelect(project.projectId)}
+                  style={[styles.sheetOption, selected && styles.sheetOptionSelected]}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.sheetOptionIcon, selected && styles.sheetOptionIconSelected]}>
+                    <MaterialCommunityIcons
+                      name={project.projectId === 0 ? "folder-off-outline" : "folder-outline"}
+                      size={16}
+                      color={selected ? "#FFFFFF" : PRIMARY}
+                    />
+                  </View>
+                  <Text
+                    style={[styles.sheetOptionText, selected && styles.sheetOptionTextSelected]}
+                    numberOfLines={1}
+                  >
+                    {project.projectName}
+                  </Text>
+                  {selected && (
+                    <MaterialCommunityIcons name="check-circle" size={18} color={PRIMARY} />
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+};
+
+// ─── Alert dialog ─────────────────────────────────────────────────────────
+const AlertDialog = ({
+  visible,
+  config,
+  onDismiss,
+  onConfirm,
+}: {
+  visible: boolean;
+  config: AlertConfig;
+  onDismiss: () => void;
+  onConfirm: () => void;
+}) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="fade"
+    statusBarTranslucent
+    onRequestClose={onDismiss}
+  >
+    <View style={styles.alertOverlay}>
+      <View style={styles.alertBox}>
+        <LottieView
+          source={lottieAnimations[config.type]}
+          autoPlay
+          loop={false}
+          style={styles.lottie}
+        />
+        <Text style={styles.alertTitle}>{config.title}</Text>
+        <Text style={styles.alertMessage}>{config.message}</Text>
+        <View style={styles.alertBtns}>
+          {config.type === "confirm" ? (
+            <>
+              <TouchableOpacity
+                style={[styles.alertBtn, styles.alertCancelBtn]}
+                onPress={onDismiss}
+              >
+                <Text style={styles.alertCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.alertBtn} onPress={onConfirm}>
+                <LinearGradient
+                  colors={["#EF4444", "#DC2626"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.alertGradientBtn}
+                >
+                  <Text style={styles.alertBtnText}>Delete</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity style={styles.alertBtn} onPress={onConfirm}>
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.alertGradientBtn}
+              >
+                <Text style={styles.alertBtnText}>OK</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
+// ════════════════════════════════════════════════════════════════════════
+//  Form
+// ════════════════════════════════════════════════════════════════════════
 
 interface TimesheetFormProps {
   selectedDate: string;
@@ -55,12 +694,11 @@ function TimesheetForm({
   onTasksUpdated,
   closeModal,
 }: TimesheetFormProps) {
-  // ─── Wizard state ────────────────────────────────────────────────────
-  const [currentStep, setCurrentStep] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const descriptionRef = useRef<TextInput>(null);
 
-  // ─── Form state (unchanged) ──────────────────────────────────────────
+  // ─── Form state ───────────────────────────────────────────────────────
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [projectId, setProjectId] = useState(0);
@@ -68,7 +706,6 @@ function TimesheetForm({
   const [showCustomProject, setShowCustomProject] = useState(false);
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [isBillable, setIsBillable] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [existingTasks, setExistingTasks] = useState<TimesheetTask[]>([]);
@@ -77,23 +714,16 @@ function TimesheetForm({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   const [alertVisible, setAlertVisible] = useState(false);
-  const [alertConfig, setAlertConfig] = useState<{
-    type: "success" | "error" | "warning" | "confirm";
-    title: string;
-    message: string;
-    onConfirm?: () => void;
-  }>({ type: "success", title: "", message: "" });
+  const [alertConfig, setAlertConfig] = useState<AlertConfig>({
+    type: "success",
+    title: "",
+    message: "",
+  });
 
-  const lottieAnimations = {
-    success: require("../../assets/animations/success.json"),
-    error: require("../../assets/animations/error.json"),
-    warning: require("../../assets/animations/cancel.json"),
-    confirm: require("../../assets/animations/cancel.json"),
-  };
-
-  // ─── Init (unchanged) ────────────────────────────────────────────────
+  // ─── Init ─────────────────────────────────────────────────────────────
   useEffect(() => {
     console.log("[Form] Component mounted for date:", selectedDate);
     loadInitialData();
@@ -115,7 +745,7 @@ function TimesheetForm({
     }
   };
 
-  // ─── Helpers (unchanged) ─────────────────────────────────────────────
+  // ─── Helpers ──────────────────────────────────────────────────────────
   const clearForm = () => {
     setTaskTitle("");
     setTaskDescription("");
@@ -126,7 +756,7 @@ function TimesheetForm({
     setMinutes(0);
     setIsBillable(false);
     setEditingTaskId(null);
-    animateToStep(0);
+    setErrors({});
   };
 
   const getTotalMinutes = (): number => hours * 60 + minutes;
@@ -136,68 +766,24 @@ function TimesheetForm({
     setMinutes(totalMinutes % 60);
   };
 
-  const formatMinutesToHoursAndMinutes = (totalMinutes: number): string => {
-    if (!totalMinutes || isNaN(totalMinutes)) return "0h 0m";
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    return `${h}h ${m}m`;
-  };
-
-  const onTimeChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === "android") setShowTimePicker(false);
-    if (selectedDate) {
-      setHours(selectedDate.getHours());
-      setMinutes(selectedDate.getMinutes());
-    }
-  };
-
-  // ─── Wizard navigation ───────────────────────────────────────────────
-  const animateToStep = (next: number) => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    setCurrentStep(next);
-  };
-
-  const validateStep = (step: number): boolean => {
-    if (step === 0) {
-      if (!taskTitle.trim()) {
-        showAlert("warning", "Missing Info", "Please enter a task title.");
-        return false;
-      }
-      if (!taskDescription.trim()) {
-        showAlert("warning", "Missing Info", "Please enter a task description.");
-        return false;
-      }
-    }
-    if (step === 1) {
-      if (getTotalMinutes() <= 0) {
-        showAlert("warning", "Missing Info", "Please set time spent (greater than 0).");
-        return false;
-      }
+  const validate = (): boolean => {
+    const next: FieldErrors = {};
+    if (!taskTitle.trim()) next.title = "Please enter a task title.";
+    if (!taskDescription.trim())
+      next.description = "Please enter a task description.";
+    if (getTotalMinutes() <= 0)
+      next.time = "Please set time spent (greater than 0).";
+    setErrors(next);
+    if (Object.keys(next).length > 0) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return false;
     }
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) animateToStep(currentStep + 1);
-  };
-
-  const handleBack = () => {
-    if (currentStep > 0) animateToStep(currentStep - 1);
-  };
-
-  // ─── Submit / Edit / Delete (all logic unchanged) ────────────────────
+  // ─── Submit / Edit / Delete (logic unchanged) ─────────────────────────
   const handleSubmit = async () => {
+    if (!validate()) return;
     setSaving(true);
     try {
       const finalProjectName =
@@ -222,7 +808,6 @@ function TimesheetForm({
         await addTasks([taskData]);
       }
 
-
       clearForm();
       await onTasksUpdated();
       await loadInitialData();
@@ -235,7 +820,7 @@ function TimesheetForm({
           clearForm();
           await onTasksUpdated();
           await loadInitialData();
-        },
+        }
       );
     } catch (error: any) {
       if (!error.message?.includes("JSON")) {
@@ -247,7 +832,7 @@ function TimesheetForm({
         showAlert(
           "success",
           "Success",
-          editingTaskId ? "Task updated successfully!" : "Task added successfully!",
+          editingTaskId ? "Task updated successfully!" : "Task added successfully!"
         );
       }
     } finally {
@@ -259,15 +844,11 @@ function TimesheetForm({
     setTaskTitle(task.taskTitle || "");
     setTaskDescription(task.taskDescription || "");
     setProjectId(task.projectId || 0);
-    const taskMinutes = task.minutes || task.minutesSpend || 0;
-    setTimeFromMinutes(taskMinutes);
-    const billableValue =
-      typeof task.billable === "string"
-        ? task.billable.toLowerCase() === "yes"
-        : Boolean(task.billable);
-    setIsBillable(billableValue);
+    setTimeFromMinutes(getTaskMinutes(task));
+    setIsBillable(isTaskBillable(task));
     setEditingTaskId(task.taskId || null);
-    animateToStep(0);
+    setErrors({});
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleDeleteTask = async (taskId: number) => {
@@ -288,16 +869,16 @@ function TimesheetForm({
         } finally {
           setDeleting(null);
         }
-      },
+      }
     );
   };
 
-  // ─── Alert helpers (unchanged) ───────────────────────────────────────
+  // ─── Alert helpers ────────────────────────────────────────────────────
   const showAlert = (
     type: "success" | "error" | "warning",
     title: string,
     message: string,
-    onClose?: () => void,
+    onClose?: () => void
   ) => {
     setAlertConfig({ type, title, message, onConfirm: onClose });
     setAlertVisible(true);
@@ -306,563 +887,39 @@ function TimesheetForm({
   const showConfirmAlert = (
     title: string,
     message: string,
-    onConfirm: () => void,
+    onConfirm: () => void
   ) => {
     setAlertConfig({ type: "confirm", title, message, onConfirm });
     setAlertVisible(true);
   };
 
+  // ─── Derived ──────────────────────────────────────────────────────────
+  const selectableProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) =>
+          project.projectId !== 0 && project.projectName !== "No Project"
+      ),
+    [projects]
+  );
+  const inlineProjects = selectableProjects.slice(0, INLINE_PROJECT_LIMIT);
+  const selectedIsHidden =
+    projectId !== 0 && !inlineProjects.some((p) => p.projectId === projectId);
   const selectedProjectName =
-    projects.find((p) => p.projectId === projectId)?.projectName ||
-    "Select a project";
+    selectableProjects.find((p) => p.projectId === projectId)?.projectName || "";
 
-
-  // ─── Premium Step Indicator ──────────────────────────────────────────
-  const StepIndicator = () => (
-    <View style={styles.stepIndicatorWrapper}>
-      {/* Progress bar background */}
-      <View style={styles.progressBarBg}>
-        <Animated.View
-          style={[
-            styles.progressBarFill,
-            { width: `${((currentStep) / (STEPS.length - 1)) * 100}%` },
-          ]}
-        />
-      </View>
-
-      {/* Step bubbles */}
-      <View style={styles.stepBubbleRow}>
-        {STEPS.map((step, index) => {
-          const isCompleted = currentStep > index;
-          const isActive = currentStep === index;
-          return (
-            <View key={index} style={styles.stepBubbleItem}>
-              <View
-                style={[
-                  styles.stepBubble,
-                  isActive && styles.stepBubbleActive,
-                  isCompleted && styles.stepBubbleCompleted,
-                ]}
-              >
-                {isCompleted ? (
-                  <FontAwesome name="check" size={13} color="white" />
-                ) : (
-                  <FontAwesome
-                    name={step.icon as any}
-                    size={13}
-                    color={isActive ? "white" : "#C0C9D6"}
-                  />
-                )}
-              </View>
-              <Text
-                style={[
-                  styles.stepBubbleLabel,
-                  isActive && styles.stepBubbleLabelActive,
-                  isCompleted && styles.stepBubbleLabelCompleted,
-                ]}
-              >
-                {step.label}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-    </View>
+  const loggedMinutes = existingTasks.reduce(
+    (sum, task) => sum + getTaskMinutes(task),
+    0
   );
+  const totalMinutes = getTotalMinutes();
 
-  // ─── Step 0 – Task Info ──────────────────────────────────────────────
-  const Step0 = () => (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-    >
-      <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-        <Text style={styles.stepHeading}>
-          {editingTaskId ? "Edit Task" : "What did you work on?"}
-        </Text>
-        <Text style={styles.stepSubheading}>
-          Give your task a clear title and description
-        </Text>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Task Title *</Text>
-          <View style={styles.inputRow}>
-            <View style={styles.inputIconBadge}>
-              <FontAwesome name="pencil" size={13} color={PRIMARY} />
-            </View>
-            <TextInput
-              style={styles.inputField}
-              placeholder="e.g. Fix login bug"
-              value={taskTitle}
-              onChangeText={setTaskTitle}
-              placeholderTextColor="#B0BAC6"
-            />
-          </View>
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Description *</Text>
-          <View style={[styles.inputRow, styles.inputRowMultiline]}>
-            <View style={[styles.inputIconBadge, { alignSelf: "flex-start", marginTop: 2 }]}>
-              <FontAwesome name="align-left" size={13} color={PRIMARY} />
-            </View>
-            <TextInput
-              style={[styles.inputField, { minHeight: 80, textAlignVertical: "top" }]}
-              placeholder="Describe what you did in detail..."
-              value={taskDescription}
-              onChangeText={setTaskDescription}
-              multiline
-              numberOfLines={4}
-              placeholderTextColor="#B0BAC6"
-            />
-          </View>
-        </View>
-      </Animated.View>
-    </KeyboardAvoidingView>
-  );
-
-  // ─── Step 1 – Project & Time ─────────────────────────────────────────
-  const Step1 = () => (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-    >
-      <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-        <Text style={styles.stepHeading}>Project & Time</Text>
-        <Text style={styles.stepSubheading}>
-          Link to a project and log your hours
-        </Text>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Project</Text>
-          {showCustomProject ? (
-            <View style={styles.inputRow}>
-              <View style={styles.inputIconBadge}>
-                <FontAwesome name="tag" size={13} color={PRIMARY} />
-              </View>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Enter custom project name"
-                value={customProject}
-                onChangeText={setCustomProject}
-                placeholderTextColor="#B0BAC6"
-              />
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.inputRow}
-              onPress={() => setShowProjectPicker(true)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.inputIconBadge}>
-                <FontAwesome name="briefcase" size={13} color={PRIMARY} />
-              </View>
-              <Text
-                style={[
-                  styles.inputField,
-                  { flex: 1 },
-                  projectId === 0 && { color: "#B0BAC6" },
-                ]}
-              >
-                {selectedProjectName}
-              </Text>
-              <FontAwesome name="chevron-down" size={12} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Time Spent *</Text>
-          <TouchableOpacity
-            style={styles.inputRow}
-            onPress={() => setShowTimePicker(true)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.inputIconBadge}>
-              <FontAwesome name="clock-o" size={14} color={PRIMARY} />
-            </View>
-            <Text style={[styles.inputField, { flex: 1, fontWeight: "700" }]}>
-              {getTotalMinutes() > 0
-                ? formatMinutesToHoursAndMinutes(getTotalMinutes())
-                : "Tap to set time"}
-            </Text>
-            <View style={styles.timePill}>
-              <Text style={styles.timePillText}>{getTotalMinutes()} min</Text>
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.helperNote}>
-            Tap the row above to open the time picker
-          </Text>
-        </View>
-
-        {/* Billable toggle card */}
-        <View style={styles.billableCard}>
-          <LinearGradient
-            colors={[PRIMARY_ULTRA_LIGHT, "rgba(0,41,87,0.02)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.billableGradient}
-          >
-            <View style={styles.billableLeft}>
-              <View style={styles.billableIconBox}>
-                <FontAwesome name="dollar" size={15} color={PRIMARY} />
-              </View>
-              <View>
-                <Text style={styles.billableTitle}>Mark as Billable</Text>
-                <Text style={styles.billableSubtitle}>
-                  Will be invoiced to client
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={isBillable}
-              onValueChange={setIsBillable}
-              trackColor={{
-                false: "#D1D5DB",
-                true: "rgba(0, 41, 87, 0.45)",
-              }}
-              thumbColor={isBillable ? PRIMARY : "#f4f3f4"}
-            />
-          </LinearGradient>
-        </View>
-      </Animated.View>
-    </KeyboardAvoidingView>
-  );
-
-  // ─── Step 2 – Review & Submit ────────────────────────────────────────
-  const Step2 = () => {
-    const finalProjectName =
-      showCustomProject && customProject
-        ? customProject
-        : projects.find((p) => p.projectId === projectId)?.projectName ||
-          "No Project";
-
-    return (
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-      >
-        <Animated.View style={[styles.stepContent, { opacity: fadeAnim }]}>
-          <Text style={styles.stepHeading}>Review & Submit</Text>
-          <Text style={styles.stepSubheading}>
-            Confirm your timesheet entry below
-          </Text>
-
-          {/* Review gradient card */}
-          <View style={styles.reviewCard}>
-            <LinearGradient
-              colors={[PRIMARY_DARK, PRIMARY_LIGHT]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.reviewGradient}
-            >
-              {/* Task title row */}
-              <View style={styles.reviewRow}>
-                <View style={styles.reviewIconBox}>
-                  <FontAwesome name="pencil" size={13} color="white" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.reviewMiniLabel}>Task</Text>
-                  <Text style={styles.reviewValue}>{taskTitle || "—"}</Text>
-                </View>
-              </View>
-              <View style={styles.reviewSep} />
-
-              {/* Description row */}
-              <View style={styles.reviewRow}>
-                <View style={styles.reviewIconBox}>
-                  <FontAwesome name="align-left" size={13} color="white" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.reviewMiniLabel}>Description</Text>
-                  <Text style={styles.reviewValue} numberOfLines={2}>
-                    {taskDescription || "—"}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.reviewSep} />
-
-              {/* Project row */}
-              <View style={styles.reviewRow}>
-                <View style={styles.reviewIconBox}>
-                  <FontAwesome name="briefcase" size={13} color="white" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.reviewMiniLabel}>Project</Text>
-                  <Text style={styles.reviewValue}>{finalProjectName}</Text>
-                </View>
-              </View>
-
-              {/* Chips */}
-              <View style={styles.reviewChipsRow}>
-                <View style={styles.reviewChip}>
-                  <FontAwesome name="clock-o" size={12} color={PRIMARY} />
-                  <Text style={styles.reviewChipText}>
-                    {formatMinutesToHoursAndMinutes(getTotalMinutes())}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.reviewChip,
-                    isBillable && styles.reviewChipBillable,
-                  ]}
-                >
-                  <FontAwesome
-                    name="dollar"
-                    size={12}
-                    color={isBillable ? "#10B981" : PRIMARY}
-                  />
-                  <Text
-                    style={[
-                      styles.reviewChipText,
-                      isBillable && { color: "#10B981" },
-                    ]}
-                  >
-                    {isBillable ? "Billable" : "Non-billable"}
-                  </Text>
-                </View>
-              </View>
-            </LinearGradient>
-          </View>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    );
-  };
-
-  // ─── Navigation Buttons ──────────────────────────────────────────────
-  const NavButtons = () => (
-    <View style={styles.navRow}>
-      {currentStep === 0 ? (
-        <TouchableOpacity
-          style={styles.clearBtn}
-          onPress={clearForm}
-          disabled={saving}
-        >
-          <FontAwesome name="times" size={13} color="#6B7280" />
-          <Text style={styles.clearBtnText}>Clear</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-          <FontAwesome name="chevron-left" size={13} color="#6B7280" />
-          <Text style={styles.backBtnText}>Back</Text>
-        </TouchableOpacity>
-      )}
-
-      {currentStep < STEPS.length - 1 ? (
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={handleNext}
-          activeOpacity={0.9}
-        >
-          <LinearGradient
-            colors={[PRIMARY, PRIMARY_LIGHT]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.primaryBtnGradient}
-          >
-            <Text style={styles.primaryBtnText}>Next</Text>
-            <FontAwesome name="chevron-right" size={13} color="white" />
-          </LinearGradient>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={handleSubmit}
-          disabled={saving}
-          activeOpacity={0.9}
-        >
-          <LinearGradient
-            colors={["#059669", "#10B981"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.primaryBtnGradient}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <FontAwesome name="check" size={13} color="white" />
-            )}
-            <Text style={styles.primaryBtnText}>
-              {saving
-                ? editingTaskId
-                  ? "Updating..."
-                  : "Submitting..."
-                : editingTaskId
-                ? "Update Task"
-                : "Submit"}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
-  // ─── Alert Modal (unchanged logic, restyled) ─────────────────────────
-  const CustomAlertModal = () => (
-    <Modal
-      visible={alertVisible}
-      transparent={true}
-      animationType="fade"
-      statusBarTranslucent={true}
-      onRequestClose={() => setAlertVisible(false)}
-    >
-      <View style={styles.alertOverlay}>
-        <View style={styles.alertBox}>
-          <LottieView
-            source={
-              alertConfig.type === "success"
-                ? lottieAnimations.success
-                : alertConfig.type === "error"
-                ? lottieAnimations.error
-                : lottieAnimations.warning
-            }
-            autoPlay
-            loop={false}
-            style={styles.lottie}
-          />
-          <Text style={styles.alertTitle}>{alertConfig.title}</Text>
-          <Text style={styles.alertMessage}>{alertConfig.message}</Text>
-          <View style={styles.alertBtns}>
-            {alertConfig.type === "confirm" ? (
-              <>
-                <TouchableOpacity
-                  style={[styles.alertBtn, styles.alertCancelBtn]}
-                  onPress={() => setAlertVisible(false)}
-                >
-                  <Text style={styles.alertCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.alertBtn}
-                  onPress={() => {
-                    setAlertVisible(false);
-                    alertConfig.onConfirm?.();
-                  }}
-                >
-                  <LinearGradient
-                    colors={["#EF4444", "#DC2626"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.alertGradientBtn}
-                  >
-                    <Text style={styles.alertBtnText}>Delete</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity
-                style={styles.alertBtn}
-                onPress={() => {
-                  setAlertVisible(false);
-                  alertConfig.onConfirm?.();
-                }}
-              >
-                <LinearGradient
-                  colors={[PRIMARY, PRIMARY_LIGHT]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.alertGradientBtn}
-                >
-                  <Text style={styles.alertBtnText}>OK</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  // ─── Project Picker (unchanged logic, restyled) ──────────────────────
-  const ProjectPickerModal = () => {
-    // Filter out any projects that are "No Project" to avoid duplicates
-    const filteredProjects = projects.filter(
-      (project) =>
-        project.projectId !== 0 && project.projectName !== "No Project",
-    );
-
-    return (
-      <Modal
-        visible={showProjectPicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowProjectPicker(false)}
-      >
-        <TouchableOpacity
-          style={styles.pickerOverlay}
-          activeOpacity={1}
-          onPress={() => setShowProjectPicker(false)}
-        >
-          <View style={styles.pickerSheet}>
-            <View style={styles.pickerHandle} />
-            <View style={styles.pickerHead}>
-              <Text style={styles.pickerTitle}>Select Project</Text>
-              <TouchableOpacity onPress={() => setShowProjectPicker(false)}>
-                <FontAwesome name="times" size={20} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: height * 0.5 }}>
-              <TouchableOpacity
-                style={[
-                  styles.pickerOption,
-                  projectId === 0 && styles.pickerOptionSelected,
-                ]}
-                onPress={() => {
-                  setProjectId(0);
-                  setShowProjectPicker(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.pickerOptionText,
-                    projectId === 0 && styles.pickerOptionTextSelected,
-                  ]}
-                >
-                  No Project
-                </Text>
-                {projectId === 0 && (
-                  <FontAwesome name="check" size={15} color={PRIMARY} />
-                )}
-              </TouchableOpacity>
-              {filteredProjects.map((project) => (
-                <TouchableOpacity
-                  key={project.projectId}
-                  style={[
-                    styles.pickerOption,
-                    projectId === project.projectId &&
-                      styles.pickerOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setProjectId(project.projectId);
-                    setShowProjectPicker(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.pickerOptionText,
-                      projectId === project.projectId &&
-                        styles.pickerOptionTextSelected,
-                    ]}
-                  >
-                    {project.projectName}
-                  </Text>
-                  {projectId === project.projectId && (
-                    <FontAwesome name="check" size={15} color={PRIMARY} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
-
-  // ─── Loading state ───────────────────────────────────────────────────
+  // ─── Loading ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color={PRIMARY} />
-        <Text style={styles.loadingScreenText}>Loading...</Text>
+        <Text style={styles.loadingScreenText}>Loading your day...</Text>
       </View>
     );
   }
@@ -871,874 +928,1011 @@ function TimesheetForm({
   //  MAIN RENDER
   // ════════════════════════════════════════════════════════════════════
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.root}>
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="always"
-        scrollEnabled={true}
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 32 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Wizard Card ───────────────────────────────────────────── */}
-        <View style={styles.wizardCard}>
-          {/* Decorative top accent */}
-          <LinearGradient
-            colors={[PRIMARY_DARK, PRIMARY_LIGHT]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.wizardAccentBar}
-          />
+        <DaySummary totalMinutes={loggedMinutes} taskCount={existingTasks.length} />
 
-          {/* Step indicator */}
-          <StepIndicator />
-
-          {/* Divider */}
-          <View style={styles.wizardDivider} />
-
-          {/* Step-specific content */}
-          {currentStep === 0 && <Step0 />}
-          {currentStep === 1 && <Step1 />}
-          {currentStep === 2 && <Step2 />}
-
-          {/* Navigation */}
-          <NavButtons />
-        </View>
-
-        {/* ── Today's Tasks ─────────────────────────────────────────── */}
-        <View style={styles.tasksCard}>
-          {/* Section header */}
-          <View style={styles.tasksHeader}>
-            <View style={styles.tasksHeaderLeft}>
-              <View style={styles.tasksIconBox}>
-                <FontAwesome name="list-ul" size={14} color="white" />
-              </View>
-              <Text style={styles.tasksSectionTitle}>Today's Tasks</Text>
+        {/* ── Composer ─────────────────────────────────────────────── */}
+        <View style={[styles.card, editingTaskId && styles.cardEditing]}>
+          <View style={styles.cardHead}>
+            <View style={styles.cardHeadIcon}>
+              <MaterialCommunityIcons
+                name={editingTaskId ? "pencil" : "plus"}
+                size={18}
+                color="#FFFFFF"
+              />
             </View>
-            <View style={styles.tasksBadge}>
-              <Text style={styles.tasksBadgeText}>{existingTasks.length}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>
+                {editingTaskId ? "Edit task" : "Log a task"}
+              </Text>
+              <Text style={styles.cardSubtitle}>
+                {editingTaskId
+                  ? "Update the details and save"
+                  : "What did you work on?"}
+              </Text>
             </View>
+            {(editingTaskId ||
+              taskTitle ||
+              taskDescription ||
+              totalMinutes > 0) && (
+              <TouchableOpacity
+                onPress={clearForm}
+                disabled={saving}
+                style={styles.resetButton}
+              >
+                <MaterialCommunityIcons
+                  name={editingTaskId ? "close" : "refresh"}
+                  size={14}
+                  color={PRIMARY}
+                />
+                <Text style={styles.resetText}>
+                  {editingTaskId ? "Cancel" : "Clear"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {existingTasks.length === 0 ? (
-            /* Empty state */
-            <View style={styles.emptyState}>
-              <LinearGradient
-                colors={[PRIMARY_ULTRA_LIGHT, "rgba(0,41,87,0.02)"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.emptyCard}
-              >
-                <FontAwesome
-                  name="calendar-o"
-                  size={36}
-                  color="rgba(0,41,87,0.2)"
-                />
-                <Text style={styles.emptyText}>No tasks logged yet</Text>
-                <Text style={styles.emptySubtext}>
-                  Use the wizard above to log your first task
-                </Text>
-              </LinearGradient>
-            </View>
-          ) : (
-            existingTasks.map((task, index) => {
-              const taskMinutes = task.minutes || task.minutesSpend || 0;
-              const taskBillable =
-                typeof task.billable === "string"
-                  ? task.billable.toLowerCase() === "yes"
-                  : Boolean(task.billable);
+          {/* Title */}
+          <View style={styles.field}>
+            <FieldLabel icon="format-title" label="Task title" required />
+            <InputField
+              value={taskTitle}
+              onChangeText={(text) => {
+                setTaskTitle(text);
+                if (errors.title) setErrors((e) => ({ ...e, title: undefined }));
+              }}
+              placeholder="e.g. Fix login bug"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => descriptionRef.current?.focus()}
+              error={errors.title}
+            />
+            <FieldError message={errors.title} />
+          </View>
 
-              return (
-                <View
-                  key={task.taskId || index}
-                  style={styles.taskItem}
-                >
-                  {/* Left accent stripe */}
-                  <LinearGradient
-                    colors={[PRIMARY, PRIMARY_LIGHT]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                    style={styles.taskStripe}
-                  />
+          {/* Description */}
+          <View style={styles.field}>
+            <FieldLabel icon="text" label="Description" required />
+            <InputField
+              ref={descriptionRef}
+              value={taskDescription}
+              onChangeText={(text) => {
+                setTaskDescription(text);
+                if (errors.description)
+                  setErrors((e) => ({ ...e, description: undefined }));
+              }}
+              placeholder="Describe what you did..."
+              multiline
+              error={errors.description}
+            />
+            <FieldError message={errors.description} />
+          </View>
 
-                  <View style={styles.taskBody}>
-                    {/* Top row: title + action buttons */}
-                    <View style={styles.taskTopRow}>
-                      <View style={styles.taskTitleRow}>
-                        <FontAwesome
-                          name="check-circle"
-                          size={13}
-                          color="#10B981"
-                        />
-                        <Text style={styles.taskTitle} numberOfLines={1}>
-                          {task.taskTitle || "Untitled Task"}
-                        </Text>
-                      </View>
-                      <View style={styles.taskActions}>
-                        <TouchableOpacity
-                          style={styles.editBtn}
-                          onPress={() => handleEditTask(task)}
-                        >
-                          <FontAwesome name="edit" size={12} color="white" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.deleteBtn}
-                          onPress={() =>
-                            task.taskId && handleDeleteTask(task.taskId)
-                          }
-                          disabled={deleting === task.taskId}
-                        >
-                          {deleting === task.taskId ? (
-                            <ActivityIndicator size="small" color="white" />
-                          ) : (
-                            <FontAwesome
-                              name="trash"
-                              size={12}
-                              color="white"
-                            />
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Description */}
-                    <Text style={styles.taskDesc} numberOfLines={2}>
-                      {task.taskDescription || "No description provided"}
+          {/* Project */}
+          <View style={styles.field}>
+            <FieldLabel
+              icon="folder-outline"
+              label="Project"
+              trailing={
+                selectableProjects.length > 0 ? (
+                  <TouchableOpacity
+                    onPress={() => setShowProjectPicker(true)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.linkText}>
+                      {selectableProjects.length > INLINE_PROJECT_LIMIT
+                        ? `All ${selectableProjects.length}`
+                        : "Search"}
                     </Text>
+                  </TouchableOpacity>
+                ) : null
+              }
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.chipRow}
+            >
+              <ProjectChip
+                label="No Project"
+                icon="folder-off-outline"
+                selected={projectId === 0}
+                onPress={() => setProjectId(0)}
+              />
+              {selectedIsHidden && (
+                <ProjectChip
+                  label={selectedProjectName}
+                  selected
+                  onPress={() => setShowProjectPicker(true)}
+                />
+              )}
+              {inlineProjects.map((project) => (
+                <ProjectChip
+                  key={project.projectId}
+                  label={project.projectName}
+                  selected={projectId === project.projectId}
+                  onPress={() => setProjectId(project.projectId)}
+                />
+              ))}
+              {selectableProjects.length > INLINE_PROJECT_LIMIT && (
+                <ProjectChip
+                  label="More"
+                  icon="dots-horizontal"
+                  selected={false}
+                  onPress={() => setShowProjectPicker(true)}
+                />
+              )}
+            </ScrollView>
+          </View>
 
-                    {/* Meta chips */}
-                    <View style={styles.taskMetaRow}>
-                      <View style={styles.metaChip}>
-                        <FontAwesome name="briefcase" size={10} color="#6B7280" />
-                        <Text style={styles.metaChipText}>
-                          {task.projectName || "No Project"}
-                        </Text>
-                      </View>
-                      <View style={styles.metaChip}>
-                        <FontAwesome name="clock-o" size={10} color="#6B7280" />
-                        <Text style={styles.metaChipText}>
-                          {formatMinutesToHoursAndMinutes(taskMinutes)}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.metaChip,
-                          taskBillable && styles.metaChipBillable,
-                        ]}
-                      >
-                        <FontAwesome
-                          name="dollar"
-                          size={10}
-                          color={taskBillable ? "#10B981" : "#6B7280"}
-                        />
-                        <Text
-                          style={[
-                            styles.metaChipText,
-                            taskBillable && {
-                              color: "#10B981",
-                              fontWeight: "700",
-                            },
-                          ]}
-                        >
-                          {taskBillable ? "Billable" : "Non-billable"}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              );
-            })
+          {/* Duration */}
+          <View style={styles.field}>
+            <FieldLabel icon="timer-outline" label="Time spent" required />
+            <DurationControl
+              minutes={totalMinutes}
+              onChange={(value) => {
+                setTimeFromMinutes(value);
+                if (errors.time) setErrors((e) => ({ ...e, time: undefined }));
+              }}
+              error={errors.time}
+            />
+            <FieldError message={errors.time} />
+          </View>
+
+          {/* Billable */}
+          <View style={styles.field}>
+            <FieldLabel icon="cash-multiple" label="Billing" />
+            <BillableToggle value={isBillable} onChange={setIsBillable} />
+          </View>
+
+          {/* Submit */}
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={saving}
+            activeOpacity={0.9}
+            style={styles.submitTouch}
+          >
+            <LinearGradient
+              colors={GRADIENT}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.submit}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <MaterialCommunityIcons
+                  name={editingTaskId ? "content-save-outline" : "check-circle-outline"}
+                  size={20}
+                  color="#FFFFFF"
+                />
+              )}
+              <Text style={styles.submitText}>
+                {saving
+                  ? editingTaskId
+                    ? "Updating..."
+                    : "Submitting..."
+                  : editingTaskId
+                  ? "Update task"
+                  : totalMinutes > 0
+                  ? `Log ${formatCompact(totalMinutes)}`
+                  : "Log task"}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Logged tasks ─────────────────────────────────────────── */}
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>Logged tasks</Text>
+          <View style={styles.countChip}>
+            <Text style={styles.countChipText}>{existingTasks.length}</Text>
+          </View>
+          <View style={{ flex: 1 }} />
+          {existingTasks.length > 0 && (
+            <Text style={styles.listTotal}>
+              {formatMinutesToHoursAndMinutes(loggedMinutes)}
+            </Text>
           )}
         </View>
+
+        {existingTasks.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyIcon}>
+              <MaterialCommunityIcons
+                name="calendar-blank-outline"
+                size={30}
+                color={PRIMARY}
+              />
+            </View>
+            <Text style={styles.emptyText}>No tasks logged yet</Text>
+            <Text style={styles.emptySubtext}>
+              Your entries for this day will show up here
+            </Text>
+          </View>
+        ) : (
+          existingTasks.map((task, index) => (
+            <TaskCard
+              key={task.taskId || index}
+              task={task}
+              editing={!!editingTaskId && editingTaskId === task.taskId}
+              deleting={deleting === task.taskId}
+              onEdit={() => handleEditTask(task)}
+              onDelete={() => task.taskId && handleDeleteTask(task.taskId)}
+            />
+          ))
+        )}
       </ScrollView>
 
-      {/* Native time picker */}
-      {showTimePicker && (
-        <DateTimePicker
-          value={new Date(0, 0, 0, hours, minutes)}
-          mode="time"
-          is24Hour={false}
-          display={Platform.OS === "android" ? "clock" : "spinner"}
-          onChange={onTimeChange}
-        />
-      )}
+      <ProjectSheet
+        visible={showProjectPicker}
+        projects={selectableProjects}
+        selectedId={projectId}
+        onSelect={(id) => {
+          setProjectId(id);
+          setShowProjectPicker(false);
+        }}
+        onClose={() => setShowProjectPicker(false)}
+      />
 
-      <ProjectPickerModal />
-      <CustomAlertModal />
-    </SafeAreaView>
+      <AlertDialog
+        visible={alertVisible}
+        config={alertConfig}
+        onDismiss={() => setAlertVisible(false)}
+        onConfirm={() => {
+          setAlertVisible(false);
+          alertConfig.onConfirm?.();
+        }}
+      />
+    </View>
   );
 }
+
+export default memo(TimesheetForm);
 
 // ════════════════════════════════════════════════════════════════════════
 //  STYLES
 // ════════════════════════════════════════════════════════════════════════
-export default memo(TimesheetForm);
-
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
-    backgroundColor: "#EEF2F7",
-    // paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    backgroundColor: PAGE_BG,
   },
-  scroll: { flex: 1 },
-  scrollContent: { paddingVertical: 18, paddingBottom: 32 },
+  scrollContent: {
+    padding: 16,
+  },
 
-  // ── Loading screen ───────────────────────────────────────────────────
+  // Loading
   loadingScreen: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#EEF2F7",
+    backgroundColor: PAGE_BG,
     gap: 12,
   },
   loadingScreenText: {
-    fontSize: 16,
-    color: "rgb(0,41,87)",
+    fontSize: 15,
+    color: PRIMARY,
     fontWeight: "600",
   },
 
-  // ── Wizard card ──────────────────────────────────────────────────────
-  wizardCard: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    borderRadius: 24,
+  // Day summary
+  summary: {
+    borderRadius: 22,
+    padding: 18,
     overflow: "hidden",
-    shadowColor: "rgb(0,41,87)",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    elevation: 10,
-    marginBottom: 20,
-  },
-  wizardAccentBar: {
-    height: 5,
-    width: "100%",
-  },
-  wizardDivider: {
-    height: 1,
-    backgroundColor: "#F1F4F8",
-    marginHorizontal: 10,
-  },
-
-  // ── Step indicator ───────────────────────────────────────────────────
-  stepIndicatorWrapper: {
-    paddingHorizontal: 24,
-    paddingTop: 22,
-    paddingBottom: 20,
-    position: "relative",
-  },
-  progressBarBg: {
-    position: "absolute",
-    top: 35,
-    left: 52,
-    right: 52,
-    height: 3,
-    backgroundColor: "#E5EAF0",
-    borderRadius: 2,
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "rgb(0,41,87)",
-    borderRadius: 2,
-  },
-  stepBubbleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  stepBubbleItem: {
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  stepBubble: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E5EAF0",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#E5EAF0",
-  },
-  stepBubbleActive: {
-    backgroundColor: "rgb(0,41,87)",
-    borderColor: "rgb(0,41,87)",
-    shadowColor: "rgb(0,41,87)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
     elevation: 6,
+    shadowColor: BRAND.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
   },
-  stepBubbleCompleted: {
-    backgroundColor: "#10B981",
-    borderColor: "#10B981",
+  summaryCircle: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.07)",
   },
-  stepBubbleLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#A0ADBC",
-    textAlign: "center",
+  summaryCircleA: { width: 160, height: 160, top: -80, right: -40 },
+  summaryCircleB: {
+    width: 90,
+    height: 90,
+    bottom: -50,
+    left: 40,
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
-  stepBubbleLabelActive: {
-    color: "rgb(0,41,87)",
-    fontWeight: "800",
-  },
-  stepBubbleLabelCompleted: {
-    color: "#10B981",
-    fontWeight: "700",
-  },
-
-  // ── Step content ─────────────────────────────────────────────────────
-  stepContent: {
-    paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 8,
-  },
-  stepHeading: {
-    fontSize: 21,
-    fontWeight: "800",
-    color: "rgb(0,41,87)",
-    letterSpacing: -0.3,
-    marginBottom: 5,
-  },
-  stepSubheading: {
-    fontSize: 13,
-    color: "#8A95A3",
-    marginBottom: 24,
-    fontWeight: "500",
-  },
-
-  // ── Field styles ─────────────────────────────────────────────────────
-  fieldGroup: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#374151",
-    marginBottom: 9,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-  },
-  inputRow: {
+  summaryTop: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#F7F9FC",
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  inputRowMultiline: {
-    alignItems: "flex-start",
-    paddingTop: 13,
-  },
-  inputIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: "rgba(0,41,87,0.08)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  inputField: {
-    flex: 1,
-    fontSize: 15,
-    color: "#1F2937",
-    padding: 0,
-    fontWeight: "500",
-  },
-  timePill: {
-    backgroundColor: "rgba(0,41,87,0.1)",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  timePillText: {
-    fontSize: 12,
-    color: "rgb(0,41,87)",
-    fontWeight: "700",
-  },
-  helperNote: {
-    fontSize: 11,
-    color: "#A0ADBC",
-    marginTop: 7,
-    fontStyle: "italic",
-    marginLeft: 4,
-  },
-
-  // ── Billable card ────────────────────────────────────────────────────
-  billableCard: {
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: "rgba(0,41,87,0.12)",
-    marginBottom: 4,
-  },
-  billableGradient: {
-    flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  billableLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  billableIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    backgroundColor: "rgba(0,41,87,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  billableTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "rgb(0,41,87)",
-  },
-  billableSubtitle: {
-    fontSize: 12,
-    color: "#8A95A3",
-    marginTop: 2,
-  },
-
-  // ── Review card ──────────────────────────────────────────────────────
-  reviewCard: {
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "rgb(0,41,87)",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  reviewGradient: {
-    padding: 20,
-  },
-  reviewRow: {
-    flexDirection: "row",
     alignItems: "flex-start",
-    gap: 14,
-    paddingVertical: 10,
   },
-  reviewIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  reviewMiniLabel: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-  reviewValue: {
-    fontSize: 14,
-    color: "white",
+  summaryLabel: {
+    fontSize: 12,
     fontWeight: "600",
-    lineHeight: 20,
+    color: "rgba(255,255,255,0.75)",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
-  reviewSep: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    marginVertical: 2,
+  summaryValue: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginTop: 4,
   },
-  reviewChipsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 16,
+  summaryTarget: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.65)",
   },
-  reviewChip: {
+  summaryBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "white",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
   },
-  reviewChipBillable: {
-    backgroundColor: "rgba(16,185,129,0.18)",
-  },
-  reviewChipText: {
-    fontSize: 13,
-    color: "rgb(0,41,87)",
+  summaryBadgeText: {
+    fontSize: 12,
     fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  summaryTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    marginTop: 16,
+    overflow: "hidden",
+  },
+  summaryFill: {
+    height: "100%",
+    borderRadius: 4,
+    backgroundColor: "#7DD3FC",
+  },
+  summaryHint: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 8,
   },
 
-  // ── Navigation buttons ───────────────────────────────────────────────
-  navRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 22,
-    paddingTop: 4,
-    paddingBottom: 18,
+  // Composer card
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
+    elevation: 3,
+    shadowColor: BRAND.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
   },
-  clearBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
-    borderRadius: 13,
-    backgroundColor: "#F3F4F6",
+  cardEditing: {
+    borderColor: "rgba(0, 86, 160, 0.45)",
     borderWidth: 1.5,
-    borderColor: "#E5E7EB",
   },
-  clearBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  backBtn: {
+  cardHead: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
-    borderRadius: 13,
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    marginBottom: 6,
   },
-  backBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  primaryBtn: {
-    flex: 1,
-    borderRadius: 14,
-    overflow: "hidden",
-    height: 50,
-    shadowColor: "rgb(0,41,87)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  primaryBtnGradient: {
-    flex: 1,
-    flexDirection: "row",
+  cardHeadIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    marginRight: 12,
   },
-  primaryBtnText: {
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: BRAND.ink,
+  },
+  cardSubtitle: {
+    fontSize: 12.5,
+    color: BRAND.inkSoft,
+    marginTop: 1,
+  },
+  resetButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: BRAND.primaryFaint,
+  },
+  resetText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: PRIMARY,
+  },
+
+  // Fields
+  field: {
+    marginTop: 16,
+  },
+  fieldLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 6,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: BRAND.ink,
+  },
+  required: {
+    color: BRAND.danger,
+  },
+  linkText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: BRAND.primaryLight,
+  },
+  inputBox: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(0, 41, 87, 0.1)",
+    backgroundColor: "#F8FAFD",
+    paddingHorizontal: 14,
+  },
+  inputBoxMultiline: {
+    paddingVertical: 4,
+  },
+  inputBoxFocused: {
+    borderColor: BRAND.primaryLight,
+    backgroundColor: "#FFFFFF",
+  },
+  inputBoxError: {
+    borderColor: "rgba(214, 69, 69, 0.6)",
+  },
+  input: {
+    fontSize: 15,
+    color: BRAND.ink,
+    paddingVertical: 12,
+  },
+  inputMultiline: {
+    minHeight: 92,
+    textAlignVertical: "top",
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+  },
+  errorText: {
+    fontSize: 12,
+    color: BRAND.danger,
+    fontWeight: "500",
+  },
+
+  // Project chips
+  chipRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  chip: {
+    borderRadius: 999,
+  },
+  chipSelectedShadow: {
+    elevation: 3,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    backgroundColor: PRIMARY,
+  },
+  chipInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    maxWidth: 200,
+  },
+  chipIdle: {
+    backgroundColor: BRAND.primaryFaint,
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: PRIMARY,
+    flexShrink: 1,
+  },
+  chipTextSelected: {
+    color: "#FFFFFF",
+  },
+
+  // Duration
+  durationCard: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(0, 41, 87, 0.1)",
+    backgroundColor: "#F8FAFD",
+    padding: 12,
+  },
+  durationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stepButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
+  },
+  stepButtonDisabled: {
+    opacity: 0.4,
+  },
+  durationDisplay: {
+    flex: 1,
+    alignItems: "center",
+  },
+  durationDigits: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  durationNumber: {
+    fontSize: 34,
+    fontWeight: "800",
+    color: PRIMARY,
+    fontVariant: ["tabular-nums"],
+  },
+  durationUnit: {
     fontSize: 15,
     fontWeight: "700",
-    color: "white",
-    letterSpacing: 0.2,
+    color: BRAND.primaryMuted,
+    marginLeft: 2,
   },
-
-  // ── Tasks section card ───────────────────────────────────────────────
-  tasksCard: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: "rgb(0,41,87)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 6,
+  durationCaption: {
+    fontSize: 11.5,
+    color: BRAND.inkSoft,
+    marginTop: 2,
   },
-  tasksHeader: {
+  presetRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  preset: {
+    flexGrow: 1,
+    minWidth: 48,
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 18,
-  },
-  tasksHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  tasksIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: "rgb(0,41,87)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  tasksSectionTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "rgb(0,41,87)",
-  },
-  tasksBadge: {
-    backgroundColor: "rgb(0,41,87)",
+    paddingVertical: 8,
     borderRadius: 12,
-    paddingHorizontal: 11,
-    paddingVertical: 4,
-    minWidth: 28,
-    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
   },
-  tasksBadgeText: {
+  presetActive: {
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
+  },
+  presetText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "white",
+    color: PRIMARY,
+  },
+  presetTextActive: {
+    color: "#FFFFFF",
   },
 
-  // ── Empty state ──────────────────────────────────────────────────────
-  emptyState: {
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  emptyCard: {
-    alignItems: "center",
-    paddingVertical: 36,
-    paddingHorizontal: 30,
-    borderRadius: 18,
-    width: "100%",
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "rgba(0,41,87,0.55)",
-    marginTop: 4,
-  },
-  emptySubtext: {
-    fontSize: 12,
-    color: "#A0ADBC",
-    textAlign: "center",
-  },
-
-  // ── Task item ────────────────────────────────────────────────────────
-  taskItem: {
+  // Billable segment
+  segment: {
     flexDirection: "row",
+    padding: 4,
     borderRadius: 16,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F1F5FA",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: BRAND.primaryBorder,
+  },
+  segmentItem: {
+    flex: 1,
+  },
+  segmentActive: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  segmentIdle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+  },
+  segmentText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: BRAND.primaryMuted,
+  },
+  segmentTextActive: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
+  // Submit
+  submitTouch: {
+    marginTop: 22,
+    borderRadius: 16,
+    overflow: "hidden",
+    elevation: 4,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    backgroundColor: PRIMARY,
+  },
+  submit: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+  },
+  submitText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
+  },
+
+  // Logged tasks
+  listHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  listTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: BRAND.ink,
+  },
+  countChip: {
+    marginLeft: 8,
+    minWidth: 24,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: BRAND.primaryFaint,
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
+    alignItems: "center",
+  },
+  countChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: PRIMARY,
+  },
+  listTotal: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: BRAND.primaryLight,
+  },
+  taskCard: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
     marginBottom: 12,
     overflow: "hidden",
-    shadowColor: "rgb(0,41,87)",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
     elevation: 2,
+    shadowColor: BRAND.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
   },
-  taskStripe: {
-    width: 4,
+  taskCardEditing: {
+    borderColor: "rgba(0, 86, 160, 0.5)",
+    borderWidth: 1.5,
+  },
+  taskTime: {
+    width: 74,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    gap: 4,
+  },
+  taskTimeValue: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   taskBody: {
     flex: 1,
-    padding: 14,
+    padding: 12,
   },
-  taskTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 7,
-  },
-  taskTitleRow: {
-    flex: 1,
+  taskTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginRight: 10,
+    gap: 6,
   },
   taskTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#1F2937",
+    color: BRAND.ink,
   },
-  taskActions: {
-    flexDirection: "row",
-    gap: 7,
-  },
-  editBtn: {
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
+  iconButton: {
     width: 32,
     height: 32,
-    justifyContent: "center",
+    borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BRAND.primaryFaint,
   },
-  deleteBtn: {
-    backgroundColor: "#EF4444",
-    borderRadius: 8,
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
+  iconButtonDanger: {
+    backgroundColor: "rgba(214, 69, 69, 0.08)",
   },
   taskDesc: {
-    fontSize: 12,
-    color: "#6B7280",
-    lineHeight: 17,
-    marginBottom: 10,
-    fontStyle: "italic",
+    fontSize: 13,
+    color: BRAND.inkSoft,
+    lineHeight: 18,
+    marginTop: 4,
   },
-  taskMetaRow: {
+  taskMeta: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 7,
+    gap: 6,
+    marginTop: 10,
   },
   metaChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "white",
-    borderRadius: 8,
+    gap: 4,
+    maxWidth: "100%",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderRadius: 999,
+    backgroundColor: "#F1F5FA",
   },
   metaChipBillable: {
-    backgroundColor: "rgba(16,185,129,0.1)",
-    borderColor: "rgba(16,185,129,0.25)",
+    backgroundColor: "#DCFCE7",
   },
   metaChipText: {
-    fontSize: 11,
-    color: "#6B7280",
+    fontSize: 11.5,
     fontWeight: "600",
+    color: BRAND.inkSoft,
+    flexShrink: 1,
+  },
+  metaChipTextBillable: {
+    color: "#047857",
+    fontWeight: "700",
   },
 
-  // ── Alert modal ──────────────────────────────────────────────────────
-  alertOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.58)",
+  // Empty state
+  emptyCard: {
+    alignItems: "center",
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "rgba(0, 41, 87, 0.18)",
+  },
+  emptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: BRAND.primaryFaint,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  alertBox: {
-    backgroundColor: "white",
-    borderRadius: 26,
-    width: "100%",
-    maxWidth: 340,
-    padding: 28,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  lottie: {
-    width: 120,
-    height: 120,
     marginBottom: 10,
   },
-  alertTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1F2937",
+  emptyText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: BRAND.ink,
+  },
+  emptySubtext: {
+    fontSize: 12.5,
+    color: BRAND.inkSoft,
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  // Project sheet
+  sheetOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 22, 48, 0.5)",
+  },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(0, 41, 87, 0.15)",
+    marginBottom: 12,
+  },
+  sheetHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: BRAND.ink,
+  },
+  sheetClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BRAND.primaryFaint,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: "#F1F5FA",
     marginBottom: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: BRAND.ink,
+    paddingVertical: 10,
+  },
+  sheetEmpty: {
+    textAlign: "center",
+    color: BRAND.inkSoft,
+    paddingVertical: 24,
+  },
+  sheetOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    marginVertical: 2,
+  },
+  sheetOptionSelected: {
+    backgroundColor: BRAND.primaryFaint,
+  },
+  sheetOptionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BRAND.primaryFaint,
+  },
+  sheetOptionIconSelected: {
+    backgroundColor: PRIMARY,
+  },
+  sheetOptionText: {
+    flex: 1,
+    fontSize: 15,
+    color: BRAND.ink,
+  },
+  sheetOptionTextSelected: {
+    fontWeight: "700",
+    color: PRIMARY,
+  },
+
+  // Alert
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 22, 48, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  alertBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 22,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 380,
+    elevation: 16,
+    shadowColor: BRAND.shadow,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+  },
+  lottie: {
+    width: 110,
+    height: 110,
+  },
+  alertTitle: {
+    fontSize: 19,
+    fontWeight: "700",
+    color: PRIMARY,
+    marginTop: 4,
     textAlign: "center",
   },
   alertMessage: {
     fontSize: 14,
-    color: "#6B7280",
+    color: BRAND.inkSoft,
     textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 24,
+    marginTop: 6,
+    lineHeight: 20,
   },
   alertBtns: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
+    marginTop: 22,
     width: "100%",
   },
   alertBtn: {
     flex: 1,
-    borderRadius: 13,
+    borderRadius: 14,
     overflow: "hidden",
   },
   alertCancelBtn: {
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(0, 41, 87, 0.18)",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 12,
   },
   alertCancelText: {
-    color: "#6B7280",
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
+    color: PRIMARY,
   },
   alertGradientBtn: {
-    paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 13,
   },
   alertBtnText: {
-    color: "white",
     fontSize: 15,
     fontWeight: "700",
-  },
-
-  // ── Project picker ───────────────────────────────────────────────────
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  pickerSheet: {
-    backgroundColor: "white",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingBottom: Platform.OS === "ios" ? 34 : 20,
-  },
-  pickerHandle: {
-    width: 36,
-    height: 4,
-    backgroundColor: "#D1D5DB",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  pickerHead: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 22,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F4F8",
-  },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#1F2937",
-  },
-  pickerOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 22,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F8FAFC",
-  },
-  pickerOptionSelected: {
-    backgroundColor: "rgba(0,41,87,0.05)",
-  },
-  pickerOptionText: {
-    fontSize: 15,
-    color: "#374151",
-    fontWeight: "500",
-  },
-  pickerOptionTextSelected: {
-    color: "rgb(0,41,87)",
-    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

@@ -11,12 +11,13 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
-  StatusBar,
-  SafeAreaView
+  StatusBar
 } from "react-native";
 import { CalendarList } from "react-native-calendars";
 import TimesheetForm from "./Timesheet";
 import { KeyboardAvoidingView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   TimesheetTask,
   TaskHourCount,
@@ -45,6 +46,8 @@ interface MarkedDates {
 }
 
 const TimesheetCalendar: React.FC = () => {
+  // The modal draws edge-to-edge (RN 0.81), so pad for the status bar here.
+  const insets = useSafeAreaInsets();
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [modalVisible, setModalVisible] = useState(false);
@@ -321,7 +324,7 @@ const TimesheetCalendar: React.FC = () => {
         />
       </View>
 
-      {/* Modal with SafeAreaView for proper header display */}
+      {/* Full-screen form modal */}
       <Modal
         animationType="slide"
         transparent={false}
@@ -329,11 +332,16 @@ const TimesheetCalendar: React.FC = () => {
         onRequestClose={() => setModalVisible(false)}
         statusBarTranslucent={false}
       >
-        <SafeAreaView style={styles.modalSafeArea}>
+        <View style={[styles.modalSafeArea, { paddingTop: insets.top }]}>
           <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
           
-          {/* Modal Header - Now clearly visible */}
-          <View style={styles.modalHeader}>
+          {/* Modal Header */}
+          <LinearGradient
+            colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.modalHeader}
+          >
             <View style={styles.modalHeaderLeft}>
               <FontAwesome name="calendar" size={20} color="white" />
               <View style={styles.modalHeaderTextContainer}>
@@ -359,14 +367,16 @@ const TimesheetCalendar: React.FC = () => {
               style={styles.closeButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <FontAwesome name="times" size={24} color="white" />
+              <FontAwesome name="times" size={18} color="white" />
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
 
           {/* Form Content */}
           <KeyboardAvoidingView 
             style={styles.modalContent}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            // Edge-to-edge: Android no longer resizes the window for the
+            // keyboard, so pad on both platforms.
+            behavior="padding"
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
             {loading ? (
@@ -379,7 +389,7 @@ const TimesheetCalendar: React.FC = () => {
               />
             )}
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {refreshing && (
@@ -544,9 +554,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
-    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     marginLeft: 12,
   },
   modalContent: {

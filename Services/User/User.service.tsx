@@ -52,25 +52,21 @@ export async function changePassword(
   newPassword: string,
   confirmpassword: string
 ): Promise<string> {
-  console.log("[DEBUG] changePassword: Function invoked");
-
+  // Never log the token, the request payload/headers, or a raw axios error
+  // here: they carry the bearer token and the plain-text passwords.
   try {
     const accessToken = await AsyncStorage.getItem("token");
-    console.log("[DEBUG] AccessToken:", accessToken);
 
     if (!accessToken) {
       throw new Error("User is not authenticated. Please log in again.");
     }
 
     const payload = { oldpassword :oldPassword, newpassword: newPassword, confirmpassword };
-    console.log("[DEBUG] Payload to be sent:", payload);
-
 
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     };
-    console.log("[DEBUG] Headers:", headers);
 
     const response = await axios.post(
       `${baseUrl}/api/v1/auth/changepassword`,
@@ -78,21 +74,29 @@ export async function changePassword(
       { headers : headers }
     );
 
-    console.log("[DEBUG] Response Data:", response.data);
-
     if (response.data.status === 200) {
-      console.log("[DEBUG] Password change success:", response.data.message);
       return response.data.message || "Password updated successfully!";
     } else {
-      console.error("[DEBUG] API returned error status:", response.data);
+      console.error(
+        "[changePassword] API returned error status:",
+        response.data?.status,
+        response.data?.message
+      );
       throw new Error(response.data.message || "Failed to update password.");
     }
   } catch (error: any) {
-    console.error("[DEBUG] Error during password change:", error);
+    console.error(
+      "[changePassword] Request failed:",
+      error?.response?.status ?? "",
+      error?.message
+    );
 
+    // Keep messages thrown above (e.g. "not authenticated") instead of
+    // replacing them with the generic fallback.
     const errorMessage =
-      error.response?.data?.message || "Something went wrong. Please try again.";
-    console.error("[DEBUG] Extracted Error Message:", errorMessage);
+      error.response?.data?.message ||
+      (!axios.isAxiosError(error) && error?.message) ||
+      "Something went wrong. Please try again.";
 
     throw new Error(errorMessage);
   }

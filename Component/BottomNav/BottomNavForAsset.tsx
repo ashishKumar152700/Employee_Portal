@@ -1,6 +1,7 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import AssetModule from '../../Screen/Asset/AssetRequest';
+import MyAssets from '../../Screen/Asset/MyAssets';
 import MyTickets from '../../Screen/Asset/MyTickets';
 import {
   renderGlassTabBar,
@@ -21,6 +22,14 @@ function BottomNavForAsset() {
         options={{
           headerShown: false,
           tabBarIcon: ({focused}) => <TabIcon name="briefcase" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="My Assets"
+        component={MyAssets}
+        options={{
+          headerShown: false,
+          tabBarIcon: ({focused}) => <TabIcon name="laptop" focused={focused} />,
         }}
       />
       <Tab.Screen

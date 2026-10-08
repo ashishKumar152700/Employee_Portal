@@ -7,259 +7,574 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  TextInputProps,
   ScrollView,
-  Dimensions,
   Animated,
   Easing,
+  KeyboardAvoidingView,
+  Linking,
+  Pressable,
+  ActivityIndicator,
 } from "react-native";
-import React, { useEffect, useState } from "react";
-import { changePassword, getUser } from "../../Services/User/User.service";
-import Icon from "react-native-vector-icons/MaterialIcons";
-
+import React, { forwardRef, useEffect, useRef, useState } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { changePassword } from "../../Services/User/User.service";
 import { useSelector, shallowEqual } from "react-redux";
 import moment from "moment";
-const { width } = Dimensions.get("window");
+import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 
-// Function to scale sizes based on device width
-const scaleSize = (size) => (width / 375) * size;
+const PAGE_BG = "#F4F7FB";
+const GRADIENT = BRAND.primaryGradient;
 
-const ProfilePage = () => {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [currentField, setCurrentField] = useState("");
-  const [currentValue, setCurrentValue] = useState("");
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
+const hasValue = (value: any) =>
+  value !== null && value !== undefined && String(value).trim() !== "";
+
+const getInitials = (name?: string) =>
+  (name || "U")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("") || "U";
+
+const getTenure = (joiningDate?: string) => {
+  if (!joiningDate) return "";
+  const joined = moment(joiningDate);
+  if (!joined.isValid()) return "";
+  const years = moment().diff(joined, "years");
+  const months = moment().diff(joined.clone().add(years, "years"), "months");
+  if (years > 0) return months > 0 ? `${years}y ${months}m` : `${years}y`;
+  if (months > 0) return `${months}m`;
+  return "New";
+};
+
+type Strength = { score: number; label: string; color: string };
+
+const getPasswordStrength = (password: string): Strength => {
+  if (!password) return { score: 0, label: "", color: "transparent" };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  const levels: Strength[] = [
+    { score: 1, label: "Weak", color: "#DC2626" },
+    { score: 1, label: "Weak", color: "#DC2626" },
+    { score: 2, label: "Fair", color: "#D97706" },
+    { score: 3, label: "Good", color: "#2563EB" },
+    { score: 4, label: "Strong", color: "#059669" },
+  ];
+  return levels[score];
+};
+
+// ════════════════════════════════════════════════════════════════════════
+//  Building blocks (module level so inputs never remount while typing)
+// ════════════════════════════════════════════════════════════════════════
+
+const HeroStat = ({
+  icon,
+  value,
+  label,
+}: {
+  icon: any;
+  value: string;
+  label: string;
+}) => (
+  <GlassSurface tone="dark" radius={14} style={styles.heroStat}>
+    <MaterialCommunityIcons name={icon} size={16} color="rgba(255,255,255,0.85)" />
+    <Text style={styles.heroStatValue} numberOfLines={1}>
+      {value || "—"}
+    </Text>
+    <Text style={styles.heroStatLabel} numberOfLines={1}>
+      {label}
+    </Text>
+  </GlassSurface>
+);
+
+const InfoRow = ({
+  icon,
+  label,
+  value,
+  last,
+}: {
+  icon: any;
+  label: string;
+  value?: string;
+  last?: boolean;
+}) => {
+  const present = hasValue(value);
+  return (
+    <View style={[styles.infoRow, last && styles.infoRowLast]}>
+      <View style={styles.infoIcon}>
+        <MaterialCommunityIcons name={icon} size={18} color={BRAND.primary} />
+      </View>
+      <View style={styles.infoText}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text
+          style={[styles.infoValue, !present && styles.infoValueEmpty]}
+          selectable={present}
+          numberOfLines={2}
+        >
+          {present ? value : "Not available"}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+const SectionCard = ({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: any;
+  children: React.ReactNode;
+}) => (
+  <View style={styles.section}>
+    <View style={styles.sectionHead}>
+      <MaterialCommunityIcons name={icon} size={16} color={BRAND.primaryMuted} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+    <View style={styles.card}>{children}</View>
+  </View>
+);
+
+const ContactButton = ({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  icon: any;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) => (
+  <TouchableOpacity
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.8}
+    style={[styles.contactButton, disabled && styles.contactButtonDisabled]}
+  >
+    <MaterialCommunityIcons name={icon} size={16} color={BRAND.primary} />
+    <Text style={styles.contactButtonText}>{label}</Text>
+  </TouchableOpacity>
+);
+
+type PasswordFieldProps = TextInputProps & {
+  label: string;
+  error?: string;
+  hint?: React.ReactNode;
+};
+
+const PasswordField = forwardRef<TextInput, PasswordFieldProps>(
+  ({ label, error, hint, ...rest }, ref) => {
+    const [visible, setVisible] = useState(false);
+    const [focused, setFocused] = useState(false);
+    return (
+      <View style={styles.pwField}>
+        <Text style={styles.pwLabel}>{label}</Text>
+        <View
+          style={[
+            styles.pwBox,
+            focused && styles.pwBoxFocused,
+            !!error && styles.pwBoxError,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="lock-outline"
+            size={18}
+            color={focused ? BRAND.primaryLight : BRAND.primaryMuted}
+          />
+          <TextInput
+            ref={ref}
+            {...rest}
+            secureTextEntry={!visible}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholderTextColor="#A3AEBD"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            style={styles.pwInput}
+          />
+          <TouchableOpacity
+            onPress={() => setVisible((v) => !v)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={visible ? "Hide password" : "Show password"}
+          >
+            <MaterialCommunityIcons
+              name={visible ? "eye-off-outline" : "eye-outline"}
+              size={19}
+              color={BRAND.primaryMuted}
+            />
+          </TouchableOpacity>
+        </View>
+        {error ? (
+          <View style={styles.pwErrorRow}>
+            <MaterialCommunityIcons name="alert-circle" size={13} color={BRAND.danger} />
+            <Text style={styles.pwErrorText}>{error}</Text>
+          </View>
+        ) : (
+          hint
+        )}
+      </View>
+    );
+  }
+);
+
+const StrengthMeter = ({ password }: { password: string }) => {
+  const strength = getPasswordStrength(password);
+  if (!password) return null;
+  return (
+    <View style={styles.strengthRow}>
+      <View style={styles.strengthBars}>
+        {[1, 2, 3, 4].map((level) => (
+          <View
+            key={level}
+            style={[
+              styles.strengthBar,
+              level <= strength.score && { backgroundColor: strength.color },
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={[styles.strengthLabel, { color: strength.color }]}>
+        {strength.label}
+      </Text>
+    </View>
+  );
+};
+
+type PasswordErrors = { old?: string; next?: string; confirm?: string };
+
+const ChangePasswordSheet = ({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) => {
+  const insets = useSafeAreaInsets();
+  const newRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmpassword, setconfirmpassword] = useState("");
-  const user = useSelector(
-    (state: any) => state.userDetails.user,
-    shallowEqual
-  );
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const [errors, setErrors] = useState<PasswordErrors>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  console.log("user from Redux → ", user);
+  const reset = () => {
+    setOldPassword("");
+    setNewPassword("");
+    setconfirmpassword("");
+    setErrors({});
+  };
+
+  const close = () => {
+    reset();
+    onClose();
+  };
+
+  const handleChangePassword = async () => {
+    const next: PasswordErrors = {};
+    if (!oldPassword) next.old = "Enter your current password.";
+    if (!newPassword) next.next = "Enter a new password.";
+    if (!confirmpassword) next.confirm = "Confirm your new password.";
+    else if (newPassword !== confirmpassword)
+      next.confirm = "New password and confirmation don't match.";
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      const message = await changePassword(oldPassword, newPassword, confirmpassword);
+      alert(message);
+      close();
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const matches = !!confirmpassword && confirmpassword === newPassword;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={styles.sheetBackdrop} onPress={close} />
+      <KeyboardAvoidingView behavior="padding" style={styles.sheetWrap} pointerEvents="box-none">
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 18 }]}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHead}>
+            <LinearGradient
+              colors={GRADIENT}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.sheetIcon}
+            >
+              <MaterialCommunityIcons name="shield-lock-outline" size={22} color="#FFFFFF" />
+            </LinearGradient>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sheetTitle}>Change password</Text>
+              <Text style={styles.sheetSubtitle}>
+                Use at least 8 characters with a mix of types
+              </Text>
+            </View>
+            <TouchableOpacity onPress={close} style={styles.sheetClose} accessibilityLabel="Close">
+              <MaterialCommunityIcons name="close" size={18} color={BRAND.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <PasswordField
+              label="Current password"
+              placeholder="Enter current password"
+              value={oldPassword}
+              onChangeText={(t) => {
+                setOldPassword(t);
+                if (errors.old) setErrors((e) => ({ ...e, old: undefined }));
+              }}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => newRef.current?.focus()}
+              error={errors.old}
+            />
+            <PasswordField
+              ref={newRef}
+              label="New password"
+              placeholder="Create a new password"
+              value={newPassword}
+              onChangeText={(t) => {
+                setNewPassword(t);
+                if (errors.next) setErrors((e) => ({ ...e, next: undefined }));
+              }}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => confirmRef.current?.focus()}
+              error={errors.next}
+              hint={<StrengthMeter password={newPassword} />}
+            />
+            <PasswordField
+              ref={confirmRef}
+              label="Confirm new password"
+              placeholder="Re-enter new password"
+              value={confirmpassword}
+              onChangeText={(t) => {
+                setconfirmpassword(t);
+                if (errors.confirm) setErrors((e) => ({ ...e, confirm: undefined }));
+              }}
+              returnKeyType="done"
+              onSubmitEditing={handleChangePassword}
+              error={errors.confirm}
+              hint={
+                matches ? (
+                  <View style={styles.pwErrorRow}>
+                    <MaterialCommunityIcons name="check-circle" size={13} color="#059669" />
+                    <Text style={[styles.pwErrorText, { color: "#059669" }]}>
+                      Passwords match
+                    </Text>
+                  </View>
+                ) : null
+              }
+            />
+
+            <View style={styles.sheetActions}>
+              <TouchableOpacity onPress={close} style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleChangePassword}
+                disabled={submitting}
+                activeOpacity={0.9}
+                style={styles.primaryTouch}
+              >
+                <LinearGradient
+                  colors={GRADIENT}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.primaryButton}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
+                  )}
+                  <Text style={styles.primaryButtonText}>
+                    {submitting ? "Updating..." : "Update password"}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+//  Screen
+// ════════════════════════════════════════════════════════════════════════
+
+const ProfilePage = () => {
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const user = useSelector((state: any) => state.userDetails.user, shallowEqual);
+  const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 600,
+      duration: 500,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
   }, []);
 
-  const profileData = user
-    ? {
-        "Personal Information": [
-          { label: "Name", value: user.name ?? "N/A", icon: "person" },
-          {
-            label: "Employee Code",
-            value: user.employeecode ?? "N/A",
-            icon: "badge",
-          },
-          { label: "Email", value: user.email ?? "N/A", icon: "email" },
-          { label: "Phone", value: user.phone ?? "N/A", icon: "phone" },
-          {
-            label: "Age",
-            value: user.age ? `${user.age} yrs` : "N/A",
-            icon: "cake",
-          },
-          { label: "Role", value: user.role ?? "N/A", icon: "work" },
-          {
-            label: "Joining Date",
-            value: user.joiningdate
-              ? moment(user.joiningdate).format("DD MMM YYYY")
-              : "N/A",
-            icon: "event",
-          },
-        ],
-        "Reporting Information": [
-          {
-            label: "Reporting To",
-            value: user.manager?.name ?? "N/A",
-            icon: "supervisor-account",
-          },
-          {
-            label: "Manager Email",
-            value: user.manager?.email ?? "N/A",
-            icon: "email",
-          },
-          {
-            label: "Manager Phone",
-            value: user.manager?.phone ?? "N/A",
-            icon: "phone",
-          },
-        ],
-      }
-    : {};
+  const joined =
+    user?.joiningdate && moment(user.joiningdate).isValid()
+      ? moment(user.joiningdate).format("DD MMM YYYY")
+      : "";
+  const manager = user?.manager;
 
-  const handleChangePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmpassword) {
-      alert("Please fill in all fields.");
-      return;
-    }
-
-    if (newPassword !== confirmpassword) {
-      alert("New password and confirmation don't match.");
-      return;
-    }
-
-    try {
-      const message = await changePassword(
-        oldPassword,
-        newPassword,
-        confirmpassword
-      );
-      alert(message);
-      setPasswordModalVisible(false);
-      setOldPassword("");
-      setNewPassword("");
-      setconfirmpassword("");
-    } catch (error) {
-      alert(error.message);
-    }
-  };
+  const openLink = (url: string) => Linking.openURL(url).catch(() => {});
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Icon name="person" size={32} color="#002957" />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Hero ───────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={GRADIENT}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <View style={[styles.heroCircle, styles.heroCircleA]} />
+            <View style={[styles.heroCircle, styles.heroCircleB]} />
           </View>
+
+          <View style={styles.avatarRing}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.28)", "rgba(255,255,255,0.10)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatar}
+            >
+              <Text style={styles.avatarText}>{getInitials(user?.name)}</Text>
+            </LinearGradient>
+          </View>
+
           <Text style={styles.userName}>{user?.name || "User Name"}</Text>
           <Text style={styles.userRole}>
-            {user?.role || "Role"} • {user?.department || "Department"}
+            {[user?.role, user?.department].filter(hasValue).join(" • ") || "Employee"}
           </Text>
-          <Text style={styles.userCode}>
-            EMP: {user?.employeecode || "N/A"}
-          </Text>
-        </View>
+          {hasValue(user?.employeecode) && (
+            <View style={styles.codeChip}>
+              <MaterialCommunityIcons name="card-account-details-outline" size={13} color="#FFFFFF" />
+              <Text style={styles.codeChipText}>EMP {user.employeecode}</Text>
+            </View>
+          )}
 
-        <TouchableOpacity
-          onPress={() => setPasswordModalVisible(true)}
-          style={styles.changePasswordButton}
-        >
-          <Icon name="lock" size={20} color="#fff" />
-          <Text style={styles.changePasswordText}>Change Password</Text>
-        </TouchableOpacity>
-
-        {Object.entries(profileData).map(([sectionTitle, sectionData]) => (
-          <View style={styles.section} key={sectionTitle}>
-            <Text style={styles.sectionTitle}>{sectionTitle}</Text>
-            {sectionData.map((item, index) => (
-              <View
-                style={[
-                  styles.infoItem,
-                  index === sectionData.length - 1 && styles.lastInfoItem,
-                ]}
-                key={item.label}
-              >
-                <View style={styles.infoLabelContainer}>
-                  <Icon
-                    name={item.icon}
-                    size={18}
-                    color="#002957"
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.infoLabel}>{item.label}</Text>
-                </View>
-                <Text
-                  style={styles.infoValue}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                >
-                  {item.value}
-                </Text>
-              </View>
-            ))}
+          <View style={styles.heroStats}>
+            <HeroStat icon="calendar-check" value={joined} label="Joined" />
+            <HeroStat icon="timer-sand" value={getTenure(user?.joiningdate)} label="With us" />
+            <HeroStat
+              icon="cake-variant-outline"
+              value={hasValue(user?.age) ? `${user.age} yrs` : ""}
+              label="Age"
+            />
           </View>
-        ))}
+        </LinearGradient>
+
+        <View style={styles.body}>
+          {/* ── Personal ─────────────────────────────────────────── */}
+          <SectionCard title="Personal information" icon="account-outline">
+            <InfoRow icon="account" label="Full name" value={user?.name} />
+            <InfoRow icon="card-account-details-outline" label="Employee code" value={user?.employeecode} />
+            <InfoRow icon="email-outline" label="Email" value={user?.email} />
+            <InfoRow icon="phone-outline" label="Phone" value={user?.phone} />
+            <InfoRow icon="briefcase-outline" label="Role" value={user?.role} />
+            <InfoRow icon="calendar-month-outline" label="Joining date" value={joined} last />
+          </SectionCard>
+
+          {/* ── Reporting ────────────────────────────────────────── */}
+          <SectionCard title="Reporting to" icon="account-supervisor-outline">
+            <View style={styles.managerRow}>
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.managerAvatar}
+              >
+                <Text style={styles.managerInitials}>{getInitials(manager?.name)}</Text>
+              </LinearGradient>
+              <View style={styles.managerInfo}>
+                <Text style={styles.managerName} numberOfLines={1}>
+                  {manager?.name || "Not assigned"}
+                </Text>
+                <Text style={styles.managerMeta} numberOfLines={1}>
+                  {manager?.email || "No email on record"}
+                </Text>
+                {hasValue(manager?.phone) && (
+                  <Text style={styles.managerMeta} numberOfLines={1}>
+                    {manager.phone}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <View style={styles.contactRow}>
+              <ContactButton
+                icon="phone-outline"
+                label="Call"
+                disabled={!hasValue(manager?.phone)}
+                onPress={() => openLink(`tel:${manager?.phone}`)}
+              />
+              <ContactButton
+                icon="email-outline"
+                label="Email"
+                disabled={!hasValue(manager?.email)}
+                onPress={() => openLink(`mailto:${manager?.email}`)}
+              />
+            </View>
+          </SectionCard>
+
+          {/* ── Security ─────────────────────────────────────────── */}
+          <SectionCard title="Security" icon="shield-account-outline">
+            <TouchableOpacity
+              onPress={() => setPasswordModalVisible(true)}
+              activeOpacity={0.8}
+              style={styles.actionRow}
+            >
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionIcon}
+              >
+                <MaterialCommunityIcons name="lock-reset" size={20} color="#FFFFFF" />
+              </LinearGradient>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionTitle}>Change password</Text>
+                <Text style={styles.actionSubtitle}>Keep your account secure</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(0,41,87,0.3)" />
+            </TouchableOpacity>
+          </SectionCard>
+        </View>
       </ScrollView>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <ChangePasswordSheet
         visible={passwordModalVisible}
-        onRequestClose={() => setPasswordModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Change Password</Text>
-              <TouchableOpacity
-                onPress={() => setPasswordModalVisible(false)}
-                style={styles.closeButton}
-              >
-                <Icon name="close" size={24} color="#002957" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Icon
-                name="lock-outline"
-                size={20}
-                color="#6c757d"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                placeholder="Current Password"
-                secureTextEntry
-                style={styles.input}
-                value={oldPassword}
-                onChangeText={setOldPassword}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Icon
-                name="lock"
-                size={20}
-                color="#6c757d"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                placeholder="New Password"
-                secureTextEntry
-                style={styles.input}
-                value={newPassword}
-                onChangeText={setNewPassword}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Icon
-                name="lock"
-                size={20}
-                color="#6c757d"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                placeholder="Confirm New Password"
-                secureTextEntry
-                style={styles.input}
-                value={confirmpassword}
-                onChangeText={setconfirmpassword}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                onPress={() => setPasswordModalVisible(false)}
-                style={styles.cancelButton}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleChangePassword}
-                style={styles.submitButton}
-              >
-                <Text style={styles.submitButtonText}>Update Password</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setPasswordModalVisible(false)}
+      />
     </Animated.View>
   );
 };
@@ -267,195 +582,426 @@ const ProfilePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: PAGE_BG,
   },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: scaleSize(16),
+  scrollContent: {
+    paddingBottom: 28,
   },
-  header: {
+
+  // Hero
+  hero: {
     alignItems: "center",
-    marginBottom: scaleSize(10),
-    padding: scaleSize(20),
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingTop: 22,
+    paddingBottom: 22,
+    paddingHorizontal: 16,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: "hidden",
+  },
+  heroCircle: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.07)",
+  },
+  heroCircleA: { width: 200, height: 200, top: -110, right: -60 },
+  heroCircleB: {
+    width: 120,
+    height: 120,
+    bottom: -70,
+    left: -30,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatar: {
-    width: scaleSize(290),
-    height: scaleSize(80),
-    borderRadius: scaleSize(40),
-    backgroundColor: "#e9f0f7",
-    justifyContent: "center",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     alignItems: "center",
-    marginBottom: scaleSize(2),
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 1,
   },
   userName: {
-    fontSize: scaleSize(20),
-    fontWeight: "bold",
-    color: "#002957",
-    marginBottom: scaleSize(4),
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginTop: 12,
     textAlign: "center",
   },
   userRole: {
-    fontSize: scaleSize(14),
-    color: "#6c757d",
-    marginBottom: scaleSize(4),
+    fontSize: 13.5,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 3,
+    textTransform: "capitalize",
   },
-  userCode: {
-    fontSize: scaleSize(12),
-    color: "#002957",
-    fontWeight: "500",
+  codeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  codeChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.8,
+  },
+  heroStats: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 18,
+    alignSelf: "stretch",
+  },
+  heroStat: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+  },
+  heroStatValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginTop: 4,
+  },
+  heroStatLabel: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 1,
+  },
+
+  // Sections
+  body: {
+    paddingHorizontal: 16,
   },
   section: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: scaleSize(20),
-    marginBottom: scaleSize(20),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginTop: 18,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   sectionTitle: {
-    fontSize: scaleSize(18),
-    fontWeight: "600",
-    color: "#002957",
-    marginBottom: scaleSize(4),
-    paddingBottom: scaleSize(8),
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
+    fontSize: 12,
+    fontWeight: "700",
+    color: BRAND.primaryMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
-  infoItem: {
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
+    elevation: 2,
+    shadowColor: BRAND.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+  },
+  infoRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: scaleSize(8),
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f3f5",
+    paddingVertical: 11,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,41,87,0.1)",
   },
-  lastInfoItem: {
+  infoRowLast: {
     borderBottomWidth: 0,
   },
-  infoLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
   infoIcon: {
-    marginRight: scaleSize(10),
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: BRAND.primaryFaint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  infoText: {
+    flex: 1,
   },
   infoLabel: {
-    fontSize: scaleSize(14),
-    fontWeight: "500",
-    color: "#495057",
+    fontSize: 11.5,
+    color: BRAND.inkSoft,
+    fontWeight: "600",
   },
   infoValue: {
-    fontSize: scaleSize(14),
-    color: "#002957",
+    fontSize: 15,
+    color: BRAND.ink,
     fontWeight: "600",
-    flex: 1,
-    textAlign: "right",
-    marginLeft: scaleSize(10),
+    marginTop: 2,
   },
-  changePasswordButton: {
+  infoValueEmpty: {
+    fontWeight: "400",
+    fontStyle: "italic",
+    color: "rgba(20,33,61,0.35)",
+  },
+
+  // Manager
+  managerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 10,
+  },
+  managerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  managerInitials: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  managerInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  managerName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: BRAND.ink,
+  },
+  managerMeta: {
+    fontSize: 12.5,
+    color: BRAND.inkSoft,
+    marginTop: 2,
+  },
+  contactRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  contactButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#002957",
-    paddingVertical: scaleSize(16),
+    gap: 6,
+    paddingVertical: 10,
     borderRadius: 12,
-    marginBottom: scaleSize(8),
+    backgroundColor: BRAND.primaryFaint,
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
   },
-  changePasswordText: {
-    color: "#fff",
-    fontSize: scaleSize(16),
-    fontWeight: "600",
-    marginLeft: scaleSize(8),
+  contactButtonDisabled: {
+    opacity: 0.4,
   },
-  modalContainer: {
-    flex: 1,
+  contactButtonText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: BRAND.primary,
+  },
+
+  // Security
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    gap: 12,
+  },
+  actionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  modalView: {
-    width: "90%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: scaleSize(20),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+  actionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: BRAND.ink,
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: scaleSize(20),
+  actionSubtitle: {
+    fontSize: 12,
+    color: BRAND.inkSoft,
+    marginTop: 1,
   },
-  modalTitle: {
-    fontSize: scaleSize(20),
-    fontWeight: "bold",
-    color: "#002957",
+
+  // Password sheet
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 22, 48, 0.55)",
   },
-  closeButton: {
-    padding: scaleSize(4),
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#dee2e6",
-    borderRadius: 8,
-    marginBottom: scaleSize(16),
-    paddingHorizontal: scaleSize(12),
-  },
-  inputIcon: {
-    marginRight: scaleSize(10),
-  },
-  input: {
+  sheetWrap: {
     flex: 1,
-    height: scaleSize(48),
-    fontSize: scaleSize(16),
+    justifyContent: "flex-end",
   },
-  modalActions: {
+  sheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    maxHeight: "90%",
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(0,41,87,0.15)",
+    marginBottom: 14,
+  },
+  sheetHead: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: scaleSize(16),
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: scaleSize(12),
-    borderRadius: 8,
-    backgroundColor: "#f8f9fa",
-    marginRight: scaleSize(8),
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#dee2e6",
+    gap: 12,
+    marginBottom: 8,
   },
-  cancelButtonText: {
-    color: "#6c757d",
+  sheetIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: BRAND.ink,
+  },
+  sheetSubtitle: {
+    fontSize: 12,
+    color: BRAND.inkSoft,
+    marginTop: 2,
+  },
+  sheetClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BRAND.primaryFaint,
+  },
+  pwField: {
+    marginTop: 14,
+  },
+  pwLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: BRAND.ink,
+    marginBottom: 7,
+  },
+  pwBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(0,41,87,0.1)",
+    backgroundColor: "#F8FAFD",
+  },
+  pwBoxFocused: {
+    borderColor: BRAND.primaryLight,
+    backgroundColor: "#FFFFFF",
+  },
+  pwBoxError: {
+    borderColor: "rgba(214,69,69,0.6)",
+  },
+  pwInput: {
+    flex: 1,
+    fontSize: 15,
+    color: BRAND.ink,
+    paddingVertical: 12,
+  },
+  pwErrorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+  },
+  pwErrorText: {
+    fontSize: 12,
+    color: BRAND.danger,
+    fontWeight: "500",
+  },
+  strengthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  strengthBars: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 4,
+  },
+  strengthBar: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(0,41,87,0.1)",
+  },
+  strengthLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    minWidth: 46,
+    textAlign: "right",
+  },
+  sheetActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 22,
+  },
+  secondaryButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(0,41,87,0.18)",
+  },
+  secondaryButtonText: {
+    fontSize: 15,
     fontWeight: "600",
+    color: BRAND.primary,
   },
-  submitButton: {
-    flex: 1,
-    paddingVertical: scaleSize(12),
-    borderRadius: 8,
-    backgroundColor: "#002957",
-    marginLeft: scaleSize(8),
+  primaryTouch: {
+    flex: 1.6,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  primaryButton: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
   },
-  submitButtonText: {
-    color: "#fff",
-    fontWeight: "600",
+  primaryButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });
 
