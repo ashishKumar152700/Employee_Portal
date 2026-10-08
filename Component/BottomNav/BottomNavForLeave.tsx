@@ -3,10 +3,8 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import MyLeaveScreen from '../../Screen/MyLeave/MyLeaveScreen';
 import LeaveApplicationScreen from '../../Screen/MyLeave/LeaveApplicationScreen';
 import {
-  sharedTabBarStyle,
-  sharedTabBarLabelStyle,
-  sharedActiveTintColor,
-  sharedInactiveTintColor,
+  renderGlassTabBar,
+  sharedTabScreenOptions,
   TabIcon,
 } from './TabBarTheme';
 
@@ -15,13 +13,8 @@ const Tab = createBottomTabNavigator();
 function BottomTabNavLeave() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: sharedTabBarStyle,
-        tabBarLabelStyle: sharedTabBarLabelStyle,
-        tabBarItemStyle: {paddingTop: 4},
-        tabBarActiveTintColor: sharedActiveTintColor,
-        tabBarInactiveTintColor: sharedInactiveTintColor,
-      }}>
+      tabBar={renderGlassTabBar}
+      screenOptions={sharedTabScreenOptions}>
       <Tab.Screen
         name="Leave Details"
         component={MyLeaveScreen}

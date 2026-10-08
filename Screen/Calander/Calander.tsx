@@ -34,6 +34,7 @@ import {
 } from "date-fns";
 import { RefreshControl } from "react-native";
 import { useSelector } from "react-redux";
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 
 if (Platform.OS === "android") {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -139,6 +140,7 @@ interface ScheduleProps {
 }
 
 const Schedule: React.FC<ScheduleProps> = ({ refreshTrigger }) => {
+  const { contentPaddingBottom } = useTabBarClearance();
   const [items, setItems] = useState<Record<string, Item[]>>({});
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<string>(todayISO);
@@ -784,6 +786,7 @@ const Schedule: React.FC<ScheduleProps> = ({ refreshTrigger }) => {
         <ScrollView
           key={`scrollview-${selectedDate}`}
           style={styles.cardsContainer}
+          contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -811,7 +814,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f7fa",
-    paddingBottom: 95,
   },
   calendarHeader: {
     flexDirection: "row",
@@ -838,6 +840,8 @@ const styles = StyleSheet.create({
   detailsContainer: {
     flex: 1,
     padding: 16,
+    // No bottom padding: the list scrolls behind the floating tab bar.
+    paddingBottom: 0,
     backgroundColor: "#f5f7fa",
   },
   sectionHeader: {

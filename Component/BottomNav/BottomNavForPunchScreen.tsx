@@ -11,6 +11,12 @@ import PagerView from 'react-native-pager-view';
 import PunchScreen from '../../Screen/Attendance/Punch';
 import Schedule from '../../Screen/Calander/Calander';
 import LottieView from 'lottie-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { BRAND, GlassSurface } from '../../Global/GlassTheme';
+
+const BAR_INSET = 16;
+const BAR_PADDING = 6;
 
 export default function BottomNavForPunchScreen() {
   const layout = useWindowDimensions();
@@ -76,7 +82,7 @@ export default function BottomNavForPunchScreen() {
     [indicatorX]
   );
 
-  const tabWidth = layout.width / 2;
+  const tabWidth = (layout.width - BAR_INSET * 2 - BAR_PADDING * 2) / 2;
 
   return (
     <View style={styles.container}>
@@ -107,41 +113,62 @@ export default function BottomNavForPunchScreen() {
       )}
 
       {/* TAB BAR */}
-      <View style={styles.tabBar}>
-        <Animated.View
-          style={[
-            styles.slidingIndicator,
-            {
-              width: tabWidth,
-              transform: [
-                {
-                  translateX: indicatorX.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, tabWidth],
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
+      <View style={styles.tabBarWrapper}>
+        <GlassSurface radius={28} style={styles.tabBar}>
+          <Animated.View
+            style={[
+              styles.slidingIndicator,
+              {
+                width: tabWidth,
+                transform: [
+                  {
+                    translateX: indicatorX.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, tabWidth],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={BRAND.primaryGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
 
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigateToPage(0)}
-        >
-          <Text style={[styles.tabText, page === 0 && styles.activeTabText]}>
-            Attendance
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigateToPage(0)}
+            activeOpacity={0.8}
+          >
+            <Icon
+              name="pencil"
+              size={15}
+              color={page === 0 ? '#FFFFFF' : BRAND.primaryMuted}
+            />
+            <Text style={[styles.tabText, page === 0 && styles.activeTabText]}>
+              Attendance
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => navigateToPage(1)}
-        >
-          <Text style={[styles.tabText, page === 1 && styles.activeTabText]}>
-            Calendar
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigateToPage(1)}
+            activeOpacity={0.8}
+          >
+            <Icon
+              name="calendar"
+              size={15}
+              color={page === 1 ? '#FFFFFF' : BRAND.primaryMuted}
+            />
+            <Text style={[styles.tabText, page === 1 && styles.activeTabText]}>
+              Calendar
+            </Text>
+          </TouchableOpacity>
+        </GlassSurface>
       </View>
     </View>
   );
@@ -153,46 +180,52 @@ const styles = StyleSheet.create({
   pagerView: { flex: 1 },
   page: { flex: 1 },
 
+  tabBarWrapper: {
+    paddingHorizontal: BAR_INSET,
+    paddingTop: 8,
+    paddingBottom: 14,
+  },
   tabBar: {
     flexDirection: 'row',
-    height: 56,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    height: 60,
+    padding: BAR_PADDING,
+    elevation: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    shadowColor: BRAND.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
   },
 
-  // The orange sliding indicator that glides between tabs.
+  // Navy pill that glides between tabs.
   slidingIndicator: {
     position: 'absolute',
-    top: 0,
-    height: 3,
-    backgroundColor: '#ff9f43',
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
+    top: BAR_PADDING,
+    bottom: BAR_PADDING,
+    left: BAR_PADDING,
+    borderRadius: 22,
+    overflow: 'hidden',
+    shadowColor: BRAND.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 
   tabItem: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  tabContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 4,
   },
   tabText: {
-    color: 'rgba(0, 41, 87, 0.5)',
+    color: BRAND.primaryMuted,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginLeft: 8,
+    letterSpacing: 0.2,
   },
   activeTabText: {
-    color: 'rgb(0, 41, 87)',
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

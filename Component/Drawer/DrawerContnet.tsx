@@ -10,9 +10,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSelector, useDispatch } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import LottieView from "lottie-react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { clearAllCache } from "../../Services/Timesheet/timesheetService";
+import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 
 export const CustomDrawerContent = ({
   onClose,
@@ -21,6 +22,9 @@ export const CustomDrawerContent = ({
   setCurrentRoute,
 }: any) => {
   const navigation = useNavigation();
+  // The drawer Modal is edge-to-edge (RN 0.81 forces translucent system bars),
+  // so the header and footer pad for the status bar and gesture bar themselves.
+  const insets = useSafeAreaInsets();
 
   const [machineStatus, setMachineStatus] = useState<boolean>(true);
   const [statusLoading, setStatusLoading] = useState<boolean>(false);
@@ -118,7 +122,7 @@ export const CustomDrawerContent = ({
           <MaterialIcons
             name={item.icon as any}
             size={18}
-            color={isActive ? "#FFFFFF" : "rgb(0, 41, 87)"}
+            color={isActive ? "#FFFFFF" : BRAND.primary}
           />
         </View>
         <Text
@@ -130,7 +134,7 @@ export const CustomDrawerContent = ({
         <MaterialIcons
           name="chevron-right"
           size={20}
-          color={isActive ? "rgba(255,255,255,0.9)" : "rgba(0,41,87,0.35)"}
+          color={isActive ? "rgba(255,255,255,0.85)" : "rgba(0,41,87,0.28)"}
         />
       </View>
     );
@@ -138,7 +142,7 @@ export const CustomDrawerContent = ({
     return (
       <TouchableOpacity
         key={item.route}
-        style={styles.menuItem}
+        style={[styles.menuItem, isActive && styles.menuItemActive]}
         onPress={() => {
           setCurrentRoute(item.route);
           navigation.navigate(item.route as never);
@@ -148,11 +152,12 @@ export const CustomDrawerContent = ({
       >
         {isActive ? (
           <LinearGradient
-            colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
+            colors={BRAND.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.menuItemInner}
           >
+            <View style={styles.activeSheen} />
             {row}
           </LinearGradient>
         ) : (
@@ -165,44 +170,41 @@ export const CustomDrawerContent = ({
   const renderMachineStatus = () => {
     if (userDetails?.user?.role !== "ADMIN") return null;
 
+    const statusColor = statusLoading
+      ? BRAND.warning
+      : machineStatus
+        ? BRAND.success
+        : BRAND.danger;
+
     return (
-      <View style={styles.statusContainer}>
+      <View style={styles.section}>
         <Text style={styles.sectionLabel}>System Status</Text>
-        <TouchableOpacity
-          style={styles.statusCard}
-          onPress={checkMachineStatus}
-          activeOpacity={0.75}
-        >
-          <View style={styles.statusIconTile}>
-            <MaterialIcons name="memory" size={18} color="rgb(0, 41, 87)" />
-          </View>
-          <View style={styles.statusTextBlock}>
-            <Text style={styles.statusText}>Biometric Device</Text>
-            <View style={styles.statusIndicatorContainer}>
+        <TouchableOpacity onPress={checkMachineStatus} activeOpacity={0.8}>
+          <GlassSurface radius={16} style={styles.statusCard}>
+            <View style={styles.iconTile}>
+              <MaterialIcons name="memory" size={18} color={BRAND.primary} />
+            </View>
+            <View style={styles.statusTextBlock}>
+              <Text style={styles.statusText}>Biometric Device</Text>
+              <Text style={styles.statusSubText}>Tap to refresh</Text>
+            </View>
+            <View style={[styles.statusChip, { borderColor: statusColor }]}>
               {statusLoading ? (
-                <MaterialIcons name="refresh" size={12} color="#E6A100" />
+                <MaterialIcons name="refresh" size={11} color={statusColor} />
               ) : (
                 <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: machineStatus ? "#28A745" : "#DC3545" },
-                  ]}
+                  style={[styles.statusDot, { backgroundColor: statusColor }]}
                 />
               )}
-              <Text
-                style={[
-                  styles.statusLabel,
-                  { color: machineStatus ? "#28A745" : "#DC3545" },
-                ]}
-              >
+              <Text style={[styles.statusLabel, { color: statusColor }]}>
                 {statusLoading
-                  ? "Checking..."
+                  ? "Checking"
                   : machineStatus
                     ? "Online"
                     : "Offline"}
               </Text>
             </View>
-          </View>
+          </GlassSurface>
         </TouchableOpacity>
       </View>
     );
@@ -259,21 +261,47 @@ export const CustomDrawerContent = ({
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#F2F6FB", "#FFFFFF"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}
+    >
       <LinearGradient
-        colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
+        colors={BRAND.primaryGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
+        style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
       >
-        <LottieView
-          source={require("../../assets/animations/header.json")}
-          autoPlay
-          loop
-          style={styles.headerLottie}
-        />
-        <View style={styles.headerOverlay} />
-        <View style={styles.userInfoContainer}>
+        {/*
+          Decorations live in their own clipped layer, rendered before the card
+          so the card always sits above them. They are positioned to stay
+          entirely in the bands above and below the card, so nothing shows
+          through its frosted surface.
+        */}
+        <View pointerEvents="none" style={styles.decorLayer}>
+          <View
+            style={[styles.circle, styles.circleLarge, { top: insets.top - 92 }]}
+          />
+          <View
+            style={[styles.ring, { top: insets.top - 26 }]}
+          />
+          <View style={[styles.circle, styles.circleBottom]} />
+        </View>
+
+        <View style={styles.headerTopRow}>
+          <Text style={styles.brandText}>Employee Self Service</Text>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeButton}
+            activeOpacity={0.75}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialIcons name="close" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        <GlassSurface tone="dark" radius={20} style={styles.userCard}>
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               <Text style={styles.avatarInitials}>{initials || "U"}</Text>
@@ -283,108 +311,159 @@ export const CustomDrawerContent = ({
             <Text style={styles.username} numberOfLines={1}>
               {userInfo.username}
             </Text>
+            <Text style={styles.email} numberOfLines={1}>
+              {userInfo.email}
+            </Text>
             <View style={styles.roleBadge}>
+              <MaterialIcons
+                name="verified"
+                size={11}
+                color="rgba(255,255,255,0.9)"
+              />
               <Text style={styles.roleBadgeText}>
                 {String(userInfo.role).toUpperCase()}
               </Text>
             </View>
-            <Text style={styles.email} numberOfLines={1}>
-              {userInfo.email}
-            </Text>
           </View>
-        </View>
+        </GlassSurface>
       </LinearGradient>
 
       <ScrollView
         style={styles.drawerContent}
+        contentContainerStyle={styles.menuContainer}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.menuContainer}>
+        {renderMachineStatus()}
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>Menu</Text>
-          {renderMachineStatus()}
           {menuItems.map((item) => renderMenuItem(item))}
-          <View style={styles.menuFooter}>
-            <MaterialIcons
-              name="verified-user"
-              size={13}
-              color="rgba(0,41,87,0.4)"
-            />
-            <Text style={styles.menuFooterText}>Employee Self Service</Text>
-          </View>
         </View>
       </ScrollView>
 
-      <View style={styles.logoutContainer}>
-        <TouchableOpacity
-          onPress={handleLogout}
-          activeOpacity={0.85}
-          style={styles.logoutTouch}
-        >
-          <LinearGradient
-            colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.logoutButton}
-          >
-            <MaterialIcons name="logout" size={20} color="white" />
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity onPress={handleLogout} activeOpacity={0.8}>
+          <GlassSurface radius={16} style={styles.logoutButton}>
+            <View style={styles.logoutIconTile}>
+              <MaterialIcons name="logout" size={18} color={BRAND.danger} />
+            </View>
             <Text style={styles.logoutButtonText}>Logout</Text>
-          </LinearGradient>
+            <MaterialIcons
+              name="chevron-right"
+              size={20}
+              color="rgba(0,41,87,0.28)"
+            />
+          </GlassSurface>
         </TouchableOpacity>
+        <View style={styles.footerMeta}>
+          <MaterialIcons
+            name="verified-user"
+            size={12}
+            color="rgba(0,41,87,0.38)"
+          />
+          <Text style={styles.footerMetaText}>Secured session</Text>
+        </View>
       </View>
-    </View>
+    </LinearGradient>
   );
 };
+
+const H_GUTTER = 16;
+const HEADER_RADIUS = 28;
+const HEADER_BOTTOM_PADDING = 22;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
+
+  // Header
   headerGradient: {
-    paddingTop: 34,
-    paddingBottom: 34,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingBottom: HEADER_BOTTOM_PADDING,
+    paddingHorizontal: H_GUTTER,
+    borderBottomRightRadius: HEADER_RADIUS,
     overflow: "hidden",
-    backgroundColor: "rgba(0, 41, 87, 0.45)",
   },
-  headerLottie: {
-    position: "absolute",
-    left: -20,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    opacity: 0.25,
-    width: "160%",
-  },
-  headerOverlay: {
+  decorLayer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 41, 87, 0.45)",
+    borderBottomRightRadius: HEADER_RADIUS,
+    overflow: "hidden",
   },
-  userInfoContainer: {
+  circle: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  // Top-right, partly off-screen; its bottom edge stays above the card.
+  circleLarge: {
+    width: 150,
+    height: 150,
+    right: -50,
+  },
+  // Bottom-left, partly off-screen; only peeks into the band below the card.
+  circleBottom: {
+    width: 110,
+    height: 110,
+    left: -36,
+    bottom: -(110 - (HEADER_BOTTOM_PADDING - 4)),
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+  },
+  // Small outline ring, kept above the brand label row.
+  ring: {
+    position: "absolute",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    right: 84,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  brandText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(255, 255, 255, 0.7)",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  userCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
   },
   avatarRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.45)",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.5)",
     alignItems: "center",
     justifyContent: "center",
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
   avatarInitials: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 1,
@@ -394,77 +473,105 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   username: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 17,
+    fontWeight: "700",
     color: "#FFFFFF",
-    marginBottom: 5,
+  },
+  email: {
+    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.72)",
+    marginTop: 2,
   },
   roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.22)",
     borderRadius: 999,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    marginBottom: 5,
+    marginTop: 8,
   },
   roleBadgeText: {
     fontSize: 10,
     fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.8,
+    marginLeft: 4,
   },
-  email: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.75)",
-  },
+
+  // Body
   drawerContent: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
   menuContainer: {
-    paddingTop: 14,
-    paddingBottom: 8,
+    paddingTop: 18,
+    paddingBottom: 12,
+  },
+  section: {
+    marginBottom: 14,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "rgba(0, 41, 87, 0.45)",
+    color: "rgba(0, 41, 87, 0.42)",
     textTransform: "uppercase",
-    letterSpacing: 1.1,
-    marginHorizontal: 26,
+    letterSpacing: 1.2,
+    marginHorizontal: H_GUTTER + 4,
     marginBottom: 8,
   },
   menuItem: {
-    marginHorizontal: 14,
-    marginVertical: 3,
+    marginHorizontal: H_GUTTER - 4,
+    marginVertical: 2,
     borderRadius: 14,
     overflow: "hidden",
   },
+  menuItemActive: {
+    shadowColor: BRAND.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+    backgroundColor: BRAND.primary,
+  },
   menuItemInner: {
-    backgroundColor: "#F7F9FC",
+    borderRadius: 14,
+  },
+  activeSheen: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   menuItemContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   iconTile: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "rgba(0, 41, 87, 0.08)",
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: BRAND.primaryFaint,
+    borderWidth: 1,
+    borderColor: BRAND.primaryBorder,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
   iconTileActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    borderColor: "rgba(255, 255, 255, 0.24)",
   },
   menuText: {
     fontSize: 15,
     fontWeight: "500",
-    color: "#1F2A37",
+    color: BRAND.ink,
     flex: 1,
     marginRight: 8,
   },
@@ -472,73 +579,14 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
   },
-  menuFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 18,
-    marginBottom: 6,
-  },
-  menuFooterText: {
-    fontSize: 11,
-    color: "rgba(0, 41, 87, 0.4)",
-    marginLeft: 6,
-    letterSpacing: 0.3,
-  },
-  logoutContainer: {
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 18,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 41, 87, 0.07)",
-  },
-  logoutTouch: {
-    borderRadius: 14,
-    overflow: "hidden",
-    shadowColor: "rgb(0, 41, 87)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  logoutButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "white",
-    marginLeft: 10,
-    letterSpacing: 0.3,
-  },
-  statusContainer: {
-    marginBottom: 6,
-  },
+
+  // Status card
   statusCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 14,
-    marginBottom: 4,
-    backgroundColor: "#F7F9FC",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(0, 41, 87, 0.07)",
+    marginHorizontal: H_GUTTER - 4,
     paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  statusIconTile: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "rgba(0, 41, 87, 0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+    paddingHorizontal: 10,
   },
   statusTextBlock: {
     flex: 1,
@@ -546,25 +594,76 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1F2A37",
-    marginBottom: 2,
+    color: BRAND.ink,
   },
-  statusIndicatorContainer: {
+  statusSubText: {
+    fontSize: 11,
+    color: BRAND.inkSoft,
+    marginTop: 1,
+  },
+  statusChip: {
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginLeft: 3,
+    marginLeft: 5,
+  },
+
+  // Footer
+  footer: {
+    paddingHorizontal: H_GUTTER - 4,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BRAND.primaryBorder,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  logoutIconTile: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: "rgba(214, 69, 69, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(214, 69, 69, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  logoutButtonText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: BRAND.ink,
+  },
+  footerMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  footerMetaText: {
+    fontSize: 11,
+    color: "rgba(0, 41, 87, 0.4)",
+    marginLeft: 5,
+    letterSpacing: 0.3,
   },
 });
 

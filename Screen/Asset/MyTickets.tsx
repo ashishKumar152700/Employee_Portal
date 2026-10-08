@@ -25,6 +25,7 @@ import {
 } from "../../Services/AssetModule/ticketService";
 import { Modal, Animated, Easing } from "react-native";
 import LottieView from "lottie-react-native";
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 
 // Status color configuration
 const getStatusConfig = (status: string) => {
@@ -86,6 +87,7 @@ const getStatusConfig = (status: string) => {
 };
 
 export default function MyTickets() {
+  const { contentPaddingBottom } = useTabBarClearance();
   const dispatch = useDispatch();
 
   // Redux state
@@ -459,7 +461,10 @@ export default function MyTickets() {
           keyExtractor={(item, index) =>
             (item.id || item._id || index).toString()
           }
-          contentContainerStyle={styles.ticketsList}
+          contentContainerStyle={[
+            styles.ticketsList,
+            { paddingBottom: contentPaddingBottom },
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -632,7 +637,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
-    paddingBottom: 95,
   },
   header: {
     alignItems: "center",

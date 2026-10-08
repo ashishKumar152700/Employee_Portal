@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StyleSheet,
   Animated,
   Easing,
@@ -17,6 +16,7 @@ import { RootStackParamList } from "../../Global/Types";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 
 const getLeaveIcon = (leaveCode: string) => {
   switch (leaveCode) {
@@ -87,6 +87,7 @@ const getLeaveColor = (leaveCode: string) => {
 };
 
 export default function MyLeaveScreen() {
+  const { barTop, contentPaddingBottom } = useTabBarClearance();
   const [fadeAnim] = useState(new Animated.Value(0));
   const dispatch = useDispatch();
   const leaveDetailsSelector = useSelector((state: any) => state.leaveDetails);
@@ -170,7 +171,9 @@ export default function MyLeaveScreen() {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <SafeAreaView style={styles.safeArea}>
+      {/* Plain View: the root already handles the top inset, and a bottom
+          inset here would bring back a strip behind the floating tab bar. */}
+      <View style={styles.safeArea}>
         {/* <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
@@ -180,7 +183,7 @@ export default function MyLeaveScreen() {
         > */}
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -284,13 +287,13 @@ export default function MyLeaveScreen() {
         </ScrollView>
 
         <FAB
-          style={styles.fab}
+          style={[styles.fab, { bottom: barTop + 12 }]}
           icon="history"
           label="Leave History"
           onPress={handleLeaveHistoryPress}
           color="white"
         />
-      </SafeAreaView>
+      </View>
     </Animated.View>
   );
 }
@@ -450,7 +453,6 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 16,
-    bottom: 92,
     backgroundColor: "#002957",
   },
   progressWithIcon: {

@@ -20,6 +20,7 @@ import Toast from "react-native-toast-message";
 import { WebView } from "react-native-webview";
 import { RefreshControl } from "react-native";
 import LottieView from "lottie-react-native";
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 
 const { width } = Dimensions.get("window");
 const scaleFont = (size: any) => Math.round(size * (width / 375));
@@ -272,6 +273,7 @@ const ClockButton: React.FC<ClockButtonProps> = ({
 
 // ─── PunchScreen ──────────────────────────────────────────────────────────────
 const PunchScreen: React.FC = () => {
+  const { contentPaddingBottom } = useTabBarClearance();
   const [clockInTime, setClockInTime] = useState<string | null>(null);
   const [clockOutTime, setClockOutTime] = useState<string | null>(null);
   const [totalTime, setTotalTime] = useState<string | null>(null);
@@ -580,7 +582,10 @@ const PunchScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingBottom: contentPaddingBottom },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -784,7 +789,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
     padding: scaleSize(13),
     alignItems: "center",
-    paddingBottom: scaleSize(95),
+    // Let content run to the screen edge, behind the floating tab bar.
+    paddingBottom: 0,
   },
   scrollContainer: {
     flexGrow: 1,

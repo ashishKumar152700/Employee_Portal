@@ -34,8 +34,13 @@ import TaxReportScreen from "../../Screen/Payroll/TaxReportScreen";
 import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
 import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const Stack = createNativeStackNavigator();
+
+// Screens hosting a floating bottom tab bar draw edge-to-edge; the bar itself
+// accounts for the bottom safe-area inset.
+const edgeToEdgeOptions = { contentStyle: { paddingBottom: 0 } };
 
 const CustomHeader = ({ navigation, title, onMenuPress }) => {
   const formatTitle = (text) => {
@@ -108,6 +113,7 @@ function DrawerNavigator() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currentRoute, setCurrentRoute] = useState('Timesheet');
+  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const drawerWidth = Math.min(340, Math.max(280, windowWidth * 0.85));
   const [slideAnim] = useState(new Animated.Value(-drawerWidth));
@@ -180,9 +186,10 @@ function DrawerNavigator() {
         initialRouteName="Attendance"
         screenOptions={{
           headerShown: false,
+          contentStyle: { paddingBottom: insets.bottom },
         }}
       >
-        <Stack.Screen name="Attendance">
+        <Stack.Screen name="Attendance" options={edgeToEdgeOptions}>
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>
               <ScreenWrapper 
@@ -193,7 +200,7 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
-        <Stack.Screen name="MyLeaves">
+        <Stack.Screen name="MyLeaves" options={edgeToEdgeOptions}>
         {/* <Stack.Screen name="MyLeaveScreen"> */}
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>
@@ -216,7 +223,7 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
-        <Stack.Screen name="AssetModule">
+        <Stack.Screen name="AssetModule" options={edgeToEdgeOptions}>
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>
               <ScreenWrapper 
@@ -490,22 +497,25 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(1, 18, 42, 0.55)',
+    // Navy-tinted scrim keeps the backdrop on-brand instead of plain grey.
+    backgroundColor: 'rgba(0, 22, 48, 0.5)',
   },
   drawerContainer: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: 'white',
-    borderTopRightRadius: 26,
-    borderBottomRightRadius: 26,
+    backgroundColor: '#F2F6FB',
+    borderTopRightRadius: 28,
+    borderBottomRightRadius: 28,
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255, 255, 255, 0.6)',
     overflow: 'hidden',
-    elevation: 16,
+    elevation: 18,
     shadowColor: '#001A38',
-    shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
+    shadowOffset: { width: 6, height: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
   },
 });
 

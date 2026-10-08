@@ -26,8 +26,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ActivityIndicator } from "react-native";
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 
 const LeaveApplicationScreen: React.FC = () => {
+  const { contentPaddingBottom } = useTabBarClearance();
   const [leaveType, setLeaveType] = useState<string>("");
   const [selectedOption, setSelectedOption] = useState<string>("full-day");
   const [reason, setReason] = useState<string>("");
@@ -481,6 +483,7 @@ const LeaveApplicationScreen: React.FC = () => {
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <ScrollView
         style={styles.scrollContainer}
+        contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.header}>Apply for Leave</Text>
@@ -832,7 +835,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 95,
   },
   submitButtonText: {
     color: "#fff",

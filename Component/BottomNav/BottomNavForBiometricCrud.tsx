@@ -3,10 +3,8 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import EmployeeListScreen from '../../Screen/AddAMember/EmployeeListScreen';
 import AddUserScreen from '../../Screen/AddAMember/AddUserScreen';
 import {
-  sharedTabBarStyle,
-  sharedTabBarLabelStyle,
-  sharedActiveTintColor,
-  sharedInactiveTintColor,
+  renderGlassTabBar,
+  sharedTabScreenOptions,
   TabIcon,
 } from './TabBarTheme';
 
@@ -15,13 +13,8 @@ const Tab = createBottomTabNavigator();
 function BottomNavForBiometricCrud() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: sharedTabBarStyle,
-        tabBarLabelStyle: sharedTabBarLabelStyle,
-        tabBarItemStyle: {paddingTop: 4},
-        tabBarActiveTintColor: sharedActiveTintColor,
-        tabBarInactiveTintColor: sharedInactiveTintColor,
-      }}>
+      tabBar={renderGlassTabBar}
+      screenOptions={sharedTabScreenOptions}>
       <Tab.Screen
         name="Employees"
         component={EmployeeListScreen}
