@@ -16,24 +16,21 @@ import { Calendar } from "react-native-calendars";
 import { useFocusEffect } from "@react-navigation/native";
 import { format } from "date-fns";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { submitLeaveApplication } from "../../Services/Leave/Leave.service";
+import {
+  submitLeaveApplication,
+  getLeaves,
+} from "../../Services/Leave/Leave.service";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ActivityIndicator } from "react-native";
-
-const leaveTypes = {
-  Casual: "Casual Leave",
-  Sick: "Sick Leave",
-  Optional: "Optional Leave",
-  Paid: "Paid Leave",
-};
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 
 const LeaveApplicationScreen: React.FC = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [leaveType, setLeaveType] = useState<string>(leaveTypes.Casual);
+  const { contentPaddingBottom } = useTabBarClearance();
+  const [leaveType, setLeaveType] = useState<string>("");
   const [selectedOption, setSelectedOption] = useState<string>("full-day");
   const [reason, setReason] = useState<string>("");
   const [approverId, setApproverId] = useState<number>(0);
@@ -49,12 +46,16 @@ const LeaveApplicationScreen: React.FC = () => {
     RootStackParamList,
     "MyLeaveScreen"
   >;
-  const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
-const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
-const [markedDates, setMarkedDates] = useState({});
+  const [selectedStartDate, setSelectedStartDate] = useState<string | null>(
+    null,
+  );
+  const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
+  const [markedDates, setMarkedDates] = useState({});
 
   const leave_Details = useSelector((state: any) => state.leaveDetails);
   const managerDetailsSelector = useSelector((state: any) => state.managerInfo);
+
+  const availableLeaveTypes = leave_Details?.leaveTypes || [];
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -66,6 +67,11 @@ const [markedDates, setMarkedDates] = useState({});
 
   const [loaderVisible, setLoaderVisible] = useState(false);
   const [loaderMessage, setLoaderMessage] = useState("");
+  const dispatch = useDispatch();
+
+  const selectedLeave = availableLeaveTypes.find(
+    (item: any) => item.leaveCode === leaveType,
+  );
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -80,8 +86,30 @@ const [markedDates, setMarkedDates] = useState({});
     console.log("leave_Details updated", leave_Details);
   }, [leave_Details]);
 
+  //   useEffect(() => {
+  //     if (availableLeaveTypes.length > 0 && !leaveType) {
+  //       setLeaveType(availableLeaveTypes[0].leaveCode);
+  //     }
+  //   }, [availableLeaveTypes]);
+  useEffect(() => {
+    if (availableLeaveTypes.length > 0 && !leaveType) {
+      const firstEligible = availableLeaveTypes.find(
+        (item: any) => item.eligible,
+      );
+
+      setLeaveType(
+        firstEligible
+          ? firstEligible.leaveCode
+          : availableLeaveTypes[0].leaveCode,
+      );
+    }
+  }, [availableLeaveTypes]);
+
   const resetForm = () => {
-    setLeaveType(leaveTypes.Casual);
+    // setLeaveType(availableLeaveTypes[0].leaveCode);
+    setLeaveType(
+      availableLeaveTypes.length > 0 ? availableLeaveTypes[0].leaveCode : "",
+    );
     setSelectedStartDate(null);
     setSelectedEndDate(null);
     setReason("");
@@ -96,51 +124,12 @@ const [markedDates, setMarkedDates] = useState({});
     getUserDetails();
   }, []);
 
-  // Get leave data to check balances
-  const getLeaveBalances = () => {
-    if (!leave_Details || Object.keys(leave_Details).length === 0) {
-      return {
-        casualleave: 0,
-        sickleave: 0,
-        optionalleave: 0,
-        paidleave: 0,
-      };
-    }
-    return leave_Details;
-  };
+  const isLeaveTypeAvailable = (leaveCode: string) => {
+    const leave = availableLeaveTypes.find(
+      (item: any) => item.leaveCode === leaveCode,
+    );
 
-  const leaveBalances = getLeaveBalances();
-
-  // Check if leave type is available
-  const isLeaveTypeAvailable = (type: string) => {
-    switch (type) {
-      case leaveTypes.Casual:
-        return (leaveBalances.casualleave || 0) > 0;
-      case leaveTypes.Sick:
-        return (leaveBalances.sickleave || 0) > 0;
-      case leaveTypes.Optional:
-        return (leaveBalances.optionalleave || 0) > 0;
-      case leaveTypes.Paid:
-        return (leaveBalances.paidleave || 0) > 0;
-      default:
-        return true;
-    }
-  };
-
-  // Get available leave count for a type
-  const getAvailableLeaves = (type: string) => {
-    switch (type) {
-      case leaveTypes.Casual:
-        return leaveBalances.casualleave || 0;
-      case leaveTypes.Sick:
-        return leaveBalances.sickleave || 0;
-      case leaveTypes.Optional:
-        return leaveBalances.optionalleave || 0;
-      case leaveTypes.Paid:
-        return leaveBalances.paidleave || 0;
-      default:
-        return 0;
-    }
+    return (leave?.remaining || 0) > 0;
   };
 
   async function getUserDetails() {
@@ -159,7 +148,7 @@ const [markedDates, setMarkedDates] = useState({});
   useFocusEffect(
     useCallback(() => {
       resetForm();
-    }, [])
+    }, []),
   );
 
   const CustomAlert = ({
@@ -250,11 +239,31 @@ const [markedDates, setMarkedDates] = useState({});
 
   const todayISO = new Date().toISOString().split("T")[0];
 
-
   const onDayPress = (day: any) => {
-  const date = day.dateString;
+    const date = day.dateString;
 
-  if (!selectedStartDate) {
+    if (!selectedStartDate) {
+      setSelectedStartDate(date);
+      setSelectedEndDate(null);
+      setMarkedDates({
+        [date]: {
+          startingDay: true,
+          endingDay: true,
+          color: "#002957",
+          textColor: "#FFFFFF",
+        },
+      });
+      return;
+    }
+
+    if (selectedStartDate && !selectedEndDate) {
+      const range = createMarkedRange(selectedStartDate, date);
+      setSelectedEndDate(date);
+      setMarkedDates(range);
+      return;
+    }
+
+    // reset if both already picked
     setSelectedStartDate(date);
     setSelectedEndDate(null);
     setMarkedDates({
@@ -265,54 +274,32 @@ const [markedDates, setMarkedDates] = useState({});
         textColor: "#FFFFFF",
       },
     });
-    return;
-  }
+  };
 
-  if (selectedStartDate && !selectedEndDate) {
-    const range = createMarkedRange(selectedStartDate, date);
-    setSelectedEndDate(date);
-    setMarkedDates(range);
-    return;
-  }
+  const createMarkedRange = (start: string, end: string) => {
+    let range: any = {};
+    let startTime = new Date(start).getTime();
+    let endTime = new Date(end).getTime();
 
-  // reset if both already picked
-  setSelectedStartDate(date);
-  setSelectedEndDate(null);
-  setMarkedDates({
-    [date]: {
-      startingDay: true,
-      endingDay: true,
-      color: "#002957",
-      textColor: "#FFFFFF",
-    },
-  });
-};
+    if (startTime > endTime) {
+      [startTime, endTime] = [endTime, startTime];
+      [start, end] = [end, start];
+    }
 
-
-const createMarkedRange = (start: string, end: string) => {
-  let range: any = {};
-  let startTime = new Date(start).getTime();
-  let endTime = new Date(end).getTime();
-
-  if (startTime > endTime) {
-    [startTime, endTime] = [endTime, startTime];
-    [start, end] = [end, start];
-  }
-
-  let current = startTime;
-  while (current <= endTime) {
-    const date = new Date(current).toISOString().split("T")[0];
-    range[date] = {
-      color: current === startTime || current === endTime ? "#002957" : "#1a4a7a",
-      textColor: "#FFFFFF",
-      startingDay: date === start,
-      endingDay: date === end,
-    };
-    current += 86400000;
-  }
-  return range;
-};
-
+    let current = startTime;
+    while (current <= endTime) {
+      const date = new Date(current).toISOString().split("T")[0];
+      range[date] = {
+        color:
+          current === startTime || current === endTime ? "#002957" : "#1a4a7a",
+        textColor: "#FFFFFF",
+        startingDay: date === start,
+        endingDay: date === end,
+      };
+      current += 86400000;
+    }
+    return range;
+  };
 
   // Custom Loading Component
   const CustomLoader = ({ visible, message }: any) => {
@@ -330,41 +317,64 @@ const createMarkedRange = (start: string, end: string) => {
     );
   };
 
-  const handleApplyLeave = async () => {
+  const validateLeaveApplication = () => {
     if (!selectedStartDate) {
-      setAlertConfig({
+      return {
+        valid: false,
         title: "Missing Information",
         message: "Please select a start date.",
-        type: "warning",
-        buttons: null,
-      });
-      setAlertVisible(true);
-      return;
+      };
     }
 
     if (!reason.trim()) {
-      setAlertConfig({
+      return {
+        valid: false,
         title: "Missing Information",
         message: "Reason for leave is required.",
-        type: "warning",
-        buttons: null,
-      });
-      setAlertVisible(true);
-      return;
+      };
     }
 
-    // Check if selected leave type has available leaves
     if (!isLeaveTypeAvailable(leaveType)) {
-      setAlertConfig({
+      return {
+        valid: false,
         title: "No Leaves Available",
-        message: `You have no ${leaveType} leaves remaining. Please select another leave type.`,
+        // message: `You have no ${leaveType} leaves remaining. Please select another leave type.`,
+        message: `You have no ${
+          selectedLeave?.title ?? "selected"
+        } leave balance remaining.`,
+      };
+    }
+
+    if (selectedLeave && !selectedLeave.eligible) {
+      return {
+        valid: false,
+        title: "Leave Not Available",
+        message: `This leave will be available after ${selectedLeave.daysRemainingForEligibility} day(s).`,
+      };
+    }
+
+    return {
+      valid: true,
+    };
+  };
+
+  const handleApplyLeave = async () => {
+    const validation = validateLeaveApplication();
+
+    if (!validation.valid) {
+      setAlertConfig({
+        title: validation.title!,
+        message: validation.message!,
         type: "warning",
         buttons: null,
       });
+
       setAlertVisible(true);
       return;
     }
 
+    console.log("leaveType State =>", leaveType);
+    console.log("selectedLeave =>", selectedLeave);
     const leaveApplication = {
       leavetype: leaveType,
       leavestart: selectedStartDate
@@ -372,7 +382,9 @@ const createMarkedRange = (start: string, end: string) => {
         : "",
       leaveend: selectedEndDate
         ? format(selectedEndDate, "dd/MM/yyyy")
-        : format(selectedStartDate, "dd/MM/yyyy"),
+        : selectedStartDate
+          ? format(selectedStartDate, "dd/MM/yyyy")
+          : "",
       leavepart: selectedOption,
       reason: reason.trim(),
       approver: managerDetailsSelector.id,
@@ -380,16 +392,14 @@ const createMarkedRange = (start: string, end: string) => {
 
     console.log("Leave Application:", leaveApplication);
 
-    // Show loader
     setLoaderMessage("Submitting your leave application...");
     setLoaderVisible(true);
 
     try {
       const response = await submitLeaveApplication(leaveApplication);
-      if (response.status === 200) {
-        setLoaderVisible(false); // Hide loader first
 
-        // Show success alert
+      if (response.status === 200) {
+        await getLeaves(dispatch);
         setAlertConfig({
           title: "Success!",
           message:
@@ -397,38 +407,42 @@ const createMarkedRange = (start: string, end: string) => {
           type: "success",
           buttons: [
             {
-              text: "Cancel",
-              style: "cancel",
+              text: "OK",
               onPress: () => {
                 resetForm();
               },
             },
           ],
         });
-        setAlertVisible(true);
       } else {
-        setLoaderVisible(false);
         setAlertConfig({
           title: "Submission Failed",
           message: response.message || "Failed to submit leave application.",
           type: "error",
           buttons: null,
         });
-        setAlertVisible(true);
       }
-    } catch (error) {
-      setLoaderVisible(false);
+
+      setAlertVisible(true);
+    } catch (error: any) {
+      console.error("Leave Apply Error:", error);
+
       setAlertConfig({
         title: "Error",
-        message: "An error occurred while submitting the leave application.",
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          "An error occurred while submitting the leave application.",
         type: "error",
         buttons: null,
       });
+
       setAlertVisible(true);
+    } finally {
+      setLoaderVisible(false);
     }
   };
 
- 
   const calculateTotalDays = () => {
     if (selectedStartDate && !selectedEndDate) {
       const leavepart = selectedOption === "full-day" ? 1 : 0.5;
@@ -458,7 +472,7 @@ const createMarkedRange = (start: string, end: string) => {
     if (selectedEndDate) {
       return `${format(selectedStartDate, "dd-MM-yyyy")} to ${format(
         selectedEndDate,
-        "dd-MM-yyyy"
+        "dd-MM-yyyy",
       )}`;
     } else {
       return format(selectedStartDate, "dd-MM-yyyy");
@@ -469,6 +483,7 @@ const createMarkedRange = (start: string, end: string) => {
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <ScrollView
         style={styles.scrollContainer}
+        contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.header}>Apply for Leave</Text>
@@ -493,61 +508,55 @@ const createMarkedRange = (start: string, end: string) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Leave Type</Text>
           <View style={styles.radioButtonContainer}>
-            {Object.keys(leaveTypes).map((label) => (
+            {availableLeaveTypes.map((item: any) => (
               <TouchableOpacity
-                key={label}
+                key={item.leaveCode}
+                disabled={!item.eligible}
                 style={[
                   styles.radioButton,
-                  leaveType === leaveTypes[label] && styles.radioButtonSelected,
+                  leaveType === item.leaveCode && styles.radioButtonSelected,
+                  !item.eligible && styles.radioButtonDisabled,
                 ]}
                 onPress={() => {
-                  if (label === "Paid") {
-                    if (userDOJ) {
-                      const dojDate = new Date(userDOJ);
-                      const appDate = new Date(applicationDate);
+                  if (!item.eligible) return;
 
-                      const diffInMonths =
-                        (appDate.getFullYear() - dojDate.getFullYear()) * 12 +
-                        (appDate.getMonth() - dojDate.getMonth());
-
-                      // if (diffInMonths < 6) {
-                      //   Alert.alert(
-                      //     "Not Eligible",
-                      //     "You are not eligible to get paid leave since you are in your probation period."
-                      //   );
-                      //   return;
-                      // }
-                      if (diffInMonths < 6) {
-                        setAlertConfig({
-                          title: "Not Eligible",
-                          message:
-                            "You are not eligible to get paid leave since you are in your probation period.",
-                          type: "warning",
-                          buttons: null,
-                        });
-                        setAlertVisible(true);
-                        return;
-                      }
-                    } else {
-                      Alert.alert(
-                        "Error",
-                        "User date of joining is not available. Please contact admin."
-                      );
-                      return;
-                    }
-                  }
-                  setLeaveType(leaveTypes[label]);
+                  setLeaveType(item.leaveCode);
+                  setSelectedOption("full-day");
                 }}
               >
-                <Text
-                  style={[
-                    styles.radioButtonText,
-                    leaveType === leaveTypes[label] &&
-                      styles.radioButtonTextSelected,
-                  ]}
-                >
-                  {label}
-                </Text>
+                <View style={styles.radioButtonContent}>
+                  <Text
+                    style={[
+                      styles.radioButtonText,
+                      leaveType === item.leaveCode &&
+                        styles.radioButtonTextSelected,
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.leaveCountText,
+                      item.remaining <= 0 && styles.leaveCountTextDisabled,
+                    ]}
+                  >
+                    Balance : {item.remaining}
+                  </Text>
+
+                  {!item.eligible && (
+                    <Text
+                      style={{
+                        color: "#dc3545",
+                        fontSize: 11,
+                        marginTop: 4,
+                        textAlign: "center",
+                      }}
+                    >
+                      Available after {item.daysRemainingForEligibility} day(s)
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -569,6 +578,7 @@ const createMarkedRange = (start: string, end: string) => {
               <Text style={styles.sectionTitle}>Leave Duration</Text>
               <View style={styles.pickerContainer}>
                 <Picker
+                  key={leaveType}
                   selectedValue={selectedOption}
                   style={styles.picker}
                   onValueChange={(itemValue) => {
@@ -576,9 +586,21 @@ const createMarkedRange = (start: string, end: string) => {
                     setTotalDays(itemValue === "full-day" ? 1 : 0.5);
                   }}
                 >
-                  <Picker.Item label="Full Day" value="full-day" />
-                  <Picker.Item label="First Half" value="first-half" />
-                  <Picker.Item label="Second Half" value="second-half" />
+                  {[
+                    { label: "Full Day", value: "full-day" },
+                    ...(selectedLeave?.halfDayAllowed
+                      ? [
+                          { label: "First Half", value: "first-half" },
+                          { label: "Second Half", value: "second-half" },
+                        ]
+                      : []),
+                  ].map((item) => (
+                    <Picker.Item
+                      key={item.value}
+                      label={item.label}
+                      value={item.value}
+                    />
+                  ))}
                 </Picker>
               </View>
             </View>
@@ -605,28 +627,11 @@ const createMarkedRange = (start: string, end: string) => {
           />
         </View>
 
-        {/* <TouchableOpacity onPress={handleApplyLeave} style={styles.submitButton}>
-          <Text style={styles.submitButtonText}>Submit Leave Application</Text>
-        </TouchableOpacity> */}
-
         <TouchableOpacity
           onPress={handleApplyLeave}
-          style={[
-            styles.submitButton,
-            isLoading && styles.submitButtonDisabled,
-          ]}
-          disabled={isLoading}
+          style={styles.submitButton}
         >
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#fff" />
-              <Text style={styles.submitButtonText}>Submitting...</Text>
-            </View>
-          ) : (
-            <Text style={styles.submitButtonText}>
-              Submit Leave Application
-            </Text>
-          )}
+          <Text style={styles.submitButtonText}>Submit Leave Application</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -686,7 +691,6 @@ const createMarkedRange = (start: string, end: string) => {
     </Animated.View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -831,7 +835,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 95,
   },
   submitButtonText: {
     color: "#fff",

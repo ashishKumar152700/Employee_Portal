@@ -3,7 +3,11 @@
 import "react-native-reanimated";
 
 import React, { useEffect } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Provider, useSelector } from "react-redux";
 import { applyMiddleware, legacy_createStore as createStore } from "redux";
 import { thunk } from "redux-thunk";
@@ -28,18 +32,33 @@ const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 const store = createStore(reducers, applyMiddleware(thunk));
 
+// The root SafeAreaView skips the bottom edge so tab screens can draw behind
+// the floating tab bar (edge-to-edge). Every other screen gets the bottom
+// inset back here, so nothing sits under the system navigation bar.
+const useBottomInsetContentStyle = () => {
+  const insets = useSafeAreaInsets();
+  return { paddingBottom: insets.bottom };
+};
+
 function AuthStackScreen() {
+  const contentStyle = useBottomInsetContentStyle();
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Navigator screenOptions={{ headerShown: false, contentStyle }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
     </AuthStack.Navigator>
   );
 }
 
 function AppStackScreen() {
+  const contentStyle = useBottomInsetContentStyle();
   return (
-    <AppStack.Navigator screenOptions={{ headerShown: false }}>
-      <AppStack.Screen name="Main" component={DrawerNavigator} />
+    <AppStack.Navigator screenOptions={{ headerShown: false, contentStyle }}>
+      {/* Main handles the bottom inset per screen (see Drawer.tsx). */}
+      <AppStack.Screen
+        name="Main"
+        component={DrawerNavigator}
+        options={{ contentStyle: { paddingBottom: 0 } }}
+      />
       <AppStack.Screen name="leaveHistory" component={TabViewExample} />
       <AppStack.Screen name="loanHistory" component={LoanTabNavigator} />
       <AppStack.Screen
@@ -90,13 +109,16 @@ export default function App() {
 
   return (
     <Provider store={store}>
-      <SafeAreaView
-        style={{
-          flex: 1,
-        }}
-      >
-        <Navigation />
-      </SafeAreaView>
+      <SafeAreaProvider>
+        <SafeAreaView
+          edges={["top", "left", "right"]}
+          style={{
+            flex: 1,
+          }}
+        >
+          <Navigation />
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Provider>
   );
 }

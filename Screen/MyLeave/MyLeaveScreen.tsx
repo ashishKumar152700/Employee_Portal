@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StyleSheet,
   Animated,
   Easing,
@@ -13,13 +12,82 @@ import * as Progress from "react-native-progress";
 import { useDispatch, useSelector } from "react-redux";
 import { getLeaves } from "../../Services/Leave/Leave.service";
 import { FAB } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../Global/Types";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
+
+const getLeaveIcon = (leaveCode: string) => {
+  switch (leaveCode) {
+    case "PL":
+      return "payments";
+
+    case "CL":
+      return "weekend";
+
+    case "SL":
+      return "local-hospital";
+
+    case "EL":
+      return "work";
+
+    case "ML":
+      return "pregnant-woman";
+
+    case "PTL":
+      return "man";
+
+    case "BL":
+      return "groups";
+
+    case "CO":
+      return "cached";
+
+    case "OH":
+      return "celebration";
+
+    default:
+      return "event";
+  }
+};
+
+const getLeaveColor = (leaveCode: string) => {
+  switch (leaveCode) {
+    case "PL":
+      return "#2E7D32"; // Green
+
+    case "CL":
+      return "#FB8C00"; // Orange
+
+    case "SL":
+      return "#E53935"; // Red
+
+    case "EL":
+      return "#1565C0"; // Blue
+
+    case "ML":
+      return "#D81B60"; // Pink
+
+    case "PTL":
+      return "#3949AB"; // Indigo
+
+    case "BL":
+      return "#6D4C41"; // Brown
+
+    case "CO":
+      return "#00897B"; // Teal
+
+    case "OH":
+      return "#8E24AA"; // Purple
+
+    default:
+      return "#002957";
+  }
+};
 
 export default function MyLeaveScreen() {
-  const [leaveDetails, setLeaveDetails] = useState(null);
+  const { barTop, contentPaddingBottom } = useTabBarClearance();
   const [fadeAnim] = useState(new Animated.Value(0));
   const dispatch = useDispatch();
   const leaveDetailsSelector = useSelector((state: any) => state.leaveDetails);
@@ -30,32 +98,27 @@ export default function MyLeaveScreen() {
   >;
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    async function fetchLeaveDetails() {
-      try {
-        const leaves = await getLeaves(dispatch);
-        setLeaveDetails(leaves.data);
-      } catch (error) {
-        console.error("Error fetching leave details:", error);
-      }
+  const fetchLeaveDetails = useCallback(async () => {
+    try {
+      await getLeaves(dispatch);
+    } catch (error) {
+      console.error("Error fetching leave details:", error);
     }
-    await fetchLeaveDetails();
-    setRefreshing(false);
   }, [dispatch]);
 
-  useEffect(() => {
-    async function fetchLeaveDetails() {
-      try {
-        const leaves = await getLeaves(dispatch);
-        console.log("Fetched leaves data:", leaves.data);
-        setLeaveDetails(leaves.data);
-      } catch (error) {
-        console.error("Error fetching leave details:", error);
-      }
-    }
-    fetchLeaveDetails();
-  }, [dispatch]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+
+    await fetchLeaveDetails();
+
+    setRefreshing(false);
+  }, [fetchLeaveDetails]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchLeaveDetails();
+    }, [fetchLeaveDetails]),
+  );
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -69,103 +132,38 @@ export default function MyLeaveScreen() {
   const getLeaveData = () => {
     if (
       !leaveDetailsSelector ||
-      Object.keys(leaveDetailsSelector).length === 0
+      !leaveDetailsSelector.summary ||
+      !leaveDetailsSelector.leaveTypes
     ) {
-      console.log("No leave data found, using defaults");
       return {
-        casualleave: 0,
-        sickleave: 0,
-        optionalleave: 0,
-        paidleave: 0,
-        earnedleave: 0,
-        maternityleave: 0,
-        paternityleave: 0,
+        summary: {
+          allocated: 0,
+          used: 0,
+          remaining: 0,
+          progress: 0,
+        },
+        leaveTypes: [],
       };
     }
 
-    console.log("Using leave data from selector:", leaveDetailsSelector);
     return leaveDetailsSelector;
   };
 
   const leaveData = getLeaveData();
+  const summary = leaveData.summary;
+
+  const paidLeave = leaveData.leaveTypes.find((l: any) => l.leaveCode === "PL");
+
+  const casualLeave = leaveData.leaveTypes.find(
+    (l: any) => l.leaveCode === "CL",
+  );
+
+  const sickLeave = leaveData.leaveTypes.find((l: any) => l.leaveCode === "SL");
+
+  const optionalLeave = leaveData.leaveTypes.find(
+    (l: any) => l.leaveCode === "OH",
+  );
   console.log("Final Leave Data:", leaveData);
-
-  // Define total allocated leaves for each type
-  const totalLeavesAllocated = {
-    casual: 12,
-    sick: 12,
-    optional: 4,
-    paid: 12,
-  };
-
-  // API returns REMAINING leaves, so these are the balances left
-  const casualLeavesLeft = leaveData.casualleave || 0;
-  const sickLeavesLeft = leaveData.sickleave || 0;
-  const optionalLeavesLeft = leaveData.optionalleave || 0;
-  const paidLeavesLeft = leaveData.paidleave || 0;
-
-  // Calculate USED leaves (total allocated - remaining) with Math.max to avoid negative values
-  const casualLeavesUsed = Math.max(
-    0,
-    totalLeavesAllocated.casual - casualLeavesLeft,
-  );
-  const sickLeavesUsed = Math.max(
-    0,
-    totalLeavesAllocated.sick - sickLeavesLeft,
-  );
-  const optionalLeavesUsed = Math.max(
-    0,
-    totalLeavesAllocated.optional - optionalLeavesLeft,
-  );
-  const paidLeavesUsed = Math.max(
-    0,
-    totalLeavesAllocated.paid - paidLeavesLeft,
-  );
-
-  console.log(
-    "Casual Leaves - Used:",
-    casualLeavesUsed,
-    "Left:",
-    casualLeavesLeft,
-  );
-  console.log("Sick Leaves - Used:", sickLeavesUsed, "Left:", sickLeavesLeft);
-  console.log(
-    "Optional Leaves - Used:",
-    optionalLeavesUsed,
-    "Left:",
-    optionalLeavesLeft,
-  );
-  console.log("Paid Leaves - Used:", paidLeavesUsed, "Left:", paidLeavesLeft);
-
-  // Calculate overall totals
-  const totalLeavesUsed =
-    casualLeavesUsed + sickLeavesUsed + optionalLeavesUsed + paidLeavesUsed;
-
-  const totalLeavesAvailable =
-    totalLeavesAllocated.casual +
-    totalLeavesAllocated.sick +
-    totalLeavesAllocated.optional +
-    totalLeavesAllocated.paid;
-
-  const totalLeavesRemaining =
-    casualLeavesLeft + sickLeavesLeft + optionalLeavesLeft + paidLeavesLeft;
-
-  // Progress calculation functions - show progress of USED leaves
-  const calculateOverallProgress = () => {
-    const progress = totalLeavesUsed / totalLeavesAvailable;
-    return isNaN(progress) ? 0 : progress; // Handle NaN case
-  };
-
-  // const calculateTypeProgress = (used: number, total: number) => {
-  //   const progress = used / total;
-  //   return isNaN(progress) ? 0 : progress; // Handle NaN case
-  // };
-
-  const calculateTypeProgress = (used: number, monthlyTotal: number) => {
-    if (monthlyTotal === 0) return 0;
-    const progress = used / monthlyTotal;
-    return isNaN(progress) ? 0 : Math.min(progress, 1);
-  };
 
   const handleLeaveHistoryPress = () => {
     navigation.navigate("leaveHistory");
@@ -173,9 +171,19 @@ export default function MyLeaveScreen() {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <SafeAreaView style={styles.safeArea}>
+      {/* Plain View: the root already handles the top inset, and a bottom
+          inset here would bring back a strip behind the floating tab bar. */}
+      <View style={styles.safeArea}>
+        {/* <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        > */}
         <ScrollView
           style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -190,7 +198,7 @@ export default function MyLeaveScreen() {
               <Text style={styles.balanceTitle}>Leave Balance</Text>
               <View style={styles.balanceBadge}>
                 <Text style={styles.balanceBadgeText}>
-                  {totalLeavesRemaining} leaves left
+                  {summary.used} Used / {summary.allocated} Total
                 </Text>
               </View>
             </View>
@@ -198,9 +206,9 @@ export default function MyLeaveScreen() {
             <View style={styles.progressContainer}>
               <Progress.Circle
                 size={120}
-                progress={calculateOverallProgress()}
+                progress={summary.progress}
                 showsText
-                formatText={() => `${totalLeavesUsed}`}
+                formatText={() => `${summary.remaining}`}
                 color="#002957"
                 unfilledColor="#e9f0f7"
                 thickness={10}
@@ -211,18 +219,18 @@ export default function MyLeaveScreen() {
 
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{totalLeavesAvailable}</Text>
+                <Text style={styles.statNumber}>{summary.allocated}</Text>
                 <Text style={styles.statLabel}>Available</Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={[styles.statNumber, styles.usedStat]}>
-                  {totalLeavesUsed}
+                  {summary.used}
                 </Text>
                 <Text style={styles.statLabel}>Used</Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={[styles.statNumber, styles.usedStat]}>
-                  {totalLeavesRemaining}
+                  {summary.remaining}
                 </Text>
                 <Text style={styles.statLabel}>Remaining</Text>
               </View>
@@ -232,120 +240,60 @@ export default function MyLeaveScreen() {
           <View style={styles.leaveTypesContainer}>
             <Text style={styles.sectionTitle}>Leave Breakdown</Text>
 
-            <View style={styles.leaveTypeRow}>
-              <View style={styles.leaveTypeItem}>
-                <View style={styles.progressWithIcon}>
-                  <Progress.Circle
-                    size={70}
-                    progress={calculateTypeProgress(
-                      paidLeavesUsed,
-                      totalLeavesAllocated.paid,
-                    )}
-                    color="#002957"
-                    unfilledColor="#e9f0f7"
-                    thickness={8}
-                    borderWidth={2}
-                  />
-                  <View style={styles.iconInsideCircle}>
-                    <Icon name="work" size={24} color="#002957" />
-                  </View>
-                </View>
-                <View style={styles.leaveTypeDetails}>
-                  <Text style={styles.leaveTypeName}>Paid Leave</Text>
-                  <Text style={styles.leaveLeftText}>
-                    {paidLeavesLeft} left
-                  </Text>
-                </View>
-              </View>
+            <View style={styles.radioButtonContainer}>
+              {leaveData.leaveTypes.map((item: any) => (
+                <View key={item.leaveCode} style={styles.leaveTypeItem}>
+                  <View style={styles.progressWithIcon}>
+                    <Progress.Circle
+                      size={50}
+                      progress={item.progress ?? 0}
+                      color="#002957"
+                      unfilledColor="#e9f0f7"
+                      thickness={8}
+                      borderWidth={2}
+                    />
 
-              <View style={styles.leaveTypeItem}>
-                <View style={styles.progressWithIcon}>
-                  <Progress.Circle
-                    size={70}
-                    progress={calculateTypeProgress(
-                      casualLeavesUsed,
-                      totalLeavesAllocated.casual,
-                    )}
-                    color="#002957"
-                    unfilledColor="#e9f0f7"
-                    thickness={8}
-                    borderWidth={2}
-                  />
-                  <View style={styles.iconInsideCircle}>
-                    <Icon name="beach-access" size={24} color="#002957" />
+                    <View style={styles.iconInsideCircle}>
+                      <Icon
+                        name={getLeaveIcon(item.leaveCode)}
+                        size={22}
+                        color={getLeaveColor(item.leaveCode)}
+                      />
+                    </View>
                   </View>
-                </View>
-                <View style={styles.leaveTypeDetails}>
-                  <Text style={styles.leaveTypeName}>Casual Leave</Text>
-                  <Text style={styles.leaveLeftText}>
-                    {casualLeavesLeft} left
-                  </Text>
-                </View>
-              </View>
-            </View>
 
-            <View style={styles.leaveTypeRow}>
-              <View style={styles.leaveTypeItem}>
-                <View style={styles.progressWithIcon}>
-                  <Progress.Circle
-                    size={70}
-                    progress={calculateTypeProgress(
-                      sickLeavesUsed,
-                      totalLeavesAllocated.sick,
-                    )}
-                    color="#002957"
-                    unfilledColor="#e9f0f7"
-                    thickness={8}
-                    borderWidth={2}
-                  />
-                  <View style={styles.iconInsideCircle}>
-                    <Icon name="local-hospital" size={24} color="#002957" />
-                  </View>
-                </View>
-                <View style={styles.leaveTypeDetails}>
-                  <Text style={styles.leaveTypeName}>Sick Leave</Text>
-                  <Text style={styles.leaveLeftText}>
-                    {sickLeavesLeft} left
-                  </Text>
-                </View>
-              </View>
+                  <View style={styles.leaveTypeDetails}>
+                    <Text style={styles.leaveTypeName}>{item.title}</Text>
 
-              <View style={styles.leaveTypeItem}>
-                <View style={styles.progressWithIcon}>
-                  <Progress.Circle
-                    size={70}
-                    progress={calculateTypeProgress(
-                      optionalLeavesUsed,
-                      totalLeavesAllocated.optional,
-                    )}
-                    color="#002957"
-                    unfilledColor="#e9f0f7"
-                    thickness={8}
-                    borderWidth={2}
-                  />
-                  <View style={styles.iconInsideCircle}>
-                    <Icon name="event-available" size={24} color="#002957" />
+                    <Text style={styles.leaveMonthlyText}>
+                      {item.used} Used
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.leaveLeftText,
+                        item.remaining <= 0 && {
+                          color: "#dc3545",
+                        },
+                      ]}
+                    >
+                      {item.remaining} / {item.allocated}
+                    </Text>
                   </View>
                 </View>
-                <View style={styles.leaveTypeDetails}>
-                  <Text style={styles.leaveTypeName}>Optional Leave</Text>
-                  <Text style={styles.leaveLeftText}>
-                    {optionalLeavesLeft} left
-                  </Text>
-                </View>
-              </View>
+              ))}
             </View>
           </View>
         </ScrollView>
 
         <FAB
-          style={styles.fab}
+          style={[styles.fab, { bottom: barTop + 12 }]}
           icon="history"
           label="Leave History"
           onPress={handleLeaveHistoryPress}
           color="white"
         />
-      </SafeAreaView>
+      </View>
     </Animated.View>
   );
 }
@@ -442,12 +390,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 14,
-    marginBottom: 10,
+    marginBottom: 25,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+  },
+  radioButtonContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
+    // paddingBottom: 24,
   },
   sectionTitle: {
     fontSize: 16,
@@ -480,7 +435,7 @@ const styles = StyleSheet.create({
   //   flex: 1,
   // },
   leaveTypeName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#002957",
     marginBottom: 4,
@@ -498,7 +453,6 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 16,
-    bottom: 16,
     backgroundColor: "#002957",
   },
   progressWithIcon: {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Modal, Pressable, Animated } from "react-native";
+import { Modal, Pressable, Animated, useWindowDimensions } from "react-native";
 import {
   View,
   Text,
@@ -27,11 +27,20 @@ import AddEmployeeRequestForm from "../../Screen/AddEmpToTeam/AddEmployeeRequest
 import OvertimeRequestForm from "../../Screen/Overtime/OvertimeRequestForm";
 import ResignationForm from "../../Screen/Resignation/ResignationForm";
 import TaxModule from "../../Screen/TaxModule/TaxModule";
+import PayrollScreen from "../../Screen/Payroll/PayrollScreen";
+import PayrollDetailScreen from "../../Screen/Payroll/PayrollDetailScreen";
+import PayslipScreen from "../../Screen/Payroll/PayslipScreen";
+import TaxReportScreen from "../../Screen/Payroll/TaxReportScreen";
 import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
 import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const Stack = createNativeStackNavigator();
+
+// Screens hosting a floating bottom tab bar draw edge-to-edge; the bar itself
+// accounts for the bottom safe-area inset.
+const edgeToEdgeOptions = { contentStyle: { paddingBottom: 0 } };
 
 const CustomHeader = ({ navigation, title, onMenuPress }) => {
   const formatTitle = (text) => {
@@ -103,8 +112,17 @@ const ScreenWrapper = ({ component: Component, onMenuPress, ...props }) => {
 function DrawerNavigator() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [slideAnim] = useState(new Animated.Value(-300));
   const [currentRoute, setCurrentRoute] = useState('Timesheet');
+  const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const drawerWidth = Math.min(340, Math.max(280, windowWidth * 0.85));
+  const [slideAnim] = useState(new Animated.Value(-drawerWidth));
+
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      slideAnim.setValue(-drawerWidth);
+    }
+  }, [drawerWidth]);
 
   useEffect(() => {
     async function preloadFonts() {
@@ -126,13 +144,13 @@ function DrawerNavigator() {
     if (isDrawerOpen) {
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 250,
+        duration: 280,
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(slideAnim, {
-        toValue: -300,
-        duration: 200,
+        toValue: -drawerWidth,
+        duration: 220,
         useNativeDriver: true,
       }).start();
     }
@@ -168,9 +186,10 @@ function DrawerNavigator() {
         initialRouteName="Attendance"
         screenOptions={{
           headerShown: false,
+          contentStyle: { paddingBottom: insets.bottom },
         }}
       >
-        <Stack.Screen name="Attendance">
+        <Stack.Screen name="Attendance" options={edgeToEdgeOptions}>
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>
               <ScreenWrapper 
@@ -181,7 +200,7 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
-        <Stack.Screen name="MyLeaveComingSoon">
+        <Stack.Screen name="MyLeaves" options={edgeToEdgeOptions}>
         {/* <Stack.Screen name="MyLeaveScreen"> */}
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>
@@ -204,7 +223,7 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
-        <Stack.Screen name="AssetModule">
+        <Stack.Screen name="AssetModule" options={edgeToEdgeOptions}>
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>
               <ScreenWrapper 
@@ -336,6 +355,50 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
+        <Stack.Screen name="Payroll">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={PayrollScreen} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="PayrollDetail">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={PayrollDetailScreen} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Payslip">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={PayslipScreen} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="TaxReport">
+          {(props) => (
+            <RouteProvider onRouteChange={handleRouteChange}>
+              <ScreenWrapper 
+                {...props} 
+                component={TaxReportScreen} 
+                onMenuPress={openDrawer}
+              />
+            </RouteProvider>
+          )}
+        </Stack.Screen>
       </Stack.Navigator>
 
       {/* Custom Drawer Modal */}
@@ -350,10 +413,10 @@ function DrawerNavigator() {
           style={styles.modalContainer} 
           onPress={closeDrawer}
         >
-          <Animated.View 
+          <Animated.View
             style={[
               styles.drawerContainer,
-              { transform: [{ translateX: slideAnim }] }
+              { width: drawerWidth, transform: [{ translateX: slideAnim }] },
             ]}
             onStartShouldSetResponder={() => true}
           >
@@ -434,20 +497,25 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // Navy-tinted scrim keeps the backdrop on-brand instead of plain grey.
+    backgroundColor: 'rgba(0, 22, 48, 0.5)',
   },
   drawerContainer: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    width: 300,
-    backgroundColor: 'white',
-    elevation: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    backgroundColor: '#F2F6FB',
+    borderTopRightRadius: 28,
+    borderBottomRightRadius: 28,
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255, 255, 255, 0.6)',
+    overflow: 'hidden',
+    elevation: 18,
+    shadowColor: '#001A38',
+    shadowOffset: { width: 6, height: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
   },
 });
 

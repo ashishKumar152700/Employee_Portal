@@ -25,6 +25,7 @@ import {
 } from "../../Services/AssetModule/ticketService";
 import { Modal, Animated, Easing } from "react-native";
 import LottieView from "lottie-react-native";
+import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 
 const { width } = Dimensions.get("window");
 
@@ -115,6 +116,7 @@ const getCategoryIcon = (category: string) => {
 };
 
 export default function AssetRequest() {
+  const { contentPaddingBottom } = useTabBarClearance();
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
@@ -459,7 +461,10 @@ export default function AssetRequest() {
             item._id || item.id?.toString() || item.category
           }
           numColumns={2}
-          contentContainerStyle={styles.categoriesContainer}
+          contentContainerStyle={[
+            styles.categoriesContainer,
+            { paddingBottom: contentPaddingBottom },
+          ]}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.row}
 
@@ -627,7 +632,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
-    marginBottom: 65,
   },
   header: {
     paddingHorizontal: 15,

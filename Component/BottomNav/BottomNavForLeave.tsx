@@ -1,80 +1,38 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import MyLeaveScreen from '../../Screen/MyLeave/MyLeaveScreen';
 import LeaveApplicationScreen from '../../Screen/MyLeave/LeaveApplicationScreen';
-import MyLeaveComingSoon from '../../Screen/MyLeave/MyLeaveComingSoon';
+import {
+  renderGlassTabBar,
+  sharedTabScreenOptions,
+  TabIcon,
+} from './TabBarTheme';
 
 const Tab = createBottomTabNavigator();
 
 function BottomTabNavLeave() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: {
-          backgroundColor: 'white',
-          height: 70,
-          paddingBottom: 10,
-          paddingTop: 8,
-          borderTopWidth: 1,
-          borderTopColor: '#e0e0e0',
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-        },
-        tabBarActiveTintColor: 'rgb(0, 41, 87)',
-        tabBarInactiveTintColor: 'rgba(0, 41, 87, 0.6)',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-          marginTop: 4,
-        },
-      }}
-    >
-      <Tab.Screen 
-        name="Leave Details" 
-        component={MyLeaveComingSoon} 
-        // component={MyLeaveScreen} 
+      tabBar={renderGlassTabBar}
+      screenOptions={sharedTabScreenOptions}>
+      <Tab.Screen
+        name="Leave Details"
+        component={MyLeaveScreen}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Icon 
-              name="list" 
-              color={color} 
-              size={22} 
-              style={focused ? styles.iconFocused : {}}
-            />
-          ),
+          tabBarIcon: ({focused}) => <TabIcon name="list" focused={focused} />,
         }}
       />
-      <Tab.Screen 
-        name="Apply for Leaves" 
-        component={LeaveApplicationScreen} 
+      <Tab.Screen
+        name="Apply for Leaves"
+        component={LeaveApplicationScreen}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color, size, focused }) => (
-            <Icon 
-              name="plus" 
-              color={color} 
-              size={22} 
-              style={focused ? styles.iconFocused : {}}
-            />
-          ),
+          tabBarIcon: ({focused}) => <TabIcon name="plus" focused={focused} />,
         }}
       />
     </Tab.Navigator>
   );
 }
-
-const styles = {
-  iconFocused: {
-    shadowColor: 'rgb(0, 41, 87)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  }
-};
 
 export default BottomTabNavLeave;
