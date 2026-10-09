@@ -20,6 +20,7 @@ import {
 } from 'react-native-image-picker';
 import Toast from 'react-native-toast-message';
 import { themedStyles } from "../../Global/ThemeContext";
+import { dialog } from "../../Component/Feedback/AppDialog";
 
 interface FaceCaptureProps {
   onImageCaptured: (imageBase64: string) => void;
@@ -66,20 +67,20 @@ export default function FaceCaptureComponent({ onImageCaptured, onCancel }: Face
               text2: 'Image ready for eSSL MB20 enrollment'
             });
           } else {
-            Alert.alert(
-              'Image Quality Check',
-              validation.message,
-              [
-                { text: 'Try Again', onPress: () => capturePhoto() },
-                { 
-                  text: 'Use Anyway', 
-                  onPress: () => setCapturedImage(asset.base64!) 
-                }
-              ]
-            );
+            dialog
+              .confirm({
+                title: 'Image quality check',
+                message: validation.message,
+                confirmLabel: 'Use anyway',
+                cancelLabel: 'Try again',
+                variant: 'warning',
+              })
+              .then((useAnyway) =>
+                useAnyway ? setCapturedImage(asset.base64!) : capturePhoto()
+              );
           }
         } else {
-          Alert.alert('Error', 'Failed to capture image data');
+          dialog.alert('Capture failed', 'Failed to capture image data', 'error');
         }
       }
     });

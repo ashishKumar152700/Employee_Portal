@@ -10,7 +10,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   RefreshControl,
   TextInput,
   StatusBar,
@@ -29,6 +28,7 @@ import {
   calculateTicketStats,
 } from "../../Services/AssetModule/ticketService";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
+import { dialog } from "../../Component/Feedback/AppDialog";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 import {
   AssetDialog,
@@ -650,10 +650,7 @@ export default function MyTickets() {
     title: string,
     message: string
   ) => {
-    const icons = { success: "✅", error: "❌", warning: "⚠️" };
-    Alert.alert(`${icons[type]} ${title}`, message, [
-      { text: "OK", style: "default" },
-    ]);
+    dialog.alert(title, message, type);
   };
 
   const showConfirmAlert = (

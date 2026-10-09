@@ -22,7 +22,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import LottieView from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   TimesheetTask,
@@ -34,6 +33,7 @@ import {
   getProjects,
 } from "../../Services/Timesheet/timesheetService";
 import { BRAND } from "../../Global/GlassTheme";
+import { AppDialog } from "../../Component/Feedback/AppDialog";
 import { themedStyles, C } from "../../Global/ThemeContext";
 
 const PRIMARY = BRAND.primary;
@@ -612,7 +612,7 @@ const ProjectSheet = ({
   );
 };
 
-// ─── Alert dialog ─────────────────────────────────────────────────────────
+// ─── Alert dialog (app-wide AppDialog, rendered inside the form's modal) ──
 const AlertDialog = ({
   visible,
   config,
@@ -623,61 +623,30 @@ const AlertDialog = ({
   config: AlertConfig;
   onDismiss: () => void;
   onConfirm: () => void;
-}) => (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="fade"
-    statusBarTranslucent
-    onRequestClose={onDismiss}
-  >
-    <View style={styles.alertOverlay}>
-      <View style={styles.alertBox}>
-        <LottieView
-          source={lottieAnimations[config.type]}
-          autoPlay
-          loop={false}
-          style={styles.lottie}
-        />
-        <Text style={styles.alertTitle}>{config.title}</Text>
-        <Text style={styles.alertMessage}>{config.message}</Text>
-        <View style={styles.alertBtns}>
-          {config.type === "confirm" ? (
-            <>
-              <TouchableOpacity
-                style={[styles.alertBtn, styles.alertCancelBtn]}
-                onPress={onDismiss}
-              >
-                <Text style={styles.alertCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.alertBtn} onPress={onConfirm}>
-                <LinearGradient
-                  colors={["#EF4444", "#DC2626"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.alertGradientBtn}
-                >
-                  <Text style={styles.alertBtnText}>Delete</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity style={styles.alertBtn} onPress={onConfirm}>
-              <LinearGradient
-                colors={C.primaryGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.alertGradientBtn}
-              >
-                <Text style={styles.alertBtnText}>OK</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </View>
-  </Modal>
-);
+}) =>
+  config.type === "confirm" ? (
+    <AppDialog
+      visible={visible}
+      variant="danger"
+      lottie={lottieAnimations.confirm}
+      title={config.title}
+      message={config.message}
+      secondaryLabel="Cancel"
+      onSecondary={onDismiss}
+      primaryLabel="Delete"
+      onPrimary={onConfirm}
+    />
+  ) : (
+    <AppDialog
+      visible={visible}
+      variant={config.type}
+      lottie={lottieAnimations[config.type]}
+      title={config.title}
+      message={config.message}
+      primaryLabel="OK"
+      onPrimary={onConfirm}
+    />
+  );
 
 // ════════════════════════════════════════════════════════════════════════
 //  Form
@@ -1184,6 +1153,19 @@ function TimesheetForm({
           setShowProjectPicker(false);
         }}
         onClose={() => setShowProjectPicker(false)}
+      />
+
+      <AppDialog
+        visible={saving || deleting !== null}
+        variant="loading"
+        title={
+          deleting !== null
+            ? "Deleting task"
+            : editingTaskId
+            ? "Updating task"
+            : "Logging your task"
+        }
+        message="Syncing with your timesheet…"
       />
 
       <AlertDialog

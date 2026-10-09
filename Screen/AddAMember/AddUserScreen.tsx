@@ -21,6 +21,7 @@ import { BiometricUserService } from '../../Services/BiometricService/BiometricU
 import { CreateUserRequest } from '../../Global/BiometricUser';
 import FaceCaptureComponent from '../../Component/AddMemberScreen/FaceCaptureComponent';
 import { themedStyles } from "../../Global/ThemeContext";
+import { dialog } from "../../Component/Feedback/AppDialog";
 
 
 interface FormData {
@@ -171,10 +172,10 @@ export default function AddUserScreen() {
 
         // Show additional instructions if needed
         if (response.nextStep === 'BIOMETRIC_ENROLLMENT') {
-          Alert.alert(
-            'Next Step',
+          dialog.alert(
+            'Next step',
             'User created successfully! Please complete biometric enrollment on the device.',
-            [{ text: 'OK' }]
+            'success'
           );
         }
       } else {

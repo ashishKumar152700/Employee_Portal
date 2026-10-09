@@ -13,6 +13,7 @@ import LottieView from "lottie-react-native";
 import BottomNavForAsset from "../BottomNav/BottomNavForAsset";
 import MyTickets from "../../Screen/Asset/MyTickets";
 import CustomDrawerContent from "./DrawerContnet";
+import { LoadingScreen } from "../Feedback/LoadingScreen";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import LeaveRequest from "../../Screen/LeaveRequestList/LeaveRequest";
@@ -172,15 +173,7 @@ function DrawerNavigator() {
 
   if (!fontsLoaded) {
     return (
-      <View style={styles.loaderContainer}>
-        <LottieView
-          source={require("../../assets/animations/loading.json")}
-          autoPlay
-          loop
-          style={styles.loadingLottie}
-        />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+      <LoadingScreen message="Getting things ready" submessage="Setting up your workspace" />
     );
   }
 

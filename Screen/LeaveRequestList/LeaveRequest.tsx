@@ -17,6 +17,8 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import {managerLeaveRequestClass} from "../../Services/LeaveRequest/LeaveRequest.service";
 import {useFocusEffect} from "@react-navigation/native";
 import { themedStyles, C } from "../../Global/ThemeContext";
+import { AppDialog, DialogDetails, dialog } from "../../Component/Feedback/AppDialog";
+import { LoadingScreen } from "../../Component/Feedback/LoadingScreen";
 
 const {width} = Dimensions.get('window');
 
@@ -96,6 +98,11 @@ const LeaveRequest = () => {
       console.error(
           `Error updating leave status (${status}):`,
           error
+      );
+      dialog.alert(
+          "Couldn't update request",
+          "The leave request could not be updated. Please try again.",
+          "error"
       );
     } finally {
       setProcessingRequest(null);
@@ -242,11 +249,7 @@ const LeaveRequest = () => {
   );
 
   if (loading) {
-    return (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={C.accent}/>
-        </View>
-    );
+    return <LoadingScreen message="Loading leave requests" submessage="Fetching pending approvals" />;
   }
 
   return (
@@ -277,76 +280,38 @@ const LeaveRequest = () => {
               </View>
           )}
 
-          {/* Custom Confirmation Modal */}
-          <Modal
+          {/* Approve / reject confirmation */}
+          <AppDialog
               visible={confirmationModal.visible}
-              transparent={true}
-              animationType="fade"
-              onRequestClose={hideConfirmation}
+              variant={confirmationModal.type === "approve" ? "confirm" : "danger"}
+              lottie={confirmationModal.type === "approve" ? null : undefined}
+              icon={confirmationModal.type === "approve" ? "check-decagram-outline" : undefined}
+              title={confirmationModal.type === "approve" ? "Confirm Approval" : "Confirm Rejection"}
+              message={`Are you sure you want to ${confirmationModal.type} ${confirmationModal.request?.user?.name || "this employee"}'s leave request?`}
+              secondaryLabel="Cancel"
+              onSecondary={hideConfirmation}
+              primaryLabel={confirmationModal.type === "approve" ? "Approve" : "Reject"}
+              onPrimary={() => {
+                if (confirmationModal.type === "approve") {
+                  handleApprove(confirmationModal.request);
+                } else {
+                  handleReject(confirmationModal.request);
+                }
+              }}
           >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContainer}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>
-                    {confirmationModal.type === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
-                  </Text>
-                  <TouchableOpacity onPress={hideConfirmation} style={styles.closeButton}>
-                    <Icon name="close" size={24} color={C.accent}/>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.modalBody}>
-                  <Text style={styles.modalMessage}>
-                    Are you sure you want
-                    to {confirmationModal.type} {confirmationModal.request?.user?.name || 'this employee'}'s
-                    leave request?
-                  </Text>
-
-                  {confirmationModal.request && (
-                      <View style={styles.requestDetails}>
-                        <Text style={styles.detailLabel}>Leave Type:</Text>
-                        <Text style={styles.detailValue}>{confirmationModal.request.leavetype}</Text>
-
-                        <Text style={styles.detailLabel}>Duration:</Text>
-                        <Text style={styles.detailValue}>
-                          {formatDate(confirmationModal.request.leavestart)} to {formatDate(confirmationModal.request.leaveend)}
-                        </Text>
-
-                        <Text style={styles.detailLabel}>Reason:</Text>
-                        <Text style={styles.detailValue}>{confirmationModal.request.reason}</Text>
-                      </View>
-                  )}
-                </View>
-
-                <View style={styles.modalFooter}>
-                  <TouchableOpacity
-                      onPress={hideConfirmation}
-                      style={styles.cancelButton}
-                  >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                      onPress={() => {
-                        if (confirmationModal.type === 'approve') {
-                          handleApprove(confirmationModal.request);
-                        } else {
-                          handleReject(confirmationModal.request);
-                        }
-                      }}
-                      style={[
-                        styles.confirmButton,
-                        confirmationModal.type === 'approve' ? styles.approveButton : styles.rejectButton
-                      ]}
-                  >
-                    <Text style={styles.confirmButtonText}>
-                      {confirmationModal.type === 'approve' ? 'Approve' : 'Reject'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </Modal>
+            {confirmationModal.request && (
+                <DialogDetails
+                    rows={[
+                      { label: "Leave type", value: confirmationModal.request.leavetype },
+                      {
+                        label: "Duration",
+                        value: `${formatDate(confirmationModal.request.leavestart)} to ${formatDate(confirmationModal.request.leaveend)}`,
+                      },
+                      { label: "Reason", value: confirmationModal.request.reason },
+                    ]}
+                />
+            )}
+          </AppDialog>
         </Animated.View>
       </GestureHandlerRootView>
   );

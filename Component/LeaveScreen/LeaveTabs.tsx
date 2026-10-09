@@ -3,8 +3,6 @@ import {
   FlatList,
   View,
   Text,
-  Alert,
-  Modal,
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
@@ -23,6 +21,7 @@ import LottieView from "lottie-react-native";
 import { leaveHistoryPending } from "../../Services/Leave/Leave.service";
 import { managerLeaveRequestClass } from "../../Services/LeaveRequest/LeaveRequest.service";
 import { themedStyles, C } from "../../Global/ThemeContext";
+import { AppDialog, dialog } from "../../Component/Feedback/AppDialog";
 
 if (
   Platform.OS === "android" &&
@@ -103,134 +102,20 @@ const createEmbers = () =>
    - Lottie animation header
    - Theme-matched card, spring entrance, faded backdrop
 --------------------------------------------------------- */
-const CancelConfirmModal = ({ visible, onCancel, onConfirm }) => {
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const cardScale = useRef(new Animated.Value(0.85)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-  const [rendered, setRendered] = useState(visible);
-
-  useEffect(() => {
-    if (visible) {
-      setRendered(true);
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 220,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.spring(cardScale, {
-          toValue: 1,
-          speed: 16,
-          bounciness: 6,
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardOpacity, {
-          toValue: 1,
-          duration: 260,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 180,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardScale, {
-          toValue: 0.9,
-          duration: 180,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardOpacity, {
-          toValue: 0,
-          duration: 180,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) setRendered(false);
-      });
-    }
-  }, [visible]);
-
-  if (!rendered) return null;
-
-  return (
-    <Modal
-      transparent
-      visible={rendered}
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={onCancel}
-    >
-      <Animated.View
-        style={[styles.modalBackdrop, { opacity: backdropOpacity }]}
-      >
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={onCancel}
-        />
-
-        <Animated.View
-          style={[
-            styles.modalCard,
-            {
-              opacity: cardOpacity,
-              transform: [{ scale: cardScale }],
-            },
-          ]}
-        >
-          <View style={styles.modalLottieWrap}>
-            <LottieView
-              source={CANCEL_LOTTIE_SOURCE}
-              autoPlay
-              loop
-              style={styles.modalLottie}
-            />
-          </View>
-
-          <Text style={styles.modalTitle}>Cancel Leave Request?</Text>
-          <Text style={styles.modalSubtitle}>
-            This action can’t be undone. Your pending leave request will be
-            withdrawn immediately.
-          </Text>
-
-          <View style={styles.modalButtonRow}>
-            <TouchableOpacity
-              style={styles.modalKeepButton}
-              activeOpacity={0.8}
-              onPress={onCancel}
-            >
-              <Text style={styles.modalKeepButtonText}>No, Keep It</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modalConfirmButtonWrap}
-              activeOpacity={0.85}
-              onPress={onConfirm}
-            >
-              <LinearGradient
-                colors={[DANGER, DANGER_DARK]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.modalConfirmButton}
-              >
-                <Icon name="times-circle" size={15} color="#FFFFFF" />
-                <Text style={styles.modalConfirmButtonText}>Yes, Cancel</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
-};
+const CancelConfirmModal = ({ visible, onCancel, onConfirm }) => (
+  <AppDialog
+    visible={visible}
+    variant="danger"
+    lottie={CANCEL_LOTTIE_SOURCE}
+    loop
+    title="Cancel Leave Request?"
+    message="This action can’t be undone. Your pending leave request will be withdrawn immediately."
+    secondaryLabel="No, Keep It"
+    onSecondary={onCancel}
+    primaryLabel="Yes, Cancel"
+    onPrimary={onConfirm}
+  />
+);
 
 /* ---------------------------------------------------------
    Animated Leave Card
@@ -635,7 +520,7 @@ const LeaveRoute = ({ leaveType, navigation }) => {
       await managerLeaveRequestClass.LeaveStatusUpdate(leave.id, "cancel");
       setExitingIds((prev) => [...prev, leave.id]);
     } catch (err) {
-      Alert.alert("Error", "Unable to cancel leave.");
+      dialog.alert("Couldn't cancel leave", "Unable to cancel leave. Please try again.", "error");
     }
   }, []);
 

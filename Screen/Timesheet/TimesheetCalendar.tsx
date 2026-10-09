@@ -10,11 +10,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Alert,
   StatusBar
 } from "react-native";
 import { CalendarList } from "react-native-calendars";
 import TimesheetForm from "./Timesheet";
+import { dialog } from "../../Component/Feedback/AppDialog";
+import { LoadingScreen } from "../../Component/Feedback/LoadingScreen";
 import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -188,28 +189,24 @@ const TimesheetCalendar: React.FC = () => {
   }, [hourCountSummary, currentVisibleMonth]);
 
   const showSuccessAlert = (title: string, message: string) => {
-    Alert.alert(`✅ ${title}`, message, [{ text: "OK" }]);
+    dialog.alert(title, message, "success");
   };
 
   const showErrorAlert = (title: string, message: string) => {
-    Alert.alert(`❌ ${title}`, message, [{ text: "OK" }]);
+    dialog.alert(title, message, "error");
   };
 
   const showWarningAlert = (title: string, message: string) => {
-    Alert.alert(`⚠️ ${title}`, message, [{ text: "OK" }]);
+    dialog.alert(title, message, "warning");
   };
 
-  const LoadingOverlay = ({ message }: { message: string }) => (
-    <View style={styles.loadingOverlay}>
-      <View style={styles.loadingCard}>
-        <ActivityIndicator size="large" color={C.accent} />
-        <Text style={styles.loadingText}>{message}</Text>
-      </View>
-    </View>
-  );
-
   if (initialLoading) {
-    return <LoadingOverlay message="Loading Calendar..." />;
+    return (
+      <LoadingScreen
+        message="Loading your timesheet"
+        submessage="Fetching logged hours for this month"
+      />
+    );
   }
 
   return (
@@ -381,7 +378,7 @@ const TimesheetCalendar: React.FC = () => {
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
             {loading ? (
-              <LoadingOverlay message="Loading tasks..." />
+              <LoadingScreen message="Loading tasks" submessage="Getting your entries for this day" showLogo={false} />
             ) : (
               <TimesheetForm
                 selectedDate={selectedDate}

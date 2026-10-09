@@ -23,6 +23,7 @@ import { RefreshControl } from "react-native";
 import LottieView from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
+import { AppDialog } from "../../Component/Feedback/AppDialog";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 import { themedStyles, C } from "../../Global/ThemeContext";
 
@@ -103,117 +104,61 @@ interface PunchOverlayProps {
 }
 
 const PunchOverlay: React.FC<PunchOverlayProps> = ({ phase, punchType }) => {
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const cardScale = useRef(new Animated.Value(0.85)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (phase) {
-      // Animate in
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.spring(cardScale, {
-          toValue: 1,
-          tension: 140,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Animate out
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardOpacity, {
-          toValue: 0,
-          duration: 160,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      cardScale.setValue(0.85);
-    }
-  }, [phase]);
-
-  if (!phase) return null;
-
-  const config = getPhaseConfig()[phase];
+  // Keep the last phase while the dialog animates out.
+  const lastPhase = useRef<NonNullable<PunchPhase>>("locating");
+  if (phase) lastPhase.current = phase;
+  const shown = lastPhase.current;
+  const config = getPhaseConfig()[shown];
   const actionLabel = punchType === "in" ? "Clock In" : "Clock Out";
   const steps: NonNullable<PunchPhase>[] = ["locating", "processing", "success"];
-  const activeIndex = phase === "error" ? -1 : steps.indexOf(phase);
+  const activeIndex = shown === "error" ? -1 : steps.indexOf(shown);
+  const isActive = shown === "locating" || shown === "processing";
 
   return (
-    <Animated.View
-      pointerEvents="box-none"
-      style={[styles.overlayBackdrop, { opacity: backdropOpacity }]}
+    <AppDialog
+      visible={!!phase}
+      variant={isActive ? "loading" : shown === "success" ? "success" : "error"}
+      lottie={LOTTIE[shown]}
+      loop={isActive}
+      title={config.label}
+      message={config.sublabel}
+      hideActions
+      dismissible={false}
     >
-      <Animated.View
-        style={[
-          styles.overlayCard,
-          { transform: [{ scale: cardScale }], opacity: cardOpacity },
-        ]}
-      >
-        <LinearGradient
-          colors={[config.bgAccent, C.surface]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.overlayAccent}
-        >
-          <View style={[styles.overlayPhaseRow, { borderColor: `${config.animColor}33` }]}>
+      <View style={[styles.overlayPhaseRow, { borderColor: C.borderStrong }]}>
+        <View style={[styles.overlayPhaseDot, { backgroundColor: config.animColor }]} />
+        <Text style={[styles.overlayPhaseLabel, { color: config.animColor }]}>
+          {actionLabel}
+        </Text>
+      </View>
+
+      {/* Step progress: locate → record → done */}
+      {shown !== "error" && (
+        <View style={styles.dotsRow}>
+          {steps.map((step, index) => (
             <View
-              style={[styles.overlayPhaseDot, { backgroundColor: config.animColor }]}
+              key={step}
+              style={[
+                styles.dot,
+                index < activeIndex && styles.dotDone,
+                index === activeIndex && [styles.dotActive, { backgroundColor: config.animColor }],
+              ]}
             />
-            <Text style={[styles.overlayPhaseLabel, { color: config.animColor }]}>
-              {actionLabel}
-            </Text>
-          </View>
-
-          <LottieView
-            source={LOTTIE[phase]}
-            autoPlay
-            loop={phase === "locating" || phase === "processing"}
-            style={styles.lottieAnim}
-          />
-        </LinearGradient>
-
-        <View style={styles.overlayTextSection}>
-          <Text style={styles.overlayTitle}>{config.label}</Text>
-          <Text style={styles.overlaySublabel}>{config.sublabel}</Text>
-
-          {/* Step progress: locate → record → done */}
-          {phase !== "error" && (
-            <View style={styles.dotsRow}>
-              {steps.map((step, index) => (
-                <View
-                  key={step}
-                  style={[
-                    styles.dot,
-                    index < activeIndex && styles.dotDone,
-                    index === activeIndex && [
-                      styles.dotActive,
-                      { backgroundColor: config.animColor },
-                    ],
-                  ]}
-                />
-              ))}
-            </View>
-          )}
+          ))}
         </View>
-      </Animated.View>
-    </Animated.View>
+      )}
+    </AppDialog>
   );
 };
+
+// ─── Map loading state ─────────────────────────────────────────────────────
+const MapLoading = () => (
+  <View style={styles.mapLoading}>
+    <LottieView source={LOTTIE.locating} autoPlay loop style={styles.mapLoadingLottie} />
+    <Text style={styles.mapLoadingTitle}>Loading map</Text>
+    <Text style={styles.mapLoadingText}>Pinpointing your punch location…</Text>
+  </View>
+);
 
 // ─── Pulse rings behind the suggested action ─────────────────────────────────
 const PulseRings = ({ color, size }: { color: string; size: number }) => {
@@ -916,6 +861,7 @@ const PunchScreen: React.FC = () => {
                   javaScriptEnabled
                   domStorageEnabled
                   startInLoadingState
+                  renderLoading={() => <MapLoading />}
                   mixedContentMode="always"
                   source={{
                     html: generateMapHTML(
@@ -926,9 +872,7 @@ const PunchScreen: React.FC = () => {
                   style={styles.webview}
                 />
               ) : (
-                <View style={styles.mapLoading}>
-                  <ActivityIndicator size="large" color={C.accent} />
-                </View>
+                <MapLoading />
               )}
             </View>
 
@@ -990,11 +934,12 @@ const styles = themedStyles((c) => ({
   overlayPhaseRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 14,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: c.surfaceAlt,
   },
   overlayPhaseDot: {
     width: 7,
@@ -1034,6 +979,7 @@ const styles = themedStyles((c) => ({
   dotsRow: {
     flexDirection: "row",
     gap: 6,
+    marginTop: 14,
   },
   dot: {
     width: 8,
@@ -1372,9 +1318,24 @@ const styles = themedStyles((c) => ({
   webviewWrapper: { flex: 1 },
   webview: { flex: 1 },
   mapLoading: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: c.surface,
+  },
+  mapLoadingLottie: {
+    width: 140,
+    height: 140,
+  },
+  mapLoadingTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: c.text,
+  },
+  mapLoadingText: {
+    fontSize: 13,
+    color: c.textSoft,
+    marginTop: 4,
   },
   addressContainer: {
     flexDirection: "row",

@@ -1,11 +1,7 @@
 // Screen/Asset/AssetUI.tsx
 // Shared visual building blocks for the Asset module (Asset + My Tickets tabs).
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import {
-  Animated,
-  Easing,
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,8 +9,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
-import LottieView from "lottie-react-native";
 import { BRAND } from "../../Global/GlassTheme";
+import { AppDialog } from "../../Component/Feedback/AppDialog";
 import { themedStyles } from "../../Global/ThemeContext";
 
 export const PAGE_BG = "#F4F7FB";
@@ -258,17 +254,11 @@ export const ViewToggle = ({
   </View>
 );
 
-type DialogVariant = "confirm" | "success" | "error" | "cancel";
-
-const DIALOG_ANIMATIONS: Partial<Record<DialogVariant, any>> = {
-  success: require("../../assets/animations/success.json"),
-  error: require("../../assets/animations/error.json"),
-  cancel: require("../../assets/animations/cancel.json"),
-};
+type AssetDialogVariant = "confirm" | "success" | "error" | "cancel";
 
 type AssetDialogProps = {
   visible: boolean;
-  variant: DialogVariant;
+  variant: AssetDialogVariant;
   title: string;
   message: string;
   primaryLabel: string;
@@ -277,7 +267,7 @@ type AssetDialogProps = {
   onSecondary?: () => void;
 };
 
-/** One dialog style for every confirm / success / error prompt in the module. */
+/** Asset-module dialogs, rendered with the app-wide AppDialog. */
 export const AssetDialog = ({
   visible,
   variant,
@@ -287,87 +277,20 @@ export const AssetDialog = ({
   onPrimary,
   secondaryLabel,
   onSecondary,
-}: AssetDialogProps) => {
-  const translateY = useRef(new Animated.Value(40)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!visible) return;
-    translateY.setValue(40);
-    opacity.setValue(0);
-    Animated.parallel([
-      Animated.spring(translateY, {
-        toValue: 0,
-        friction: 8,
-        tension: 90,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 200,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [visible]);
-
-  const dismiss = onSecondary ?? onPrimary;
-  const animation = DIALOG_ANIMATIONS[variant];
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={dismiss}
-    >
-      <Animated.View style={[styles.dialogOverlay, { opacity }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
-        <Animated.View
-          style={[styles.dialogCard, { transform: [{ translateY }] }]}
-        >
-          {animation ? (
-            <LottieView
-              source={animation}
-              autoPlay
-              loop={false}
-              style={styles.dialogLottie}
-            />
-          ) : (
-            <View style={styles.dialogBadgeRing}>
-              <LinearGradient
-                colors={BRAND.primaryGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.dialogBadge}
-              >
-                <FontAwesome name="cube" size={28} color="#FFFFFF" />
-              </LinearGradient>
-            </View>
-          )}
-
-          <Text style={styles.dialogTitle}>{title}</Text>
-          <Text style={styles.dialogMessage}>{message}</Text>
-
-          <View style={styles.dialogButtons}>
-            {secondaryLabel && onSecondary && (
-              <SecondaryButton
-                label={secondaryLabel}
-                onPress={onSecondary}
-                style={styles.dialogButton}
-              />
-            )}
-            <PrimaryButton
-              label={primaryLabel}
-              onPress={onPrimary}
-              style={styles.dialogButton}
-            />
-          </View>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
-};
+}: AssetDialogProps) => (
+  <AppDialog
+    visible={visible}
+    variant={variant === "cancel" ? "danger" : variant}
+    lottie={variant === "confirm" ? null : undefined}
+    icon={variant === "confirm" ? "package-variant-closed" : undefined}
+    title={title}
+    message={message}
+    primaryLabel={primaryLabel}
+    onPrimary={onPrimary}
+    secondaryLabel={secondaryLabel}
+    onSecondary={onSecondary}
+  />
+);
 
 const styles = themedStyles((c) => ({
   toggle: {
@@ -488,71 +411,4 @@ const styles = themedStyles((c) => ({
     fontWeight: "600",
   },
 
-  // Dialog
-  dialogOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    backgroundColor: c.overlay,
-  },
-  dialogCard: {
-    width: "100%",
-    maxWidth: 380,
-    backgroundColor: c.surface,
-    borderRadius: 24,
-    paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 20,
-    alignItems: "center",
-    elevation: 16,
-    shadowColor: BRAND.shadow,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-  },
-  dialogLottie: {
-    width: 120,
-    height: 120,
-    marginTop: -8,
-    marginBottom: -4,
-  },
-  dialogBadgeRing: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: BRAND.primaryFaint,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  dialogBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dialogTitle: {
-    fontSize: 19,
-    fontWeight: "700",
-    color: c.accent,
-    textAlign: "center",
-  },
-  dialogMessage: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: BRAND.inkSoft,
-    textAlign: "center",
-    marginTop: 6,
-  },
-  dialogButtons: {
-    flexDirection: "row",
-    width: "100%",
-    gap: 10,
-    marginTop: 22,
-  },
-  dialogButton: {
-    flex: 1,
-  },
 }));

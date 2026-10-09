@@ -2,7 +2,8 @@
 (global as any).__reanimatedWorkletInit = () => {};
 import "react-native-reanimated";
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import * as SplashScreen from "expo-splash-screen";
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -34,6 +35,11 @@ import {
   Provider as PaperProvider,
 } from "react-native-paper";
 import { C, ThemeProvider, useTheme } from "./Global/ThemeContext";
+import { DialogHost } from "./Component/Feedback/AppDialog";
+import { AnimatedSplash } from "./Component/Splash/AnimatedSplash";
+
+// Keep the native splash up until the animated splash has painted over it.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "react-native";
 import { useOTAUpdate } from "./src/hooks/useOTAUpdate";
@@ -174,12 +180,15 @@ function ThemedRoot() {
       >
         <Navigation />
       </SafeAreaView>
+      {/* App-wide dialogs (dialog.alert / confirm / loading) */}
+      <DialogHost />
     </PaperProvider>
   );
 }
 
 export default function App() {
   useOTAUpdate();
+  const [splashDone, setSplashDone] = useState(false);
 
   return (
     <Provider store={store}>
@@ -187,6 +196,7 @@ export default function App() {
         <ThemeProvider>
           <ThemedRoot />
         </ThemeProvider>
+        {!splashDone && <AnimatedSplash onFinish={() => setSplashDone(true)} />}
       </SafeAreaProvider>
     </Provider>
   );

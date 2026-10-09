@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as Updates from 'expo-updates';
-import { Alert, AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
+import { dialog } from '../../Component/Feedback/AppDialog';
 
 export const useOTAUpdate = (): void => {
   const appState = useRef<AppStateStatus>(AppState.currentState);
@@ -17,31 +18,28 @@ export const useOTAUpdate = (): void => {
         const update = await Updates.checkForUpdateAsync();
 
         if (update.isAvailable) {
-          Alert.alert(
-            'Update Available',
-            'A new version of the app is available. Would you like to download and install it now?',
-            [
-              {
-                text: 'Cancel',
-                onPress: () => {
-                  updateCheckInProgress.current = false;
-                },
-              },
-              {
-                text: 'Install',
-                onPress: async () => {
-                  try {
-                    await Updates.fetchUpdateAsync();
-                    await Updates.reloadAsync();
-                  } catch (error) {
-                    console.error('Error installing update:', error);
-                    Alert.alert('Error', 'Failed to install the update. Please try again.');
-                    updateCheckInProgress.current = false;
-                  }
-                },
-              },
-            ]
-          );
+          const install = await dialog.confirm({
+            title: 'Update available',
+            message:
+              'A new version of the app is available. Would you like to download and install it now?',
+            confirmLabel: 'Install',
+            cancelLabel: 'Later',
+            icon: 'cloud-download-outline',
+          });
+          if (!install) {
+            updateCheckInProgress.current = false;
+            return;
+          }
+          const hideLoading = dialog.loading('Installing update', 'The app will restart in a moment…');
+          try {
+            await Updates.fetchUpdateAsync();
+            await Updates.reloadAsync();
+          } catch (error) {
+            console.error('Error installing update:', error);
+            hideLoading();
+            dialog.alert('Update failed', 'Failed to install the update. Please try again.', 'error');
+            updateCheckInProgress.current = false;
+          }
         } else {
           updateCheckInProgress.current = false;
         }

@@ -25,6 +25,7 @@ import { useSelector, shallowEqual } from "react-redux";
 import moment from "moment";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 import { themedStyles, C, PALETTES, ThemeMode, useTheme } from "../../Global/ThemeContext";
+import { AppDialog, dialog } from "../../Component/Feedback/AppDialog";
 
 const PAGE_BG = "#F4F7FB";
 
@@ -319,6 +320,7 @@ const ChangePasswordSheet = ({
   const [confirmpassword, setconfirmpassword] = useState("");
   const [errors, setErrors] = useState<PasswordErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [resultError, setResultError] = useState("");
 
   const reset = () => {
     setOldPassword("");
@@ -345,10 +347,10 @@ const ChangePasswordSheet = ({
     setSubmitting(true);
     try {
       const message = await changePassword(oldPassword, newPassword, confirmpassword);
-      alert(message);
       close();
+      dialog.alert("Password updated", message, "success");
     } catch (error: any) {
-      alert(error.message);
+      setResultError(error.message || "Could not update your password.");
     } finally {
       setSubmitting(false);
     }
@@ -465,6 +467,16 @@ const ChangePasswordSheet = ({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Rendered inside the sheet's modal so it always appears on top of it */}
+      <AppDialog
+        visible={!!resultError}
+        variant="error"
+        title="Password not changed"
+        message={resultError}
+        primaryLabel="Try again"
+        onPrimary={() => setResultError("")}
+      />
     </Modal>
   );
 };

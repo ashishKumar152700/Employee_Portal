@@ -27,6 +27,7 @@ import { RootStackParamList } from "../../Global/Types";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { ActivityIndicator } from "react-native";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
+import { AppDialog, DialogVariant } from "../../Component/Feedback/AppDialog";
 import { themedStyles, C } from "../../Global/ThemeContext";
 
 const LeaveApplicationScreen: React.FC = () => {
@@ -152,92 +153,6 @@ const LeaveApplicationScreen: React.FC = () => {
     }, []),
   );
 
-  const CustomAlert = ({
-    visible,
-    title,
-    message,
-    type,
-    onClose,
-    buttons,
-  }: any) => {
-    if (!visible) return null;
-
-    const getBackgroundColor = () => {
-      switch (type) {
-        case "success":
-          return "#28a745";
-        case "error":
-          return "#dc3545";
-        case "warning":
-          return "#ffc107";
-        default:
-          return C.primary;
-      }
-    };
-
-    const getIcon = () => {
-      switch (type) {
-        case "success":
-          return "check-circle";
-        case "error":
-          return "error";
-        case "warning":
-          return "warning";
-        default:
-          return "info";
-      }
-    };
-
-    return (
-      <Modal transparent visible={visible} animationType="fade">
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertContainer}>
-            <View
-              style={[
-                styles.alertHeader,
-                { backgroundColor: getBackgroundColor() },
-              ]}
-            >
-              <Icon name={getIcon()} size={24} color="#fff" />
-              <Text style={styles.alertTitle}>{title}</Text>
-            </View>
-            <View style={styles.alertBody}>
-              <Text style={styles.alertMessage}>{message}</Text>
-            </View>
-            <View style={styles.alertFooter}>
-              {buttons ? (
-                buttons.map((button: any, index: number) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.alertButton,
-                      button.style === "cancel" && styles.alertButtonCancel,
-                    ]}
-                    onPress={button.onPress}
-                  >
-                    <Text
-                      style={[
-                        styles.alertButtonText,
-                        button.style === "cancel" &&
-                          styles.alertButtonCancelText,
-                      ]}
-                    >
-                      {button.text}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <TouchableOpacity style={styles.alertButton} onPress={onClose}>
-                  <Text style={styles.alertButtonText}>OK</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
   const todayISO = new Date().toISOString().split("T")[0];
 
   const onDayPress = (day: any) => {
@@ -300,22 +215,6 @@ const LeaveApplicationScreen: React.FC = () => {
       current += 86400000;
     }
     return range;
-  };
-
-  // Custom Loading Component
-  const CustomLoader = ({ visible, message }: any) => {
-    if (!visible) return null;
-
-    return (
-      <Modal transparent visible={visible} animationType="fade">
-        <View style={styles.loaderOverlay}>
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={C.accent} />
-            <Text style={styles.loaderText}>{message || "Submitting..."}</Text>
-          </View>
-        </View>
-      </Modal>
-    );
   };
 
   const validateLeaveApplication = () => {
@@ -679,16 +578,30 @@ const LeaveApplicationScreen: React.FC = () => {
         </View>
       </Modal>
 
-      <CustomAlert
-        visible={alertVisible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        buttons={alertConfig.buttons}
-        onClose={() => setAlertVisible(false)}
+      <AppDialog
+        visible={loaderVisible}
+        variant="loading"
+        title="Applying for leave"
+        message={loaderMessage || "Submitting..."}
       />
 
-      <CustomLoader visible={loaderVisible} message={loaderMessage} />
+      <AppDialog
+        visible={alertVisible}
+        variant={alertConfig.type as DialogVariant}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        primaryLabel={alertConfig.buttons?.[alertConfig.buttons.length - 1]?.text || "OK"}
+        onPrimary={
+          alertConfig.buttons?.[alertConfig.buttons.length - 1]?.onPress ||
+          (() => setAlertVisible(false))
+        }
+        secondaryLabel={
+          alertConfig.buttons && alertConfig.buttons.length > 1
+            ? alertConfig.buttons[0].text
+            : undefined
+        }
+        onSecondary={alertConfig.buttons && alertConfig.buttons.length > 1 ? alertConfig.buttons[0].onPress : undefined}
+      />
     </Animated.View>
   );
 };

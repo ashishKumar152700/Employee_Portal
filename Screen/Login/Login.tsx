@@ -1,37 +1,92 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { forwardRef, useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Image,
   ScrollView,
-  Alert,
-  Dimensions,
   Platform,
   KeyboardAvoidingView,
   StatusBar,
   Animated,
   Easing,
+  TextInput,
+  TextInputProps,
+  StyleSheet,
 } from "react-native";
-import { TextInput } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootStackParamList } from "../../Global/Types";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { loginservice } from "../../Services/Login/Login.service";
 import { useDispatch } from "react-redux";
-import LottieView from "lottie-react-native";
 import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
-import {saveUserCredentials,getUserCredentials} from "../../src/utils/secureStorage";
+import { saveUserCredentials, getUserCredentials } from "../../src/utils/secureStorage";
 import { themedStyles, C } from "../../Global/ThemeContext";
+import { AppDialog, DIALOG_LOTTIE, dialog } from "../../Component/Feedback/AppDialog";
 
+const LOGO = require("../../assets/logo-mark.png");
+const APP_VERSION = Constants.expoConfig?.version ?? "";
 
-const { width, height } = Dimensions.get("window");
+// ─── Input field (module level so typing never remounts the input) ────────
+type LoginFieldProps = TextInputProps & {
+  icon: any;
+  label: string;
+  error?: string;
+  trailing?: React.ReactNode;
+};
+
+const LoginField = forwardRef<TextInput, LoginFieldProps>(
+  ({ icon, label, error, trailing, onFocus, onBlur, ...rest }, ref) => {
+    const [focused, setFocused] = useState(false);
+    return (
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        <View
+          style={[
+            styles.fieldBox,
+            focused && styles.fieldBoxFocused,
+            !!error && styles.fieldBoxError,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name={icon}
+            size={20}
+            color={error ? C.dangerText : focused ? C.accent : C.primaryMuted}
+          />
+          <TextInput
+            ref={ref}
+            {...rest}
+            placeholderTextColor={C.placeholder}
+            onFocus={(e) => {
+              setFocused(true);
+              onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              setFocused(false);
+              onBlur?.(e);
+            }}
+            style={styles.fieldInput}
+          />
+          {trailing}
+        </View>
+        {!!error && (
+          <View style={styles.fieldErrorRow}>
+            <MaterialCommunityIcons name="alert-circle" size={13} color={C.dangerText} />
+            <Text style={styles.fieldErrorText}>{error}</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
+);
 
 const LoginScreen = () => {
+  const insets = useSafeAreaInsets();
   const [employeecode, setEmployeecode] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,9 +96,11 @@ const LoginScreen = () => {
   const [biometricLoginError, setBiometricLoginError] = useState<string | null>(
     null,
   );
+  const [fieldErrors, setFieldErrors] = useState<{ code?: string; password?: string }>({});
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dispatch = useDispatch();
+  const passwordRef = useRef<TextInput>(null);
 
   // Biometric hook
   const {
@@ -56,16 +113,38 @@ const LoginScreen = () => {
     isBiometricAvailableAndEnabled,
   } = useBiometricAuth();
 
-  // Animation refs
-  const logoScaleAnim = new Animated.Value(1);
-  const buttonScaleAnim = new Animated.Value(1);
-  const welcomeAnimationRef = useRef<LottieView>(null);
-  const loadingOpacity = useRef(new Animated.Value(0)).current;
+  // Animations
+  const entrance = useRef(new Animated.Value(0)).current;
+  const logoFloat = useRef(new Animated.Value(0)).current;
+  const buttonScaleAnim = useRef(new Animated.Value(1)).current;
+  const shake = useRef(new Animated.Value(0)).current;
   const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
-    startLogoScale();
-    welcomeAnimationRef.current?.play();
+    Animated.timing(entrance, {
+      toValue: 1,
+      duration: 650,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+    const float = Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoFloat, {
+          toValue: 1,
+          duration: 2600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoFloat, {
+          toValue: 0,
+          duration: 2600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    float.start();
+    return () => float.stop();
   }, []);
 
   // Check if biometric login is available and enabled for displaying the button
@@ -83,61 +162,28 @@ const LoginScreen = () => {
     checkBiometricAvailability();
   }, [isBiometricAvailableAndEnabled]);
 
-  useEffect(() => {
-    if (loading) {
-      // Fade in over 1000ms (1 second - much smoother)
-      Animated.timing(loadingOpacity, {
-        toValue: 1,
-        duration: 1000,
-        easing: Easing.bezier(0.4, 0.0, 0.2, 1), // Material design ease-out
-        useNativeDriver: true,
-      }).start();
-    } else {
-      // Wait 800ms, then fade out over 1200ms (total ~2 seconds before disappearing)
-      Animated.sequence([
-        Animated.delay(1500), // Hold the loading screen for a bit
-        Animated.timing(loadingOpacity, {
-          toValue: 0,
-          duration: 1200,
-          easing: Easing.bezier(0.0, 0.0, 0.2, 1), // Material design ease-in
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [loading]);
-
-  const startLogoScale = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(logoScaleAnim, {
-          toValue: 1.1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoScaleAnim, {
-          toValue: 0.9,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  };
-
   const animateButtonPress = () => {
     Animated.sequence([
       Animated.timing(buttonScaleAnim, {
-        toValue: 0.95,
-        duration: 100,
+        toValue: 0.96,
+        duration: 90,
         useNativeDriver: true,
       }),
       Animated.timing(buttonScaleAnim, {
         toValue: 1,
-        duration: 100,
+        duration: 110,
         useNativeDriver: true,
       }),
     ]).start();
+  };
+
+  const shakeForm = () => {
+    shake.setValue(0);
+    Animated.sequence(
+      [10, -10, 7, -7, 3, 0].map((toValue) =>
+        Animated.timing(shake, { toValue, duration: 55, useNativeDriver: true }),
+      ),
+    ).start();
   };
 
   const togglePasswordVisibility = () => {
@@ -205,9 +251,14 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     if (!employeecode || !password) {
-      Alert.alert("Error", "Employee code and password are required");
+      setFieldErrors({
+        code: employeecode ? undefined : "Employee code is required",
+        password: password ? undefined : "Password is required",
+      });
+      shakeForm();
       return;
     }
+    setFieldErrors({});
 
     animateButtonPress();
     setLoading(true);
@@ -248,46 +299,41 @@ const LoginScreen = () => {
 
         // Show biometric setup prompt if biometric is supported and not yet enabled
         if (isSupported && isEnrolled) {
-          Alert.alert(
-            "Enable Biometric Login?",
-            "Would you like to enable biometric (fingerprint/Face ID) login for faster access in the future?",
-            [
-              {
-                text: "No",
-                onPress: () => {
-                  console.log("User declined biometric login");
-                  onLoginSuccess();
-                },
-                style: "cancel",
-              },
-              {
-                text: "Yes",
-                onPress: async () => {
-                  try {
-                    await enableBiometricLogin();
-                    Alert.alert(
-                      "Success",
-                      "Biometric login has been enabled. You can now use fingerprint/Face ID to login.",
-                    );
-                    onLoginSuccess();
-                  } catch (err) {
-                    Alert.alert(
-                      "Error",
-                      "Failed to enable biometric login. You can try again later.",
-                    );
-                    onLoginSuccess();
-                  }
-                },
-              },
-            ],
-            { cancelable: false },
-          );
+          const enable = await dialog.confirm({
+            title: "Enable biometric login?",
+            message:
+              "Would you like to enable biometric (fingerprint/Face ID) login for faster access in the future?",
+            confirmLabel: "Enable",
+            cancelLabel: "Not now",
+            icon: "fingerprint",
+          });
+          if (!enable) {
+            console.log("User declined biometric login");
+            onLoginSuccess();
+          } else {
+            try {
+              await enableBiometricLogin();
+              await dialog.alert(
+                "Biometric login enabled",
+                "You can now use fingerprint/Face ID to login.",
+                "success",
+              );
+              onLoginSuccess();
+            } catch (err) {
+              await dialog.alert(
+                "Couldn't enable biometrics",
+                "Failed to enable biometric login. You can try again later.",
+                "error",
+              );
+              onLoginSuccess();
+            }
+          }
         } else {
           // No biometric available, proceed directly
           onLoginSuccess();
         }
       }
-    } catch (error:any) {
+    } catch (error: any) {
       const elapsed = Date.now() - startTime;
       if (elapsed < minLoadingTime) {
         await new Promise((resolve) =>
@@ -307,12 +353,7 @@ const LoginScreen = () => {
 
   const onLoginSuccess = () => {
     // Navigate to main app after successful login (password or biometric)
-    // Replace 'MainApp' with your actual route name in the navigation stack
     navigation.replace("Main");
-    // Alternative options:
-    // navigation.replace('Dashboard');
-    // navigation.replace('Home');
-    // navigation.navigate('DashBoard'); // if using navigate instead of replace
   };
 
   const handleLogout = async () => {
@@ -320,14 +361,6 @@ const LoginScreen = () => {
       // Clear session data
       await AsyncStorage.removeItem("token");
       await AsyncStorage.removeItem("user");
-
-      // Clear saved credentials for security
-      // await clearUserCredentials();
-
-      // Optional: Also disable biometric login on logout for security
-      // Uncomment the line below if you want to clear biometric preference on logout
-      // const { disableBiometricLogin } = useBiometricAuth();
-      // await disableBiometricLogin();
 
       // Reset form
       setEmployeecode("");
@@ -337,578 +370,476 @@ const LoginScreen = () => {
       setLoginSuccess(false);
 
       console.log("Logged out successfully");
-      // Navigation back to login will happen automatically as part of your app's state management
     } catch (err) {
       console.error("Logout error:", err);
-      Alert.alert("Error", "Failed to logout. Please try again.");
+      dialog.alert("Error", "Failed to logout. Please try again.", "error");
     }
   };
 
+  const rise = (from: number) => ({
+    opacity: entrance,
+    transform: [
+      {
+        translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [from, 0] }),
+      },
+    ],
+  });
+
+  const inlineError = biometricLoginError || (biometricError ? `Biometric Error: ${biometricError}` : "");
+
   return (
-    <>
+    <View style={styles.container}>
       <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
+
+      {/* ── Brand hero ──────────────────────────────────────────── */}
       <LinearGradient
-        colors={["rgb(0, 41, 87)", "rgba(0, 41, 87, 0.8)", C.background]}
-        style={styles.container}
+        colors={C.heroGradient}
         start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
       >
-        {/* <KeyboardAvoidingView
-          style={styles.keyboardContainer}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-         */}
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={
-            Platform.OS === "ios" ? 0 : (StatusBar.currentHeight ?? 0)
-          }
-        >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-            scrollEnabled={!loading || Platform.OS === "android"}
-          >
-            <View style={styles.headerSection}>
-              <View style={styles.lottieContainer}>
-                <LottieView
-                  ref={welcomeAnimationRef}
-                  source={require("../../assets/animations/success.json")}
-                  autoPlay
-                  loop
-                  style={styles.welcomeLottie}
-                />
-              </View>
+        <View pointerEvents="none" style={styles.heroDecor}>
+          <View style={[styles.ring, styles.ringLg]} />
+          <View style={[styles.ring, styles.ringMd]} />
+          <View style={[styles.orb, styles.orbA]} />
+          <View style={[styles.orb, styles.orbB]} />
+        </View>
 
-              <Animated.View
-                style={[
-                  styles.logoContainer,
-                  {
-                    transform: [{ scale: logoScaleAnim }],
-                  },
-                ]}
-              >
-                <Image
-                  source={{
-                    uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsGAgOHc7MixFJidTH-Ng1Z_y-iq_w82rGIt93WsTFMRTsmwZtuCgTgAh1KE5uDMzOjPk&usqp=CAU",
-                  }}
-                  style={styles.logo}
-                />
-              </Animated.View>
-
-              <View style={styles.headerTextContainer}>
-                <Text style={styles.companyName}>RKT ESS</Text>
-                <Text style={styles.tagline}>Employee Self Service Portal</Text>
-              </View>
-            </View>
-
-            {/* Login Card */}
-            <View style={styles.loginCard}>
-              <LinearGradient
-                colors={C.glass}
-                style={styles.cardGradient}
-              >
-                <View style={styles.cardHeader}>
-                  <Text style={styles.welcomeText}>Welcome Back!</Text>
-                  <Text style={styles.subtitleText}>
-                    Please sign in to continue
-                  </Text>
-                </View>
-
-                <View style={styles.formContainer}>
-                  <View style={styles.inputContainer}>
-                    <TextInput
-                      label="Employee Code"
-                      placeholder="Enter your employee code"
-                      value={employeecode}
-                      onChangeText={setEmployeecode}
-                      style={styles.input}
-                      mode="outlined"
-                      activeOutlineColor={C.accent}
-                      outlineColor={C.border}
-                      theme={{
-                        colors: {
-                          background: C.surface,
-                          onSurfaceVariant: C.textFaint,
-                          outline: C.border,
-                          primary: C.accent,
-                          placeholder: C.placeholder,
-                          onSurface: C.text,
-                          surface: C.surface,
-                        },
-                      }}
-                      left={
-                        <TextInput.Icon
-                          icon="badge-account"
-                          color={C.accent}
-                        />
-                      }
-                      keyboardType="numeric"
-                      contentStyle={styles.inputContent}
-                      outlineStyle={styles.inputOutline}
-                      editable={!loading}
-                    />
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <TextInput
-                      label="Password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChangeText={setPassword}
-                      secureTextEntry={secureTextEntry}
-                      style={styles.input}
-                      mode="outlined"
-                      activeOutlineColor={C.accent}
-                      outlineColor={C.border}
-                      theme={{
-                        colors: {
-                          background: C.surface,
-                          onSurfaceVariant: C.textFaint,
-                          outline: C.border,
-                          primary: C.accent,
-                          placeholder: C.placeholder,
-                          onSurface: C.text,
-                          surface: C.surface,
-                        },
-                      }}
-                      left={
-                        <TextInput.Icon
-                          icon="lock-outline"
-                          color={C.accent}
-                        />
-                      }
-                      right={
-                        <TextInput.Icon
-                          icon={
-                            secureTextEntry ? "eye-off-outline" : "eye-outline"
-                          }
-                          color={C.accent}
-                          onPress={togglePasswordVisibility}
-                        />
-                      }
-                      contentStyle={styles.inputContent}
-                      outlineStyle={styles.inputOutline}
-                      editable={!loading}
-                    />
-                  </View>
-
-                  <Animated.View
-                    style={{ transform: [{ scale: buttonScaleAnim }] }}
-                  >
-                    <TouchableOpacity
-                      style={styles.loginButton}
-                      onPress={handleLogin}
-                      activeOpacity={0.8}
-                      disabled={loading}
-                    >
-                      <LinearGradient
-                        colors={["rgb(0, 41, 87)", "rgba(0, 41, 87, 0.8)"]}
-                        style={styles.buttonGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                      >
-                        <MaterialIcons
-                          name="login"
-                          size={20}
-                          color="white"
-                          style={styles.buttonIcon}
-                        />
-                        <Text style={styles.buttonText}>Sign In</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </Animated.View>
-
-                  {/* Biometric Login Button - shown only if biometrics are available and enabled */}
-                  {showBiometricButton && (
-                    <Animated.View
-                      style={{ transform: [{ scale: buttonScaleAnim }] }}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.loginButton,
-                          { marginTop: 12, backgroundColor: "transparent" },
-                        ]}
-                        onPress={handleBiometricLogin}
-                        activeOpacity={0.8}
-                        disabled={loading || isAuthenticating}
-                      >
-                        <LinearGradient
-                          colors={["rgba(0, 41, 87, 0.8)","rgb(0, 41, 87)"]}
-                          style={styles.buttonGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                        >
-                          <MaterialIcons
-                            name="fingerprint"
-                            size={20}
-                            color="white"
-                            style={styles.buttonIcon}
-                          />
-                          <Text style={styles.buttonText}>
-                            {Platform.OS === "ios"
-                              ? "Login with Face ID"
-                              : "Login with Fingerprint"}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  )}
-
-                  {/* Biometric Login Error Display */}
-                  {biometricLoginError && (
-                    <View
-                      style={{
-                        marginTop: 12,
-                        padding: 12,
-                        backgroundColor: C.dangerBg,
-                        borderRadius: 8,
-                        borderLeftWidth: 4,
-                        borderLeftColor: "#dc2626",
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: C.dangerText,
-                          fontSize: 12,
-                          fontWeight: "600",
-                        }}
-                      >
-                        {biometricLoginError}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* General Biometric Error Display */}
-                  {biometricError && (
-                    <View
-                      style={{
-                        marginTop: 16,
-                        padding: 12,
-                        backgroundColor: C.dangerBg,
-                        borderRadius: 8,
-                        borderLeftWidth: 4,
-                        borderLeftColor: "#dc2626",
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: C.dangerText,
-                          fontSize: 12,
-                          fontWeight: "600",
-                        }}
-                      >
-                        Biometric Error: {biometricError}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </LinearGradient>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-
-        {/* Loading Overlay with Blur - FIXED */}
-        {loading && (
+        <Animated.View style={[styles.brand, rise(-12)]}>
           <Animated.View
             style={[
-              styles.loadingOverlay,
+              styles.logoGlow,
               {
-                opacity: loadingOpacity,
+                transform: [
+                  {
+                    translateY: logoFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -6] }),
+                  },
+                ],
               },
             ]}
           >
-            <View style={styles.blurBackground} />
-            <View style={styles.loadingCard}>
-              {loginError === "" ? (
-                <>
-                  {/* Loading Animation */}
-                  <LottieView
-                    source={require("../../assets/animations/loading.json")}
-                    autoPlay
-                    loop
-                    style={styles.loadingLottie}
-                  />
-
-                  <Text style={styles.loadingText}>Signing you in...</Text>
-                  <Text style={styles.loadingSubtext}>Please wait</Text>
-                </>
-              ) : (
-                <>
-                  <LottieView
-                    source={require("../../assets/animations/LoginError.json")}
-                    autoPlay
-                    loop={false}
-                    style={{
-                      width: 180,
-                      height: 180,
-                      marginBottom: 10,
-                    }}
-                  />
-
-                  <Text
-                    style={[
-                      styles.loadingText,
-                      { color: C.dangerText, marginTop: -10 },
-                    ]}
-                  >
-                    Login Failed
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.loadingSubtext,
-                      {
-                        color: C.dangerText,
-                        fontWeight: "600",
-                        marginTop: 6,
-                        textAlign: "center",
-                        paddingHorizontal: 10,
-                      },
-                    ]}
-                  >
-                    {loginError}
-                  </Text>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setLoginError("");
-                      setLoading(false);
-                      setEmployeecode("");
-                      setPassword("");
-                    }}
-                    style={{
-                      marginTop: 20,
-                      backgroundColor: C.primary,
-                      paddingVertical: 12,
-                      paddingHorizontal: 26,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "white",
-                        fontWeight: "700",
-                        fontSize: 16,
-                      }}
-                    >
-                      Try Again
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
+            <Image source={LOGO} style={styles.logo} />
           </Animated.View>
-        )}
+          <Text style={styles.brandTitle}>RKT ESS</Text>
+          <Text style={styles.brandSubtitle}>Employee Self Service Portal</Text>
+        </Animated.View>
       </LinearGradient>
-    </>
+
+      {/* ── Sign-in card ────────────────────────────────────────── */}
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          <View style={styles.heroSpacer} />
+
+          <Animated.View
+            style={[styles.card, rise(28), { transform: [...rise(28).transform, { translateX: shake }] }]}
+          >
+            <Text style={styles.welcome}>Welcome back</Text>
+            <Text style={styles.welcomeSub}>Sign in with your employee credentials</Text>
+
+            <LoginField
+              icon="badge-account-outline"
+              label="Employee code"
+              placeholder="e.g. 1024"
+              value={employeecode}
+              onChangeText={(t) => {
+                setEmployeecode(t);
+                if (fieldErrors.code) setFieldErrors((e) => ({ ...e, code: undefined }));
+              }}
+              keyboardType="numeric"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              editable={!loading}
+              error={fieldErrors.code}
+            />
+
+            <LoginField
+              ref={passwordRef}
+              icon="lock-outline"
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={(t) => {
+                setPassword(t);
+                if (fieldErrors.password) setFieldErrors((e) => ({ ...e, password: undefined }));
+              }}
+              secureTextEntry={secureTextEntry}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
+              editable={!loading}
+              error={fieldErrors.password}
+              trailing={
+                <TouchableOpacity
+                  onPress={togglePasswordVisibility}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityLabel={secureTextEntry ? "Show password" : "Hide password"}
+                >
+                  <MaterialCommunityIcons
+                    name={secureTextEntry ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={C.primaryMuted}
+                  />
+                </TouchableOpacity>
+              }
+            />
+
+            <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
+              <TouchableOpacity
+                onPress={handleLogin}
+                activeOpacity={0.9}
+                disabled={loading}
+                style={styles.signInTouch}
+                accessibilityRole="button"
+              >
+                <LinearGradient
+                  colors={C.primaryGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.signIn}
+                >
+                  <Text style={styles.signInText}>Sign in</Text>
+                  <View style={styles.signInArrow}>
+                    <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+
+            {showBiometricButton && (
+              <>
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+                <TouchableOpacity
+                  onPress={handleBiometricLogin}
+                  activeOpacity={0.85}
+                  disabled={loading || isAuthenticating}
+                  style={styles.biometric}
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons
+                    name={Platform.OS === "ios" ? "face-recognition" : "fingerprint"}
+                    size={22}
+                    color={C.accent}
+                  />
+                  <Text style={styles.biometricText}>
+                    {Platform.OS === "ios" ? "Login with Face ID" : "Login with Fingerprint"}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {!!inlineError && (
+              <View style={styles.inlineError}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={16} color={C.dangerText} />
+                <Text style={styles.inlineErrorText}>{inlineError}</Text>
+              </View>
+            )}
+          </Animated.View>
+
+          <Animated.View style={[styles.footer, rise(16)]}>
+            <View style={styles.footerRow}>
+              <MaterialCommunityIcons name="shield-lock-outline" size={14} color={C.textFaint} />
+              <Text style={styles.footerText}>Secured by RishiKirti Technologies</Text>
+            </View>
+            {!!APP_VERSION && <Text style={styles.footerVersion}>Version {APP_VERSION}</Text>}
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* ── Sign-in progress / failure ──────────────────────────── */}
+      <AppDialog
+        visible={loading}
+        variant="loading"
+        title="Signing you in"
+        message="Verifying your credentials…"
+      />
+      <AppDialog
+        visible={!!loginError && !loading}
+        variant="error"
+        lottie={DIALOG_LOTTIE.loginError}
+        title="Login failed"
+        message={loginError}
+        primaryLabel="Try again"
+        onPrimary={() => {
+          setLoginError("");
+          setPassword("");
+          passwordRef.current?.focus();
+        }}
+      />
+    </View>
   );
 };
+
+const HERO_HEIGHT = 330;
 
 const styles = themedStyles((c) => ({
   container: {
     flex: 1,
+    backgroundColor: c.background,
   },
-  keyboardContainer: {
+  flex: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  headerSection: {
-    alignItems: "center",
-    marginBottom: 40,
-    paddingTop: 20,
-  },
-  lottieContainer: {
+
+  // Hero
+  hero: {
     position: "absolute",
-    top: -66,
+    top: 0,
     left: 0,
     right: 0,
+    height: HERO_HEIGHT,
     alignItems: "center",
-    zIndex: 0,
+    justifyContent: "center",
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    overflow: "hidden",
+    paddingBottom: 40,
   },
-  welcomeLottie: {
-    width: 260,
-    height: 200,
-    opacity: 0.6,
+  heroDecor: {
+    ...StyleSheet.absoluteFillObject,
   },
-  logoContainer: {
-    marginBottom: 16,
-    marginTop: 106,
-    zIndex: 1,
+  ring: {
+    position: "absolute",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(125, 211, 252, 0.14)",
   },
-  logo: {
-    width: 90,
-    height: 90,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: "rgba(255, 255, 255, 0.3)",
+  ringLg: { width: 420, height: 420, top: -190, right: -170 },
+  ringMd: { width: 260, height: 260, top: -110, right: -90 },
+  orb: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
-  headerTextContainer: {
+  orbA: { width: 160, height: 160, bottom: -60, left: -50 },
+  orbB: { width: 70, height: 70, top: 70, left: 40, backgroundColor: "rgba(125, 211, 252, 0.08)" },
+  brand: {
     alignItems: "center",
-    zIndex: 1,
   },
-  companyName: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  tagline: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
-    textAlign: "center",
-  },
-  loginCard: {
-    borderRadius: 24,
-    marginBottom: 10,
+  logoGlow: {
+    borderRadius: 30,
+    elevation: 14,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
     shadowRadius: 20,
-    elevation: 10,
-  },
-  cardGradient: {
-    borderRadius: 24,
-    padding: 30,
-  },
-  cardLogoContainer: {
-    alignItems: "center",
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
-  },
-  cardLogo: {
-    width: 100,
-    height: 45,
     backgroundColor: "transparent",
   },
-  cardHeader: {
-    alignItems: "center",
-    marginBottom: 20,
+  logo: {
+    width: 96,
+    height: 96,
   },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: c.accent,
-    marginBottom: 8,
+  brandTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 2,
+    marginTop: 14,
   },
-  subtitleText: {
-    fontSize: 16,
-    color: c.textSoft,
-    textAlign: "center",
+  brandSubtitle: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.75)",
+    letterSpacing: 0.6,
+    marginTop: 4,
   },
-  formContainer: {
-    width: "100%",
+
+  // Card
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 18,
   },
-  inputContainer: {
-    marginBottom: 10,
+  heroSpacer: {
+    height: HERO_HEIGHT - 56,
   },
-  input: {
-    fontSize: 14,
+  card: {
+    backgroundColor: c.surface,
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 22,
+    borderWidth: 1,
+    borderColor: c.border,
+    elevation: 12,
+    shadowColor: c.shadow,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.16,
+    shadowRadius: 26,
   },
-  inputContent: {
+  welcome: {
+    fontSize: 22,
+    fontWeight: "800",
     color: c.text,
   },
-  inputOutline: {
-    borderRadius: 12,
+  welcomeSub: {
+    fontSize: 13.5,
+    color: c.textSoft,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+
+  // Fields
+  field: {
+    marginTop: 14,
+  },
+  fieldLabel: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: c.text,
+    marginBottom: 7,
+    marginLeft: 2,
+  },
+  fieldBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: 54,
+    paddingHorizontal: 14,
+    borderRadius: 15,
     borderWidth: 1.5,
+    borderColor: c.border,
+    backgroundColor: c.surfaceInput,
   },
-  loginButton: {
-    borderRadius: 12,
+  fieldBoxFocused: {
+    borderColor: c.accent,
+    backgroundColor: c.surface,
+  },
+  fieldBoxError: {
+    borderColor: c.dangerText,
+  },
+  fieldInput: {
+    flex: 1,
+    fontSize: 15.5,
+    color: c.text,
+    paddingVertical: 0,
+  },
+  fieldErrorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  fieldErrorText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: c.dangerText,
+  },
+
+  // Buttons
+  signInTouch: {
+    marginTop: 22,
+    borderRadius: 16,
     overflow: "hidden",
-    marginTop: 20,
-    shadowColor: "rgb(0, 41, 87)",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    elevation: 6,
+    shadowColor: c.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 14,
+    backgroundColor: c.primary,
   },
-  buttonGradient: {
+  signIn: {
+    height: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
   },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  buttonText: {
-    color: "white",
+  signInText: {
     fontSize: 16,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.4,
+  },
+  signInArrow: {
+    position: "absolute",
+    right: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: c.divider,
+  },
+  dividerText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: c.textFaint,
+  },
+  biometric: {
+    height: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: c.borderStrong,
+    backgroundColor: c.primaryFaint,
+  },
+  biometricText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: c.accent,
+  },
+  inlineError: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: c.dangerBg,
+  },
+  inlineErrorText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: c.dangerText,
+    lineHeight: 18,
+  },
+
+  // Footer
+  footer: {
+    alignItems: "center",
+    marginTop: 22,
+  },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  footerText: {
+    fontSize: 12,
+    color: c.textFaint,
     fontWeight: "600",
   },
-  // Loading Overlay Styles
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  blurBackground: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: c.overlay,
-  },
-  loadingCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.98)",
-    borderRadius: 24,
-    padding: 40,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
-    minWidth: 280,
-  },
-  loadingLottie: {
-    width: 180,
-    height: 180,
-  },
-  loadingText: {
-    marginTop: 20,
-    color: c.accent,
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  loadingSubtext: {
-    marginTop: 8,
-    color: c.textSoft,
-    fontSize: 14,
-    fontWeight: "500",
-    textAlign: "center",
+  footerVersion: {
+    fontSize: 11,
+    color: c.textFaint,
+    marginTop: 4,
   },
 }));
+
 
 export default LoginScreen;

@@ -13,9 +13,9 @@
     "icon": "./assets/RktEss.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#002957"
     },
     "android": {
       "package": "com.sudhirtbk9.essp202",
@@ -58,7 +58,19 @@
           "faceIDPermission": "Allow $(RKT Employee App) to use Face ID for secure login."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#002957",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 240,
+          "dark": {
+            "backgroundColor": "#00122A",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ]
     ],
     "web": {
       "favicon": "./assets/favicon.png"

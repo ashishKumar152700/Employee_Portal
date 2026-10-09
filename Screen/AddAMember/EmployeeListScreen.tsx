@@ -25,6 +25,7 @@ import { BiometricUserService } from '../../Services/BiometricService/BiometricU
 import { BiometricUser } from '../../Global/BiometricUser';
 import EditUserModal from '../../Component/EditUserModal/EditUserModal';
 import { themedStyles } from "../../Global/ThemeContext";
+import { dialog } from "../../Component/Feedback/AppDialog";
 
 export default function EmployeeListScreen() {
   const [users, setUsers] = useState<BiometricUser[]>([]);
@@ -86,15 +87,14 @@ export default function EmployeeListScreen() {
   }, [searchQuery, users]);
 
   const handleDeleteUser = async (user: BiometricUser) => {
-    Alert.alert(
-      'Delete User',
-      `Are you sure you want to delete ${user.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
+    const confirmed = await dialog.confirm({
+      title: 'Delete user?',
+      message: `Are you sure you want to delete ${user.name}?`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    await (async () => {
             try {
               const response = await BiometricUserService.deleteUser(user.uid);
               if (response.success) {
@@ -118,10 +118,7 @@ export default function EmployeeListScreen() {
                 text2: 'Failed to delete user',
               });
             }
-          },
-        },
-      ]
-    );
+    })();
   };
 
   const handleEditUser = (user: BiometricUser) => {
