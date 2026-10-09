@@ -26,6 +26,7 @@ import moment from "moment";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 import { themedStyles, C, PALETTES, ThemeMode, useTheme } from "../../Global/ThemeContext";
 import { AppDialog, dialog } from "../../Component/Feedback/AppDialog";
+import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
 
 const PAGE_BG = "#F4F7FB";
 
@@ -488,6 +489,9 @@ const ChangePasswordSheet = ({
 const ProfilePage = () => {
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const user = useSelector((state: any) => state.userDetails.user, shallowEqual);
+  const { isSupported, isEnrolled, binding, disableBiometricLogin } = useBiometricAuth();
+  const boundToMe = !!binding && !!user && binding.empCode === String(user.employeecode);
+  const boundToOther = !!binding && !boundToMe;
   const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -635,6 +639,51 @@ const ProfilePage = () => {
               </View>
               <MaterialCommunityIcons name="chevron-right" size={22} color={C.primaryMuted} />
             </TouchableOpacity>
+
+            {isSupported && isEnrolled && (
+              <View style={[styles.actionRow, styles.actionRowDivider]}>
+                <LinearGradient
+                  colors={C.primaryGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.actionIcon}
+                >
+                  <MaterialCommunityIcons name="fingerprint" size={20} color="#FFFFFF" />
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.actionTitle}>Fingerprint login</Text>
+                  <Text style={styles.actionSubtitle}>
+                    {boundToMe
+                      ? "On for your account on this device"
+                      : boundToOther
+                        ? "Set up for another account on this device"
+                        : "Offered next time you sign in with your password"}
+                  </Text>
+                </View>
+                {boundToMe ? (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const off = await dialog.confirm({
+                        title: "Turn off fingerprint login?",
+                        message: "You'll sign in with your password next time. You can turn it back on at your next sign-in.",
+                        confirmLabel: "Turn off",
+                        variant: "danger",
+                        icon: "fingerprint-off",
+                        lottie: null,
+                      });
+                      if (off) await disableBiometricLogin();
+                    }}
+                    style={styles.pillButton}
+                  >
+                    <Text style={styles.pillButtonText}>Turn off</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.statusPill}>
+                    <Text style={styles.statusPillText}>Off</Text>
+                  </View>
+                )}
+              </View>
+            )}
           </SectionCard>
         </View>
       </ScrollView>
@@ -894,6 +943,32 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     paddingVertical: 10,
     gap: 12,
+  },
+  actionRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: c.divider,
+  },
+  pillButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: c.dangerBg,
+  },
+  pillButtonText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: c.dangerText,
+  },
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: c.surfaceAlt,
+  },
+  statusPillText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: c.textSoft,
   },
   actionIcon: {
     width: 42,

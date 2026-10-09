@@ -102,6 +102,11 @@ export const CustomDrawerContent = ({
     },
   ];
 
+  // Development builds only (e.g. Expo Go via `npm run dev`): effect playgrounds.
+  const devItems = __DEV__
+    ? [{ name: "Burn effect demo", icon: "local-fire-department", route: "BurnDemo" }]
+    : [];
+
   const checkMachineStatus = async () => {
     try {
       setStatusLoading(true);
@@ -363,6 +368,12 @@ export const CustomDrawerContent = ({
         showsVerticalScrollIndicator={false}
       >
         {renderMachineStatus()}
+        {devItems.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Developer</Text>
+            {devItems.map((item) => renderMenuItem(item))}
+          </View>
+        )}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Menu</Text>
           {menuItems.map((item) => renderMenuItem(item))}

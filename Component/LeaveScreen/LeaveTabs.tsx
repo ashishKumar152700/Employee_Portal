@@ -22,6 +22,7 @@ import { leaveHistoryPending } from "../../Services/Leave/Leave.service";
 import { managerLeaveRequestClass } from "../../Services/LeaveRequest/LeaveRequest.service";
 import { themedStyles, C } from "../../Global/ThemeContext";
 import { AppDialog, dialog } from "../../Component/Feedback/AppDialog";
+import { BurnCard } from "../Effects/BurnCard";
 
 if (
   Platform.OS === "android" &&
@@ -40,9 +41,6 @@ const BG = "#F4F7FB";
 const DANGER = "#E5484D";
 const DANGER_DARK = "#B3261E";
 
-const BURN_DURATION = 900;
-const EMBER_COUNT = 18;
-const EMBER_COLORS = ["#FFD580", "#FF8C00", "#FF5A1F", "#FFC24B", "#FF3D00"];
 
 // NOTE: Drop a free "warning / alert" Lottie JSON from lottiefiles.com into
 // this path (or point it at your own asset). Any circular alert/question-mark
@@ -79,23 +77,6 @@ const formatLeavePart = (part) => {
       return part;
   }
 };
-
-/* Embers that spawn along the burn front and rise off the card */
-const createEmbers = () =>
-  Array.from({ length: EMBER_COUNT }).map(() => {
-    const triggerFrac = Math.random() * 0.82; // when along the burn this ember ignites
-    return {
-      anim: new Animated.Value(0),
-      left: `${4 + Math.random() * 92}%`,
-      bottomStart: triggerFrac * 96, // roughly tracks the flame front height at ignition
-      rise: 30 + Math.random() * 70,
-      drift: (Math.random() - 0.5) * 36,
-      size: 2.5 + Math.random() * 4.5,
-      color: EMBER_COLORS[Math.floor(Math.random() * EMBER_COLORS.length)],
-      duration: 450 + Math.random() * 500,
-      delay: triggerFrac * BURN_DURATION,
-    };
-  });
 
 /* ---------------------------------------------------------
    Cancel Confirmation Modal
@@ -134,10 +115,6 @@ const LeaveCard = ({
 }) => {
   const cardAnim = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(1)).current;
-  const burnAnim = useRef(new Animated.Value(0)).current;
-  const flicker = useRef(new Animated.Value(1)).current;
-  const postBurnFade = useRef(new Animated.Value(1)).current;
-  const embers = useRef(createEmbers()).current;
   const itemRef = useRef(item);
   itemRef.current = item;
 
@@ -154,57 +131,6 @@ const LeaveCard = ({
       useNativeDriver: true,
     }).start();
   }, []);
-
-  // Trigger the burn sequence once the parent flags this card as exiting
-  useEffect(() => {
-    if (!isExiting) return;
-
-    const flickerLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(flicker, {
-          toValue: 0.6,
-          duration: 90,
-          useNativeDriver: true,
-        }),
-        Animated.timing(flicker, {
-          toValue: 1,
-          duration: 110,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    flickerLoop.start();
-
-    Animated.parallel([
-      Animated.sequence([
-        Animated.timing(burnAnim, {
-          toValue: 1,
-          duration: BURN_DURATION,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: false,
-        }),
-        Animated.delay(150),
-        Animated.timing(postBurnFade, {
-          toValue: 0,
-          duration: 320,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-      ...embers.map((e) =>
-        Animated.timing(e.anim, {
-          toValue: 1,
-          duration: e.duration,
-          delay: e.delay,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ),
-    ]).start(({ finished }) => {
-      flickerLoop.stop();
-      if (finished) onExitComplete(item.id);
-    });
-  }, [isExiting]);
 
   const requestCancel = () => {
     setConfirmVisible(true);
@@ -249,15 +175,6 @@ const LeaveCard = ({
     inputRange: [0, 1],
     outputRange: [24, 0],
   });
-  const combinedOpacity = Animated.multiply(cardAnim, postBurnFade);
-  const combinedScale = Animated.multiply(
-    pressAnim,
-    postBurnFade.interpolate({ inputRange: [0, 1], outputRange: [0.93, 1] }),
-  );
-  const charHeight = burnAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0%", "100%"],
-  });
 
   const onPressIn = () => {
     Animated.spring(pressAnim, {
@@ -283,13 +200,19 @@ const LeaveCard = ({
         style={{
           marginHorizontal: 16,
           marginVertical: 8,
-          opacity: combinedOpacity,
+          opacity: cardAnim,
           transform: [
             { translateY: entranceTranslateY },
-            { scale: combinedScale },
+            { scale: pressAnim },
           ],
         }}
       >
+        {/* Burns away like paper when the leave is cancelled */}
+        <BurnCard
+          burning={isExiting}
+          origin="random"
+          onBurnComplete={() => onExitComplete(itemRef.current.id)}
+        >
         <TouchableOpacity
           activeOpacity={1}
           onPressIn={onPressIn}
@@ -417,71 +340,8 @@ const LeaveCard = ({
             )}
           </View>
 
-          {/* Burning-paper overlay, clipped by the card's rounded corners */}
-          {isExiting && (
-            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-              <Animated.View style={[styles.charLayer, { height: charHeight }]}>
-                <LinearGradient
-                  colors={["#FF6A00", "#FFD580"]}
-                  style={StyleSheet.absoluteFill}
-                />
-
-                {/* Glowing flame front riding the char boundary */}
-                <Animated.View style={[styles.flameBar, { opacity: flicker }]}>
-                  <LinearGradient
-                    colors={[
-                      "rgba(255,140,0,0)",
-                      "#FFD580",
-                      "#FF6A00",
-                      "#FF3D00",
-                      "rgba(255,61,0,0)",
-                    ]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.flameGradient}
-                  />
-                </Animated.View>
-
-                {/* Embers rising off the flame front */}
-                {embers.map((e, i) => (
-                  <Animated.View
-                    key={i}
-                    style={{
-                      position: "absolute",
-                      left: e.left,
-                      bottom: `${e.bottomStart}%`,
-                      width: e.size,
-                      height: e.size,
-                      borderRadius: e.size,
-                      backgroundColor: e.color,
-                      shadowColor: e.color,
-                      shadowOpacity: 0.9,
-                      shadowRadius: 4,
-                      opacity: e.anim.interpolate({
-                        inputRange: [0, 0.12, 0.7, 1],
-                        outputRange: [0, 1, 0.9, 0],
-                      }),
-                      transform: [
-                        {
-                          translateY: e.anim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -e.rise],
-                          }),
-                        },
-                        {
-                          translateX: e.anim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, e.drift],
-                          }),
-                        },
-                      ],
-                    }}
-                  />
-                ))}
-              </Animated.View>
-            </View>
-          )}
         </TouchableOpacity>
+        </BurnCard>
       </Animated.View>
 
       <CancelConfirmModal
@@ -1002,24 +862,6 @@ const styles = themedStyles((c) => ({
   },
 
   /* Burn overlay */
-  charLayer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: "visible",
-  },
-  flameBar: {
-    position: "absolute",
-    top: -7,
-    left: 0,
-    right: 0,
-    height: 14,
-  },
-  flameGradient: {
-    flex: 1,
-  },
-
   /* Cancel confirmation modal */
   modalBackdrop: {
     flex: 1,

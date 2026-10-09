@@ -21,16 +21,30 @@ import { RootStackParamList } from "../../Global/Types";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import * as Updates from "expo-updates";
+import { getUpdateLabel } from "../../src/hooks/useOTAUpdate";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { loginservice } from "../../Services/Login/Login.service";
 import { useDispatch } from "react-redux";
 import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
-import { saveUserCredentials, getUserCredentials } from "../../src/utils/secureStorage";
+import { refreshBindingPassword } from "../../src/utils/secureStorage";
+
+// The login service throws this generic message for network/server failures;
+// anything else means the server rejected the credentials.
+const GENERIC_LOGIN_ERROR = "Something went wrong. Please try again.";
 import { themedStyles, C } from "../../Global/ThemeContext";
 import { AppDialog, DIALOG_LOTTIE, dialog } from "../../Component/Feedback/AppDialog";
 
 const LOGO = require("../../assets/logo-mark.png");
 const APP_VERSION = Constants.expoConfig?.version ?? "";
+// e.g. "Version 1.0.0 · update 3fa9c2e1 · preview" — confirms which OTA bundle is running.
+const BUILD_LABEL = [
+  APP_VERSION && `Version ${APP_VERSION}`,
+  getUpdateLabel(),
+  Updates.channel || "",
+]
+  .filter(Boolean)
+  .join(" · ");
 
 // ─── Input field (module level so typing never remounts the input) ────────
 type LoginFieldProps = TextInputProps & {
@@ -92,7 +106,6 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [secureTextEntry, setSecureTextEntry] = useState(true);
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const [showBiometricButton, setShowBiometricButton] = useState(false);
   const [biometricLoginError, setBiometricLoginError] = useState<string | null>(
     null,
   );
@@ -108,10 +121,17 @@ const LoginScreen = () => {
     isEnrolled,
     isAuthenticating,
     error: biometricError,
+    binding,
+    ready: biometricReady,
     authenticate,
     enableBiometricLogin,
-    isBiometricAvailableAndEnabled,
+    disableBiometricLogin,
+    refreshBinding,
   } = useBiometricAuth();
+
+  // Fingerprint login is offered only for the account it was set up for.
+  const showBiometricButton = isSupported && isEnrolled && !!binding;
+  const autoPrompted = useRef(false);
 
   // Animations
   const entrance = useRef(new Animated.Value(0)).current;
@@ -147,20 +167,13 @@ const LoginScreen = () => {
     return () => float.stop();
   }, []);
 
-  // Check if biometric login is available and enabled for displaying the button
+  // Offer the fingerprint prompt straight away for the bound account.
   useEffect(() => {
-    const checkBiometricAvailability = async () => {
-      try {
-        const available = await isBiometricAvailableAndEnabled();
-        setShowBiometricButton(available);
-      } catch (err) {
-        console.error("Failed to check biometric availability:", err);
-        setShowBiometricButton(false);
-      }
-    };
-
-    checkBiometricAvailability();
-  }, [isBiometricAvailableAndEnabled]);
+    if (!biometricReady || !showBiometricButton || autoPrompted.current) return;
+    autoPrompted.current = true;
+    const timer = setTimeout(() => handleBiometricLogin(), 600);
+    return () => clearTimeout(timer);
+  }, [biometricReady, showBiometricButton]);
 
   const animateButtonPress = () => {
     Animated.sequence([
@@ -195,32 +208,46 @@ const LoginScreen = () => {
     setLoading(true);
 
     try {
-      // Step 1: Authenticate with biometric
-      const authenticated = await authenticate();
+      // Step 1: Read the binding — the only credentials fingerprint login may use.
+      const credentials = await refreshBinding();
+      if (!credentials) {
+        setLoading(false);
+        setBiometricLoginError(
+          "Fingerprint login isn't set up on this device. Sign in with your password to enable it.",
+        );
+        return;
+      }
+
+      // Step 2: Authenticate with biometric
+      const authenticated = await authenticate(
+        `Log in as ${credentials.name || "EMP " + credentials.empCode}`,
+      );
 
       if (!authenticated) {
         setLoading(false);
-        setBiometricLoginError(
-          "Biometric authentication failed. Please try again or use password login.",
-        );
-        return;
+        return; // cancelled or not recognised — stay on the login screen
       }
 
-      // Step 2: Retrieve stored credentials
-      const credentials = await getUserCredentials();
-      if (!credentials || !credentials.empCode || !credentials.password) {
-        setLoading(false);
-        setBiometricLoginError(
-          "No saved credentials found. Please login with password first.",
+      // Step 3: Call backend API with the bound account's credentials
+      let response;
+      try {
+        response = await loginservice.LoginApi(
+          { employeecode: +credentials.empCode, password: credentials.password },
+          dispatch,
         );
-        return;
+      } catch (apiError: any) {
+        // Rejected credentials (e.g. the owner changed their password on another
+        // device): the binding no longer works, so remove it.
+        if (apiError?.message && apiError.message !== GENERIC_LOGIN_ERROR) {
+          await disableBiometricLogin();
+          setLoading(false);
+          setBiometricLoginError(
+            "Your saved fingerprint login has expired (password changed?). Sign in with your password to set it up again.",
+          );
+          return;
+        }
+        throw apiError;
       }
-
-      // Step 3: Call backend API with retrieved credentials
-      const response = await loginservice.LoginApi(
-        { employeecode: +credentials.empCode, password: credentials.password },
-        dispatch,
-      );
 
       if (response.status === 200) {
         // Step 4: Save session token
@@ -286,19 +313,23 @@ const LoginScreen = () => {
 
         if (!userData) throw new Error("User data not found after login");
 
-        // Save credentials securely for biometric login
-        try {
-          await saveUserCredentials(employeecode, password);
-        } catch (err) {
-          console.warn("Failed to save credentials for biometric login:", err);
-          // Don't fail the entire login flow if credential saving fails
-        }
-
         setLoading(false);
         setLoginSuccess(true);
 
-        // Show biometric setup prompt if biometric is supported and not yet enabled
-        if (isSupported && isEnrolled) {
+        const signedInName = response.data?.user?.name || "";
+        const currentBinding = await refreshBinding();
+
+        if (currentBinding && currentBinding.empCode === String(employeecode)) {
+          // The fingerprint owner signed in with their password: keep the saved
+          // password current so fingerprint login keeps working. No prompt.
+          try {
+            await refreshBindingPassword(employeecode, password);
+          } catch (err) {
+            console.warn("Failed to refresh biometric credentials:", err);
+          }
+          onLoginSuccess();
+        } else if (!currentBinding && isSupported && isEnrolled) {
+          // Nobody has fingerprint login on this device yet — offer it.
           const enable = await dialog.confirm({
             title: "Enable biometric login?",
             message:
@@ -312,7 +343,7 @@ const LoginScreen = () => {
             onLoginSuccess();
           } else {
             try {
-              await enableBiometricLogin();
+              await enableBiometricLogin(employeecode, password, signedInName);
               await dialog.alert(
                 "Biometric login enabled",
                 "You can now use fingerprint/Face ID to login.",
@@ -329,7 +360,8 @@ const LoginScreen = () => {
             }
           }
         } else {
-          // No biometric available, proceed directly
+          // No biometric hardware, or fingerprint login belongs to another
+          // account on this device — leave it untouched and continue.
           onLoginSuccess();
         }
       }
@@ -527,14 +559,42 @@ const LoginScreen = () => {
                   style={styles.biometric}
                   accessibilityRole="button"
                 >
-                  <MaterialCommunityIcons
-                    name={Platform.OS === "ios" ? "face-recognition" : "fingerprint"}
-                    size={22}
-                    color={C.accent}
-                  />
-                  <Text style={styles.biometricText}>
-                    {Platform.OS === "ios" ? "Login with Face ID" : "Login with Fingerprint"}
-                  </Text>
+                  <View style={styles.biometricIcon}>
+                    <MaterialCommunityIcons
+                      name={Platform.OS === "ios" ? "face-recognition" : "fingerprint"}
+                      size={24}
+                      color={C.accent}
+                    />
+                  </View>
+                  <View style={styles.biometricBody}>
+                    <Text style={styles.biometricText} numberOfLines={1}>
+                      Continue as {binding?.name?.split(" ")[0] || `EMP ${binding?.empCode}`}
+                    </Text>
+                    <Text style={styles.biometricSub} numberOfLines={1}>
+                      {Platform.OS === "ios" ? "Face ID" : "Fingerprint"} · EMP {binding?.empCode}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color={C.primaryMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={async () => {
+                    const remove = await dialog.confirm({
+                      title: "Remove fingerprint login?",
+                      message: `Fingerprint login on this device opens ${binding?.name || "EMP " + binding?.empCode}'s account. Remove it? The owner can turn it on again after signing in with their password.`,
+                      confirmLabel: "Remove",
+                      variant: "danger",
+                      icon: "fingerprint-off",
+                      lottie: null,
+                    });
+                    if (remove) {
+                      await disableBiometricLogin();
+                      setBiometricLoginError(null);
+                    }
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.notYou}
+                >
+                  <Text style={styles.notYouText}>Not you? Remove fingerprint login</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -552,7 +612,7 @@ const LoginScreen = () => {
               <MaterialCommunityIcons name="shield-lock-outline" size={14} color={C.textFaint} />
               <Text style={styles.footerText}>Secured by RishiKirti Technologies</Text>
             </View>
-            {!!APP_VERSION && <Text style={styles.footerVersion}>Version {APP_VERSION}</Text>}
+            {!!BUILD_LABEL && <Text style={styles.footerVersion}>{BUILD_LABEL}</Text>}
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -787,20 +847,47 @@ const styles = themedStyles((c) => ({
     color: c.textFaint,
   },
   biometric: {
-    height: 52,
+    minHeight: 60,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
+    gap: 12,
+    paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: c.borderStrong,
     backgroundColor: c.primaryFaint,
   },
+  biometricIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  biometricBody: {
+    flex: 1,
+  },
   biometricText: {
     fontSize: 15,
     fontWeight: "700",
     color: c.accent,
+  },
+  biometricSub: {
+    fontSize: 12,
+    color: c.textSoft,
+    marginTop: 2,
+  },
+  notYou: {
+    alignSelf: "center",
+    marginTop: 12,
+  },
+  notYouText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: c.link,
   },
   inlineError: {
     flexDirection: "row",

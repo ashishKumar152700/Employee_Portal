@@ -34,6 +34,7 @@ import PayslipScreen from "../../Screen/Payroll/PayslipScreen";
 import TaxReportScreen from "../../Screen/Payroll/TaxReportScreen";
 import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
+import BurnDemo from "../../Screen/Dev/BurnDemo";
 import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { themedStyles } from "../../Global/ThemeContext";
@@ -387,6 +388,15 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
+        {__DEV__ && (
+          <Stack.Screen name="BurnDemo">
+            {(props) => (
+              <RouteProvider onRouteChange={handleRouteChange}>
+                <ScreenWrapper {...props} component={BurnDemo} onMenuPress={openDrawer} />
+              </RouteProvider>
+            )}
+          </Stack.Screen>
+        )}
         <Stack.Screen name="TaxReport">
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>

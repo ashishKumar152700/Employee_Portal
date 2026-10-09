@@ -1,17 +1,17 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Modal,
   ScrollView,
   Animated,
   Easing,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Calendar } from "react-native-calendars";
 import { useFocusEffect } from "@react-navigation/native";
 import { format } from "date-fns";
@@ -66,6 +66,23 @@ const LeaveApplicationScreen: React.FC = () => {
     type: "info", // 'success', 'error', 'warning', 'info'
     buttons: null as any,
   });
+
+  const insets = useSafeAreaInsets();
+  const [reasonFocused, setReasonFocused] = useState(false);
+  const calendarTheme = useMemo(
+    () => ({
+      calendarBackground: "transparent",
+      todayTextColor: C.accent,
+      dayTextColor: C.text,
+      textDisabledColor: C.textFaint,
+      monthTextColor: C.text,
+      textMonthFontWeight: "800" as const,
+      textDayFontWeight: "600" as const,
+      textSectionTitleColor: C.textSoft,
+      arrowColor: C.accent,
+    }),
+    []
+  );
 
   const [loaderVisible, setLoaderVisible] = useState(false);
   const [loaderMessage, setLoaderMessage] = useState("");
@@ -207,7 +224,7 @@ const LeaveApplicationScreen: React.FC = () => {
       const date = new Date(current).toISOString().split("T")[0];
       range[date] = {
         color:
-          current === startTime || current === endTime ? "#002957" : "#1a4a7a",
+          current === startTime || current === endTime ? C.primary : C.primaryLight,
         textColor: "#FFFFFF",
         startingDay: date === start,
         endingDay: date === end,
@@ -379,177 +396,323 @@ const LeaveApplicationScreen: React.FC = () => {
     }
   };
 
+  const singleDay = !!selectedStartDate && !selectedEndDate;
+  const dayOptions = [
+    { label: "Full day", value: "full-day", icon: "brightness-7" },
+    ...(selectedLeave?.halfDayAllowed
+      ? [
+          { label: "First half", value: "first-half", icon: "brightness-5" },
+          { label: "Second half", value: "second-half", icon: "brightness-4" },
+        ]
+      : []),
+  ];
+  const approverName = managerDetailsSelector?.name || "Not assigned";
+  const approverInitials =
+    approverName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w: string) => w[0]?.toUpperCase())
+      .join("") || "?";
+
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+        contentContainerStyle={[styles.scroll, { paddingBottom: contentPaddingBottom }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.header}>Apply for Leave</Text>
-
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Application Date</Text>
-              <Text style={styles.infoValue}>
-                {format(new Date(applicationDate), "dd-MM-yyyy")}
-              </Text>
+        {/* ── Hero ──────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={C.heroGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View pointerEvents="none" style={styles.heroRing} />
+          <Text style={styles.heroEyebrow}>NEW REQUEST</Text>
+          <Text style={styles.heroTitle}>Apply for leave</Text>
+          <View style={styles.heroRow}>
+            <View style={styles.heroChip}>
+              <View style={styles.approverAvatar}>
+                <Text style={styles.approverInitials}>{approverInitials}</Text>
+              </View>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={styles.heroChipLabel}>Approver</Text>
+                <Text style={styles.heroChipValue} numberOfLines={1}>
+                  {approverName}
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Approver</Text>
-              <Text style={styles.infoValue}>
-                {managerDetailsSelector?.name || "Not assigned"}
-              </Text>
+            <View style={styles.heroChip}>
+              <Icon name="today" size={18} color="#7DD3FC" />
+              <View>
+                <Text style={styles.heroChipLabel}>Applied on</Text>
+                <Text style={styles.heroChipValue}>
+                  {format(new Date(applicationDate), "dd MMM yyyy")}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Leave Type</Text>
-          <View style={styles.radioButtonContainer}>
-            {availableLeaveTypes.map((item: any) => (
+        {/* ── Leave type ────────────────────────────────────────── */}
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>Leave type</Text>
+          {selectedLeave && (
+            <Text style={styles.sectionHint}>
+              {selectedLeave.remaining} day{selectedLeave.remaining === 1 ? "" : "s"} available
+            </Text>
+          )}
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.typeRow}
+        >
+          {availableLeaveTypes.map((item: any) => {
+            const selected = leaveType === item.leaveCode;
+            const empty = (item.remaining || 0) <= 0;
+            const locked = !item.eligible;
+            const card = (
+              <>
+                <View style={[styles.typeIcon, selected && styles.typeIconSelected]}>
+                  <Icon
+                    name={locked ? "lock-outline" : getLeaveIcon(item.leaveCode)}
+                    size={20}
+                    color={selected ? "#FFFFFF" : locked ? C.textFaint : C.accent}
+                  />
+                </View>
+                <Text
+                  style={[styles.typeTitle, selected && styles.typeTitleSelected]}
+                  numberOfLines={2}
+                >
+                  {item.title}
+                </Text>
+                <View style={styles.typeBalanceRow}>
+                  <Text
+                    style={[
+                      styles.typeBalance,
+                      selected && styles.typeTextOnFill,
+                      empty && !selected && styles.typeBalanceEmpty,
+                    ]}
+                  >
+                    {item.remaining}
+                  </Text>
+                  <Text style={[styles.typeBalanceLabel, selected && styles.typeSubOnFill]}>
+                    {" "}left
+                  </Text>
+                </View>
+                {locked ? (
+                  <Text style={styles.typeNote} numberOfLines={2}>
+                    Available in {item.daysRemainingForEligibility} day(s)
+                  </Text>
+                ) : empty ? (
+                  <Text style={[styles.typeNote, styles.typeNoteWarn, selected && styles.typeSubOnFill]}>
+                    No balance
+                  </Text>
+                ) : (
+                  <Text style={[styles.typeNote, selected && styles.typeSubOnFill]}>
+                    {item.leaveCode}
+                  </Text>
+                )}
+              </>
+            );
+            return (
               <TouchableOpacity
                 key={item.leaveCode}
-                disabled={!item.eligible}
-                style={[
-                  styles.radioButton,
-                  leaveType === item.leaveCode && styles.radioButtonSelected,
-                  !item.eligible && styles.radioButtonDisabled,
-                ]}
+                disabled={locked}
+                activeOpacity={0.85}
                 onPress={() => {
                   if (!item.eligible) return;
 
                   setLeaveType(item.leaveCode);
                   setSelectedOption("full-day");
                 }}
+                style={[styles.typeCard, locked && styles.typeCardLocked, empty && !selected && styles.typeCardEmpty]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected, disabled: locked }}
               >
-                <View style={styles.radioButtonContent}>
-                  <Text
-                    style={[
-                      styles.radioButtonText,
-                      leaveType === item.leaveCode &&
-                        styles.radioButtonTextSelected,
-                    ]}
+                {selected ? (
+                  <LinearGradient
+                    colors={C.primaryGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.typeCardInner}
                   >
-                    {item.title}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.leaveCountText,
-                      item.remaining <= 0 && styles.leaveCountTextDisabled,
-                    ]}
-                  >
-                    Balance : {item.remaining}
-                  </Text>
-
-                  {!item.eligible && (
-                    <Text
-                      style={{
-                        color: "#dc3545",
-                        fontSize: 11,
-                        marginTop: 4,
-                        textAlign: "center",
-                      }}
-                    >
-                      Available after {item.daysRemainingForEligibility} day(s)
-                    </Text>
-                  )}
-                </View>
+                    {card}
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.typeCardInner}>{card}</View>
+                )}
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+            );
+          })}
+        </ScrollView>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date Selection</Text>
-          <TouchableOpacity
-            onPress={() => setIsCalendarModalVisible(true)}
-            style={styles.dateButton}
-          >
-            <Icon name="event" size={20} color={C.accent} />
-            <Text style={styles.dateButtonText}>{showDateRange()}</Text>
-            <Icon name="keyboard-arrow-down" size={24} color={C.accent} />
-          </TouchableOpacity>
-
-          {selectedStartDate && !selectedEndDate && (
-            <View style={styles.partialDayContainer}>
-              <Text style={styles.sectionTitle}>Leave Duration</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  key={leaveType}
-                  selectedValue={selectedOption}
-                  style={styles.picker}
-                  onValueChange={(itemValue) => {
-                    setSelectedOption(itemValue);
-                    setTotalDays(itemValue === "full-day" ? 1 : 0.5);
-                  }}
-                >
-                  {[
-                    { label: "Full Day", value: "full-day" },
-                    ...(selectedLeave?.halfDayAllowed
-                      ? [
-                          { label: "First Half", value: "first-half" },
-                          { label: "Second Half", value: "second-half" },
-                        ]
-                      : []),
-                  ].map((item) => (
-                    <Picker.Item
-                      key={item.value}
-                      label={item.label}
-                      value={item.value}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-          )}
-
+        {/* ── Dates ─────────────────────────────────────────────── */}
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>Dates</Text>
           {totalDays > 0 && (
-            <View style={styles.daysContainer}>
-              <Text style={styles.daysText}>
-                {totalDays} day{totalDays !== 1 ? "s" : ""} selected
+            <View style={styles.daysPill}>
+              <Icon name="event-available" size={14} color={C.accent} />
+              <Text style={styles.daysPillText}>
+                {totalDays} day{totalDays !== 1 ? "s" : ""}
               </Text>
             </View>
           )}
         </View>
+        <TouchableOpacity
+          onPress={() => setIsCalendarModalVisible(true)}
+          activeOpacity={0.85}
+          style={styles.dateCard}
+        >
+          <DateTile label="From" iso={selectedStartDate} />
+          <View style={styles.dateArrow}>
+            <Icon name="arrow-forward" size={18} color={C.textFaint} />
+          </View>
+          <DateTile
+            label="To"
+            iso={selectedEndDate || selectedStartDate}
+            muted={!selectedEndDate}
+          />
+          <View style={styles.dateEdit}>
+            <Icon name="edit-calendar" size={20} color={C.accent} />
+          </View>
+        </TouchableOpacity>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Reason for Leave</Text>
+        {singleDay && (
+          <View style={styles.dayTypeRow}>
+            {dayOptions.map((opt) => {
+              const active = selectedOption === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setSelectedOption(opt.value);
+                    setTotalDays(opt.value === "full-day" ? 1 : 0.5);
+                  }}
+                  style={[styles.dayTypeChip, active && styles.dayTypeChipActive]}
+                >
+                  <Icon
+                    name={opt.icon}
+                    size={16}
+                    color={active ? "#FFFFFF" : C.textSoft}
+                  />
+                  <Text style={[styles.dayTypeText, active && styles.dayTypeTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* ── Reason ────────────────────────────────────────────── */}
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>Reason</Text>
+          <Text style={styles.sectionHint}>{reason.trim().length}/300</Text>
+        </View>
+        <View style={[styles.reasonBox, reasonFocused && styles.reasonBoxFocused]}>
           <TextInput
-            style={styles.textInput}
-            placeholder="Please provide a reason for your leave"
+            style={styles.reasonInput}
+            placeholder="Briefly tell your manager why you need this leave"
+            placeholderTextColor={C.placeholder}
             value={reason}
             onChangeText={setReason}
+            onFocus={() => setReasonFocused(true)}
+            onBlur={() => setReasonFocused(false)}
+            maxLength={300}
             multiline
             numberOfLines={4}
           />
         </View>
-
-        <TouchableOpacity
-          onPress={handleApplyLeave}
-          style={styles.submitButton}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.suggestRow}
         >
-          <Text style={styles.submitButtonText}>Submit Leave Application</Text>
+          {REASON_SUGGESTIONS.map((s) => (
+            <TouchableOpacity
+              key={s}
+              onPress={() => setReason(s)}
+              activeOpacity={0.8}
+              style={[styles.suggestChip, reason === s && styles.suggestChipActive]}
+            >
+              <Text style={[styles.suggestText, reason === s && styles.suggestTextActive]}>
+                {s}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* ── Summary + submit ──────────────────────────────────── */}
+        <View style={styles.summary}>
+          <View style={styles.summaryIcon}>
+            <Icon name="fact-check" size={20} color={C.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.summaryTitle} numberOfLines={1}>
+              {selectedLeave?.title || "Choose a leave type"}
+              {totalDays > 0 ? ` · ${totalDays} day${totalDays !== 1 ? "s" : ""}` : ""}
+            </Text>
+            <Text style={styles.summaryText} numberOfLines={1}>
+              {selectedStartDate
+                ? `${showDateRange()}${singleDay && selectedOption !== "full-day" ? ` · ${dayOptions.find((o) => o.value === selectedOption)?.label}` : ""}`
+                : "Pick your dates to continue"}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity onPress={handleApplyLeave} activeOpacity={0.9} style={styles.submitTouch}>
+          <LinearGradient
+            colors={C.primaryGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submit}
+          >
+            <Icon name="send" size={18} color="#FFFFFF" />
+            <Text style={styles.submitText}>Submit leave request</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
 
+      {/* ── Date range sheet ────────────────────────────────────── */}
       <Modal
         visible={isCalendarModalVisible}
         transparent={true}
         animationType="slide"
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setIsCalendarModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.calendarContainer}>
-            <View style={styles.calendarHeader}>
-              <Text style={styles.calendarTitle}>Select Date Range</Text>
+        <View style={styles.sheetBackdrop}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setIsCalendarModalVisible(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHead}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetTitle}>Select dates</Text>
+                <Text style={styles.sheetHint}>
+                  {!selectedStartDate
+                    ? "Tap your first day of leave"
+                    : !selectedEndDate
+                      ? "Tap the last day, or confirm for a single day"
+                      : "Tap a date to start over"}
+                </Text>
+              </View>
               <TouchableOpacity
                 onPress={() => setIsCalendarModalVisible(false)}
-                style={styles.closeCalendarButton}
+                style={styles.sheetClose}
+                accessibilityLabel="Close"
               >
-                <Icon name="close" size={24} color={C.accent} />
+                <Icon name="close" size={20} color={C.accent} />
               </TouchableOpacity>
             </View>
 
@@ -558,22 +721,44 @@ const LeaveApplicationScreen: React.FC = () => {
               markingType="period"
               markedDates={markedDates}
               minDate={todayISO}
-              theme={{
-                todayBackgroundColor: C.primaryFaint,
-                todayTextColor: C.text,
-                selectedDayBackgroundColor: C.primary,
-                selectedDayTextColor: "#FFFFFF",
-                textDayFontWeight: "500",
-                arrowColor: C.accent,
-              }}
+              theme={calendarTheme}
             />
 
-            <TouchableOpacity
-              onPress={handleConfirmDates}
-              style={styles.confirmButton}
-            >
-              <Text style={styles.confirmButtonText}>Confirm Dates</Text>
-            </TouchableOpacity>
+            <View style={styles.sheetSummary}>
+              <Icon name="date-range" size={18} color={C.accent} />
+              <Text style={styles.sheetSummaryText}>
+                {selectedStartDate
+                  ? `${showDateRange()} · ${totalDays} day${totalDays !== 1 ? "s" : ""}`
+                  : "No dates selected"}
+              </Text>
+            </View>
+
+            <View style={styles.sheetActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedStartDate(null);
+                  setSelectedEndDate(null);
+                  setMarkedDates({});
+                }}
+                style={styles.sheetSecondary}
+              >
+                <Text style={styles.sheetSecondaryText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmDates}
+                disabled={!selectedStartDate}
+                style={[styles.sheetPrimaryTouch, !selectedStartDate && { opacity: 0.5 }]}
+              >
+                <LinearGradient
+                  colors={C.primaryGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.sheetPrimary}
+                >
+                  <Text style={styles.sheetPrimaryText}>Confirm dates</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -605,317 +790,526 @@ const LeaveApplicationScreen: React.FC = () => {
     </Animated.View>
   );
 };
+
+// ─── Helpers (module level) ────────────────────────────────────────────────
+const REASON_SUGGESTIONS = [
+  "Personal work",
+  "Not feeling well",
+  "Medical appointment",
+  "Family function",
+  "Travel",
+  "Emergency",
+];
+
+const getLeaveIcon = (leaveCode: string) => {
+  switch (leaveCode) {
+    case "PL":
+      return "payments";
+    case "CL":
+      return "weekend";
+    case "SL":
+      return "local-hospital";
+    case "EL":
+      return "work";
+    case "ML":
+      return "pregnant-woman";
+    case "PTL":
+      return "man";
+    case "BL":
+      return "groups";
+    case "CO":
+      return "cached";
+    case "OH":
+      return "celebration";
+    default:
+      return "event";
+  }
+};
+
+const DateTile = ({ label, iso, muted }: { label: string; iso: string | null; muted?: boolean }) => {
+  const date = iso ? new Date(`${iso}T00:00:00`) : null;
+  return (
+    <View style={styles.dateTile}>
+      <Text style={styles.dateLabel}>{label}</Text>
+      {date ? (
+        <>
+          <Text style={[styles.dateDay, muted && styles.dateMuted]}>{format(date, "dd")}</Text>
+          <Text style={[styles.dateMonth, muted && styles.dateMuted]}>
+            {format(date, "MMM, EEE")}
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text style={[styles.dateDay, styles.datePlaceholder]}>--</Text>
+          <Text style={styles.dateMonth}>Select</Text>
+        </>
+      )}
+    </View>
+  );
+};
+
 const styles = themedStyles((c) => ({
   container: {
     flex: 1,
     backgroundColor: c.background,
   },
-  scrollContainer: {
+  scroll: {
     padding: 16,
   },
-  header: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: c.accent,
-    marginBottom: 16,
-    textAlign: "center",
+
+  // Hero
+  hero: {
+    borderRadius: 24,
+    padding: 18,
+    overflow: "hidden",
   },
-  infoCard: {
-    backgroundColor: c.surface,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+  heroRing: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    top: -100,
+    right: -60,
+    borderWidth: 1,
+    borderColor: "rgba(125, 211, 252, 0.16)",
   },
-  infoRow: {
+  heroEyebrow: {
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.8,
+    color: "#7DD3FC",
+  },
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginTop: 4,
+  },
+  heroRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 14,
   },
-  infoItem: {
+  heroChip: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
   },
-  infoLabel: {
-    fontSize: 14,
-    color: c.textSoft,
-    marginBottom: 4,
+  approverAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(125, 211, 252, 0.2)",
   },
-  infoValue: {
-    fontSize: 16,
+  approverInitials: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  heroChipLabel: {
+    fontSize: 10.5,
+    color: "rgba(255, 255, 255, 0.65)",
     fontWeight: "600",
-    color: c.accent,
   },
-  section: {
-    backgroundColor: c.surface,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+  heroChipValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginTop: 1,
+  },
+
+  // Sections
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 22,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: c.accent,
-    marginBottom: 14,
+    fontSize: 15,
+    fontWeight: "800",
+    color: c.text,
   },
-  radioButtonContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  radioButton: {
-    width: "48%",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: c.border,
-    marginBottom: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioButtonSelected: {
-    backgroundColor: c.primaryFaint,
-    borderColor: c.accent,
-  },
-  radioButtonText: {
-    fontSize: 14,
-    color: c.textSoft,
-    fontWeight: "500",
-  },
-  radioButtonTextSelected: {
-    color: c.accent,
-    fontWeight: "600",
-  },
-  dateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: c.background,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  dateButtonText: {
-    fontSize: 16,
-    color: c.accent,
-    fontWeight: "500",
-    flex: 1,
-    marginHorizontal: 12,
-  },
-  partialDayContainer: {
-    marginTop: 10,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 12,
-    overflow: "visible",
-  },
-  picker: {
-    height: 55,
-  },
-  daysContainer: {
-    marginTop: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: c.primaryFaint,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  daysText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: c.accent,
-  },
-  textInput: {
-    height: 80,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 12,
-    padding: 14,
-    textAlignVertical: "top",
-    fontSize: 14,
-  },
-  submitButton: {
-    backgroundColor: c.primary,
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  submitButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: c.overlay,
-  },
-  calendarContainer: {
-    width: "95%",
-    backgroundColor: c.surface,
-    borderRadius: 16,
-    padding: 14,
-  },
-  calendarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  calendarTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: c.accent,
-  },
-  closeCalendarButton: {
-    padding: 4,
-  },
-  confirmButton: {
-    backgroundColor: c.primary,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  radioButtonDisabled: {
-    backgroundColor: c.background,
-    borderColor: c.border,
-    opacity: 0.6,
-  },
-  radioButtonContent: {
-    alignItems: "center",
-  },
-  radioButtonTextDisabled: {
-    color: c.textSoft,
-  },
-  leaveCountText: {
+  sectionHint: {
     fontSize: 12,
-    color: "#28a745",
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  leaveCountTextDisabled: {
-    color: "#dc3545",
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // Alert Styles
-  alertOverlay: {
-    flex: 1,
-    backgroundColor: c.overlay,
-    // backgroundColor: c.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  alertContainer: {
-    backgroundColor: c.surface,
-    borderRadius: 16,
-    width: "100%",
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  alertHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: c.primary,
-  },
-  alertTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    marginLeft: 8,
-  },
-  alertBody: {
-    padding: 20,
-  },
-  alertMessage: {
-    fontSize: 16,
-    color: c.textSoft,
-    lineHeight: 22,
-  },
-  alertFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    padding: 5,
-    // borderTopWidth: 1,
-    // borderTopColor: c.accent,
-  },
-  alertButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: c.primary,
-    borderRadius: 8,
-    marginLeft: 8,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  alertButtonCancel: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: c.borderStrong,
-  },
-  alertButtonText: {
-    color: "#fff",
     fontWeight: "600",
-    fontSize: 14,
-  },
-  alertButtonCancelText: {
     color: c.textSoft,
   },
 
-  // Loader Styles
-  loaderOverlay: {
-    flex: 1,
-    backgroundColor: c.overlay,
-    justifyContent: "center",
-    alignItems: "center",
+  // Leave type cards
+  typeRow: {
+    gap: 10,
+    paddingRight: 4,
   },
-  loaderContainer: {
+  typeCard: {
+    width: 128,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: c.border,
     backgroundColor: c.surface,
-    padding: 30,
+    overflow: "hidden",
+  },
+  typeCardLocked: {
+    opacity: 0.6,
+  },
+  typeCardEmpty: {
+    borderColor: c.warningBg,
+  },
+  typeCardInner: {
+    padding: 12,
+    minHeight: 142,
+  },
+  typeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.primaryFaint,
+  },
+  typeIconSelected: {
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+  },
+  typeTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: c.text,
+    marginTop: 10,
+    minHeight: 34,
+  },
+  typeTitleSelected: {
+    color: "#FFFFFF",
+  },
+  typeBalanceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginTop: 4,
+  },
+  typeBalance: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: c.accent,
+  },
+  typeBalanceEmpty: {
+    color: c.warningText,
+  },
+  typeTextOnFill: {
+    color: "#FFFFFF",
+  },
+  typeBalanceLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: c.textSoft,
+  },
+  typeSubOnFill: {
+    color: "rgba(255, 255, 255, 0.75)",
+  },
+  typeNote: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: c.textFaint,
+    marginTop: 4,
+  },
+  typeNoteWarn: {
+    color: c.warningText,
+  },
+
+  // Dates
+  daysPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: c.primaryFaint,
+  },
+  daysPillText: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: c.accent,
+  },
+  dateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  dateTile: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: c.textFaint,
+    textTransform: "uppercase",
+  },
+  dateDay: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: c.text,
+    marginTop: 2,
+  },
+  dateMonth: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: c.textSoft,
+  },
+  dateMuted: {
+    color: c.textFaint,
+  },
+  datePlaceholder: {
+    color: c.textFaint,
+  },
+  dateArrow: {
+    paddingHorizontal: 10,
+  },
+  dateEdit: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.primaryFaint,
+  },
+  dayTypeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  dayTypeChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 14,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  dayTypeChipActive: {
+    backgroundColor: c.primary,
+    borderColor: c.primary,
+  },
+  dayTypeText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: c.textSoft,
+  },
+  dayTypeTextActive: {
+    color: "#FFFFFF",
+  },
+
+  // Reason
+  reasonBox: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    backgroundColor: c.surfaceInput,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  reasonBoxFocused: {
+    borderColor: c.accent,
+    backgroundColor: c.surface,
+  },
+  reasonInput: {
+    minHeight: 92,
+    fontSize: 15,
+    color: c.text,
+    textAlignVertical: "top",
+    paddingVertical: 8,
+  },
+  suggestRow: {
+    gap: 8,
+    paddingTop: 10,
+    paddingRight: 4,
+  },
+  suggestChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  suggestChipActive: {
+    backgroundColor: c.primaryFaint,
+    borderColor: c.accent,
+  },
+  suggestText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: c.textSoft,
+  },
+  suggestTextActive: {
+    color: c.accent,
+  },
+
+  // Summary + submit
+  summary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 22,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: c.borderStrong,
+  },
+  summaryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.primaryFaint,
+  },
+  summaryTitle: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: c.text,
+  },
+  summaryText: {
+    fontSize: 12.5,
+    color: c.textSoft,
+    marginTop: 2,
+  },
+  submitTouch: {
+    marginTop: 14,
+    borderRadius: 18,
+    overflow: "hidden",
+    elevation: 6,
+    shadowColor: c.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    backgroundColor: c.primary,
+  },
+  submit: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  submitText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
+  },
+
+  // Date sheet
+  sheetBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: c.overlay,
+  },
+  sheet: {
+    backgroundColor: c.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: c.borderStrong,
+    marginBottom: 12,
+  },
+  sheetHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: c.text,
+  },
+  sheetHint: {
+    fontSize: 12.5,
+    color: c.textSoft,
+    marginTop: 2,
+  },
+  sheetClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.primaryFaint,
+  },
+  sheetSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: c.surfaceAlt,
+  },
+  sheetSummaryText: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: c.text,
+  },
+  sheetActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  sheetSecondary: {
+    flex: 1,
+    height: 52,
     borderRadius: 16,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    minWidth: 200,
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: c.borderStrong,
   },
-  loaderText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: c.accent,
-    fontWeight: "500",
-    textAlign: "center",
+  sheetSecondaryText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: c.text,
+  },
+  sheetPrimaryTouch: {
+    flex: 1.6,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  sheetPrimary: {
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetPrimaryText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
 }));
 

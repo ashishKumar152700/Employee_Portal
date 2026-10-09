@@ -92,82 +92,6 @@ const isTaskBillable = (task: TimesheetTask) =>
 //  TextInputs and dismisses the keyboard.
 // ════════════════════════════════════════════════════════════════════════
 
-// ─── Day summary ──────────────────────────────────────────────────────────
-const DaySummary = ({
-  totalMinutes,
-  taskCount,
-}: {
-  totalMinutes: number;
-  taskCount: number;
-}) => {
-  const progress = Math.min(totalMinutes / DAILY_TARGET_MINUTES, 1);
-  const fill = useRef(new Animated.Value(0)).current;
-  const remaining = DAILY_TARGET_MINUTES - totalMinutes;
-
-  useEffect(() => {
-    Animated.timing(fill, {
-      toValue: progress,
-      duration: 600,
-      useNativeDriver: false,
-    }).start();
-  }, [progress]);
-
-  return (
-    <LinearGradient
-      colors={C.primaryGradient}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.summary}
-    >
-      <View style={[styles.summaryCircle, styles.summaryCircleA]} />
-      <View style={[styles.summaryCircle, styles.summaryCircleB]} />
-
-      <View style={styles.summaryTop}>
-        <View>
-          <Text style={styles.summaryLabel}>Logged today</Text>
-          <Text style={styles.summaryValue}>
-            {formatCompact(totalMinutes)}
-            <Text style={styles.summaryTarget}>
-              {"  "}/ {formatCompact(DAILY_TARGET_MINUTES)}
-            </Text>
-          </Text>
-        </View>
-        <View style={styles.summaryBadge}>
-          <MaterialCommunityIcons
-            name="format-list-checks"
-            size={14}
-            color="#FFFFFF"
-          />
-          <Text style={styles.summaryBadgeText}>
-            {taskCount} task{taskCount === 1 ? "" : "s"}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.summaryTrack}>
-        <Animated.View
-          style={[
-            styles.summaryFill,
-            {
-              width: fill.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["0%", "100%"],
-              }),
-            },
-          ]}
-        />
-      </View>
-      <Text style={styles.summaryHint}>
-        {remaining > 0
-          ? `${formatCompact(remaining)} to reach your ${formatCompact(
-              DAILY_TARGET_MINUTES
-            )} day`
-          : "Daily target reached. Great work!"}
-      </Text>
-    </LinearGradient>
-  );
-};
-
 // ─── Section label ────────────────────────────────────────────────────────
 const FieldLabel = ({
   icon,
@@ -338,7 +262,12 @@ const DurationControl = ({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.presetRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.presetRow}
+      >
         {DURATION_PRESETS.map((preset) => {
           const active = minutes === preset;
           return (
@@ -354,7 +283,7 @@ const DurationControl = ({
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -684,6 +613,7 @@ function TimesheetForm({
   const [deleting, setDeleting] = useState<number | null>(null);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [tab, setTab] = useState<"log" | "entries">("log");
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState<AlertConfig>({
@@ -817,6 +747,7 @@ function TimesheetForm({
     setIsBillable(isTaskBillable(task));
     setEditingTaskId(task.taskId || null);
     setErrors({});
+    setTab("log");
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
@@ -898,251 +829,278 @@ function TimesheetForm({
   // ════════════════════════════════════════════════════════════════════
   return (
     <View style={styles.root}>
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 32 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="none"
-        showsVerticalScrollIndicator={false}
-      >
-        <DaySummary totalMinutes={loggedMinutes} taskCount={existingTasks.length} />
-
-        {/* ── Composer ─────────────────────────────────────────────── */}
-        <View style={[styles.card, editingTaskId && styles.cardEditing]}>
-          <View style={styles.cardHead}>
-            <View style={styles.cardHeadIcon}>
+      {/* ── Tabs: log time / entries ─────────────────────────────── */}
+      <View style={styles.tabs}>
+        {(["log", "entries"] as const).map((key) => {
+          const active = tab === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              onPress={() => setTab(key)}
+              activeOpacity={0.85}
+              style={[styles.tab, active && styles.tabActive]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
               <MaterialCommunityIcons
-                name={editingTaskId ? "pencil" : "plus"}
-                size={18}
-                color="#FFFFFF"
+                name={key === "log" ? (editingTaskId ? "pencil" : "plus-circle-outline") : "format-list-checks"}
+                size={17}
+                color={active ? C.accent : C.textSoft}
               />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>
-                {editingTaskId ? "Edit task" : "Log a task"}
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                {key === "log" ? (editingTaskId ? "Edit task" : "Log time") : "Entries"}
               </Text>
-              <Text style={styles.cardSubtitle}>
-                {editingTaskId
-                  ? "Update the details and save"
-                  : "What did you work on?"}
-              </Text>
+              {key === "entries" && existingTasks.length > 0 && (
+                <View style={[styles.tabBadge, active && styles.tabBadgeActive]}>
+                  <Text style={[styles.tabBadgeText, active && styles.tabBadgeTextActive]}>
+                    {existingTasks.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {tab === "log" ? (
+        <>
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.formContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="none"
+            showsVerticalScrollIndicator={false}
+          >
+            {editingTaskId && (
+              <View style={styles.editBanner}>
+                <MaterialCommunityIcons name="pencil-circle" size={18} color={C.accent} />
+                <Text style={styles.editBannerText} numberOfLines={1}>
+                  Editing “{existingTasks.find((t) => t.taskId === editingTaskId)?.taskTitle || "task"}”
+                </Text>
+                <TouchableOpacity
+                  onPress={clearForm}
+                  disabled={saving}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.editBannerAction}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Title */}
+            <View style={styles.fieldFirst}>
+              <FieldLabel icon="format-title" label="Task title" required />
+              <InputField
+                value={taskTitle}
+                onChangeText={(text) => {
+                  setTaskTitle(text);
+                  if (errors.title) setErrors((e) => ({ ...e, title: undefined }));
+                }}
+                placeholder="e.g. Fix login bug"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => descriptionRef.current?.focus()}
+                error={errors.title}
+              />
+              <FieldError message={errors.title} />
             </View>
-            {(editingTaskId ||
-              taskTitle ||
-              taskDescription ||
-              totalMinutes > 0) && (
+
+            {/* Description */}
+            <View style={styles.field}>
+              <FieldLabel icon="text" label="Description" required />
+              <InputField
+                ref={descriptionRef}
+                value={taskDescription}
+                onChangeText={(text) => {
+                  setTaskDescription(text);
+                  if (errors.description)
+                    setErrors((e) => ({ ...e, description: undefined }));
+                }}
+                placeholder="Describe what you did..."
+                multiline
+                error={errors.description}
+              />
+              <FieldError message={errors.description} />
+            </View>
+
+            {/* Project */}
+            <View style={styles.field}>
+              <FieldLabel
+                icon="folder-outline"
+                label="Project"
+                trailing={
+                  selectableProjects.length > 0 ? (
+                    <TouchableOpacity
+                      onPress={() => setShowProjectPicker(true)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.linkText}>
+                        {selectableProjects.length > INLINE_PROJECT_LIMIT
+                          ? `All ${selectableProjects.length}`
+                          : "Search"}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null
+                }
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.chipRow}
+              >
+                <ProjectChip
+                  label="No Project"
+                  icon="folder-off-outline"
+                  selected={projectId === 0}
+                  onPress={() => setProjectId(0)}
+                />
+                {selectedIsHidden && (
+                  <ProjectChip
+                    label={selectedProjectName}
+                    selected
+                    onPress={() => setShowProjectPicker(true)}
+                  />
+                )}
+                {inlineProjects.map((project) => (
+                  <ProjectChip
+                    key={project.projectId}
+                    label={project.projectName}
+                    selected={projectId === project.projectId}
+                    onPress={() => setProjectId(project.projectId)}
+                  />
+                ))}
+                {selectableProjects.length > INLINE_PROJECT_LIMIT && (
+                  <ProjectChip
+                    label="More"
+                    icon="dots-horizontal"
+                    selected={false}
+                    onPress={() => setShowProjectPicker(true)}
+                  />
+                )}
+              </ScrollView>
+            </View>
+
+            {/* Duration */}
+            <View style={styles.field}>
+              <FieldLabel icon="timer-outline" label="Time spent" required />
+              <DurationControl
+                minutes={totalMinutes}
+                onChange={(value) => {
+                  setTimeFromMinutes(value);
+                  if (errors.time) setErrors((e) => ({ ...e, time: undefined }));
+                }}
+                error={errors.time}
+              />
+              <FieldError message={errors.time} />
+            </View>
+
+            {/* Billable */}
+            <View style={styles.field}>
+              <FieldLabel icon="cash-multiple" label="Billing" />
+              <BillableToggle value={isBillable} onChange={setIsBillable} />
+            </View>
+          </ScrollView>
+
+          {/* ── Fixed action bar: always reachable ───────────────── */}
+          <View style={[styles.actionBar, { paddingBottom: insets.bottom + 10 }]}>
+            {editingTaskId || taskTitle || taskDescription || totalMinutes > 0 ? (
               <TouchableOpacity
                 onPress={clearForm}
                 disabled={saving}
-                style={styles.resetButton}
+                style={styles.clearButton}
+                accessibilityLabel={editingTaskId ? "Cancel editing" : "Clear form"}
               >
                 <MaterialCommunityIcons
-                  name={editingTaskId ? "close" : "refresh"}
-                  size={14}
+                  name={editingTaskId ? "close" : "eraser"}
+                  size={20}
+                  color={C.textSoft}
+                />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={saving}
+              activeOpacity={0.9}
+              style={styles.submitTouch}
+            >
+              <LinearGradient
+                colors={C.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submit}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <MaterialCommunityIcons
+                    name={editingTaskId ? "content-save-outline" : "check-circle-outline"}
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                )}
+                <Text style={styles.submitText}>
+                  {saving
+                    ? editingTaskId
+                      ? "Updating..."
+                      : "Submitting..."
+                    : editingTaskId
+                    ? "Update task"
+                    : totalMinutes > 0
+                    ? `Log ${formatCompact(totalMinutes)}`
+                    : "Log task"}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[styles.entriesContent, { paddingBottom: insets.bottom + 24 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {existingTasks.length > 0 && (
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>Logged for this day</Text>
+              <View style={{ flex: 1 }} />
+              <Text style={styles.listTotal}>
+                {formatMinutesToHoursAndMinutes(loggedMinutes)}
+              </Text>
+            </View>
+          )}
+
+          {existingTasks.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIcon}>
+                <MaterialCommunityIcons
+                  name="calendar-blank-outline"
+                  size={30}
                   color={C.accent}
                 />
-                <Text style={styles.resetText}>
-                  {editingTaskId ? "Cancel" : "Clear"}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Title */}
-          <View style={styles.field}>
-            <FieldLabel icon="format-title" label="Task title" required />
-            <InputField
-              value={taskTitle}
-              onChangeText={(text) => {
-                setTaskTitle(text);
-                if (errors.title) setErrors((e) => ({ ...e, title: undefined }));
-              }}
-              placeholder="e.g. Fix login bug"
-              returnKeyType="next"
-              blurOnSubmit={false}
-              onSubmitEditing={() => descriptionRef.current?.focus()}
-              error={errors.title}
-            />
-            <FieldError message={errors.title} />
-          </View>
-
-          {/* Description */}
-          <View style={styles.field}>
-            <FieldLabel icon="text" label="Description" required />
-            <InputField
-              ref={descriptionRef}
-              value={taskDescription}
-              onChangeText={(text) => {
-                setTaskDescription(text);
-                if (errors.description)
-                  setErrors((e) => ({ ...e, description: undefined }));
-              }}
-              placeholder="Describe what you did..."
-              multiline
-              error={errors.description}
-            />
-            <FieldError message={errors.description} />
-          </View>
-
-          {/* Project */}
-          <View style={styles.field}>
-            <FieldLabel
-              icon="folder-outline"
-              label="Project"
-              trailing={
-                selectableProjects.length > 0 ? (
-                  <TouchableOpacity
-                    onPress={() => setShowProjectPicker(true)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.linkText}>
-                      {selectableProjects.length > INLINE_PROJECT_LIMIT
-                        ? `All ${selectableProjects.length}`
-                        : "Search"}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null
-              }
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.chipRow}
-            >
-              <ProjectChip
-                label="No Project"
-                icon="folder-off-outline"
-                selected={projectId === 0}
-                onPress={() => setProjectId(0)}
-              />
-              {selectedIsHidden && (
-                <ProjectChip
-                  label={selectedProjectName}
-                  selected
-                  onPress={() => setShowProjectPicker(true)}
-                />
-              )}
-              {inlineProjects.map((project) => (
-                <ProjectChip
-                  key={project.projectId}
-                  label={project.projectName}
-                  selected={projectId === project.projectId}
-                  onPress={() => setProjectId(project.projectId)}
-                />
-              ))}
-              {selectableProjects.length > INLINE_PROJECT_LIMIT && (
-                <ProjectChip
-                  label="More"
-                  icon="dots-horizontal"
-                  selected={false}
-                  onPress={() => setShowProjectPicker(true)}
-                />
-              )}
-            </ScrollView>
-          </View>
-
-          {/* Duration */}
-          <View style={styles.field}>
-            <FieldLabel icon="timer-outline" label="Time spent" required />
-            <DurationControl
-              minutes={totalMinutes}
-              onChange={(value) => {
-                setTimeFromMinutes(value);
-                if (errors.time) setErrors((e) => ({ ...e, time: undefined }));
-              }}
-              error={errors.time}
-            />
-            <FieldError message={errors.time} />
-          </View>
-
-          {/* Billable */}
-          <View style={styles.field}>
-            <FieldLabel icon="cash-multiple" label="Billing" />
-            <BillableToggle value={isBillable} onChange={setIsBillable} />
-          </View>
-
-          {/* Submit */}
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={saving}
-            activeOpacity={0.9}
-            style={styles.submitTouch}
-          >
-            <LinearGradient
-              colors={C.primaryGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.submit}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <MaterialCommunityIcons
-                  name={editingTaskId ? "content-save-outline" : "check-circle-outline"}
-                  size={20}
-                  color="#FFFFFF"
-                />
-              )}
-              <Text style={styles.submitText}>
-                {saving
-                  ? editingTaskId
-                    ? "Updating..."
-                    : "Submitting..."
-                  : editingTaskId
-                  ? "Update task"
-                  : totalMinutes > 0
-                  ? `Log ${formatCompact(totalMinutes)}`
-                  : "Log task"}
+              </View>
+              <Text style={styles.emptyText}>No tasks logged yet</Text>
+              <Text style={styles.emptySubtext}>
+                Your entries for this day will show up here
               </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Logged tasks ─────────────────────────────────────────── */}
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Logged tasks</Text>
-          <View style={styles.countChip}>
-            <Text style={styles.countChipText}>{existingTasks.length}</Text>
-          </View>
-          <View style={{ flex: 1 }} />
-          {existingTasks.length > 0 && (
-            <Text style={styles.listTotal}>
-              {formatMinutesToHoursAndMinutes(loggedMinutes)}
-            </Text>
-          )}
-        </View>
-
-        {existingTasks.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIcon}>
-              <MaterialCommunityIcons
-                name="calendar-blank-outline"
-                size={30}
-                color={C.accent}
-              />
+              <TouchableOpacity onPress={() => setTab("log")} style={styles.emptyAction}>
+                <MaterialCommunityIcons name="plus" size={16} color={C.accent} />
+                <Text style={styles.emptyActionText}>Log time</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.emptyText}>No tasks logged yet</Text>
-            <Text style={styles.emptySubtext}>
-              Your entries for this day will show up here
-            </Text>
-          </View>
-        ) : (
-          existingTasks.map((task, index) => (
-            <TaskCard
-              key={task.taskId || index}
-              task={task}
-              editing={!!editingTaskId && editingTaskId === task.taskId}
-              deleting={deleting === task.taskId}
-              onEdit={() => handleEditTask(task)}
-              onDelete={() => task.taskId && handleDeleteTask(task.taskId)}
-            />
-          ))
-        )}
-      </ScrollView>
+          ) : (
+            existingTasks.map((task, index) => (
+              <TaskCard
+                key={task.taskId || index}
+                task={task}
+                editing={!!editingTaskId && editingTaskId === task.taskId}
+                deleting={deleting === task.taskId}
+                onEdit={() => handleEditTask(task)}
+                onDelete={() => task.taskId && handleDeleteTask(task.taskId)}
+              />
+            ))
+          )}
+        </ScrollView>
+      )}
 
       <ProjectSheet
         visible={showProjectPicker}
@@ -1347,9 +1305,136 @@ const styles = themedStyles((c) => ({
     color: c.accent,
   },
 
+  // Tabs
+  tabs: {
+    flexDirection: "row",
+    gap: 6,
+    margin: 12,
+    marginBottom: 4,
+    padding: 4,
+    borderRadius: 16,
+    backgroundColor: c.surfaceAlt,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  tabActive: {
+    backgroundColor: c.surface,
+    elevation: 2,
+    shadowColor: c.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: c.textSoft,
+  },
+  tabTextActive: {
+    color: c.accent,
+  },
+  tabBadge: {
+    minWidth: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 999,
+    backgroundColor: c.border,
+    alignItems: "center",
+  },
+  tabBadgeActive: {
+    backgroundColor: c.primaryFaint,
+  },
+  tabBadgeText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: c.textSoft,
+  },
+  tabBadgeTextActive: {
+    color: c.accent,
+  },
+  formContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  entriesContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  fieldFirst: {
+    marginTop: 8,
+  },
+  editBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: c.primaryFaint,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  editBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: c.text,
+  },
+  editBannerAction: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: c.link,
+  },
+  actionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: c.surface,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+  },
+  clearButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.surfaceAlt,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  emptyAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: c.primaryFaint,
+  },
+  emptyActionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: c.accent,
+  },
+
   // Fields
   field: {
-    marginTop: 16,
+    marginTop: 12,
   },
   fieldLabelRow: {
     flexDirection: "row",
@@ -1393,7 +1478,7 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
   },
   inputMultiline: {
-    minHeight: 92,
+    minHeight: 64,
     textAlignVertical: "top",
   },
   errorRow: {
@@ -1461,8 +1546,8 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
   },
   stepButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -1482,7 +1567,7 @@ const styles = themedStyles((c) => ({
     alignItems: "baseline",
   },
   durationNumber: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "800",
     color: c.accent,
     fontVariant: ["tabular-nums"],
@@ -1500,13 +1585,12 @@ const styles = themedStyles((c) => ({
   },
   presetRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 8,
-    marginTop: 12,
+    marginTop: 10,
   },
   preset: {
-    flexGrow: 1,
-    minWidth: 48,
+    minWidth: 54,
+    paddingHorizontal: 12,
     alignItems: "center",
     paddingVertical: 8,
     borderRadius: 12,
@@ -1567,7 +1651,7 @@ const styles = themedStyles((c) => ({
 
   // Submit
   submitTouch: {
-    marginTop: 22,
+    flex: 1,
     borderRadius: 16,
     overflow: "hidden",
     elevation: 4,

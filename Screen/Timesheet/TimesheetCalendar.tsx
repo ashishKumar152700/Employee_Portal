@@ -1,56 +1,135 @@
 // Screen/Timesheet/TimesheetCalendar.tsx
 
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
   View,
   Modal,
-  Platform,
-  ActivityIndicator,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  StatusBar
+  StatusBar,
+  ScrollView,
+  RefreshControl,
+  Animated,
+  Easing,
+  PanResponder,
+  KeyboardAvoidingView,
 } from "react-native";
-import { CalendarList } from "react-native-calendars";
+import { Calendar } from "react-native-calendars";
 import TimesheetForm from "./Timesheet";
 import { dialog } from "../../Component/Feedback/AppDialog";
 import { LoadingScreen } from "../../Component/Feedback/LoadingScreen";
-import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   TimesheetTask,
-  TaskHourCount,
   MonthlyTaskSummary,
   getTasksByDate,
   getUserTaskHourCount,
   processHourCountForCalendar,
   clearCache,
-  getCacheStats
 } from "../../Services/Timesheet/timesheetService";
-import { FontAwesome } from "@expo/vector-icons";
-import { useSelector, useDispatch } from 'react-redux';
-import LottieView from 'lottie-react-native';
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import LottieView from "lottie-react-native";
 import { themedStyles, C } from "../../Global/ThemeContext";
 
+const DAILY_TARGET_HOURS = 8;
+const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const pad = (n: number) => String(n).padStart(2, "0");
+const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const monthKeyOf = (year: number, month: number) => `${year}-${pad(month)}-01`;
 
-interface MarkedDates {
-  [date: string]: {
-    selected?: boolean;
-    selectedColor?: string;
-    marked?: boolean;
-    dotColor?: string;
-    disabled?: boolean;
-  };
-}
+// Hours → colour band (same thresholds as before).
+const hoursTone = (hours: number) =>
+  hours >= 8
+    ? { fg: C.successText, bg: C.successBg, solid: "#10B981" }
+    : hours >= 4
+      ? { fg: C.warningText, bg: C.warningBg, solid: "#F59E0B" }
+      : { fg: C.dangerText, bg: C.dangerBg, solid: "#EF4444" };
+
+const formatHours = (hours: number) =>
+  hours === 0 ? "0h" : Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+
+/** Mon–Fri days in the month, up to today for the current month. */
+const workingDaysSoFar = (year: number, month: number) => {
+  const now = new Date();
+  const isCurrent = now.getFullYear() === year && now.getMonth() + 1 === month;
+  const lastDay = isCurrent ? now.getDate() : new Date(year, month, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= lastDay; d++) {
+    const dow = new Date(year, month - 1, d).getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+};
+
+// ─── Day cell ───────────────────────────────────────────────────────────────
+const DayCell = ({
+  date,
+  state,
+  summary,
+  isToday,
+  isFuture,
+  onPress,
+}: {
+  date: any;
+  state?: string;
+  summary?: MonthlyTaskSummary;
+  isToday: boolean;
+  isFuture: boolean;
+  onPress: (dateString: string) => void;
+}) => {
+  const outside = state === "disabled" && !isFuture; // padding days of other months
+  const hours = summary && summary.hasTimesheet ? summary.totalMinutes / 60 : 0;
+  const tone = hours > 0 ? hoursTone(hours) : null;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      disabled={isFuture || outside}
+      onPress={() => onPress(date.dateString)}
+      style={[
+        styles.day,
+        tone && { backgroundColor: tone.bg },
+        isToday && styles.dayToday,
+        (isFuture || outside) && styles.dayMuted,
+      ]}
+      accessibilityLabel={`${date.dateString}${hours ? `, ${formatHours(hours)} logged` : ""}`}
+    >
+      <Text style={[styles.dayNum, isToday && styles.dayNumToday, tone && { color: tone.fg }]}>
+        {date.day}
+      </Text>
+      {tone ? (
+        <Text style={[styles.dayHours, { color: tone.fg }]}>{formatHours(hours)}</Text>
+      ) : isToday ? (
+        <View style={styles.todayDot} />
+      ) : (
+        <View style={styles.dayHoursSpacer} />
+      )}
+    </TouchableOpacity>
+  );
+};
+
+const LegendChip = ({ color, label, outline }: { color: string; label: string; outline?: boolean }) => (
+  <View style={styles.legendChip}>
+    <View
+      style={[
+        styles.legendSwatch,
+        outline ? { borderWidth: 2, borderColor: color } : { backgroundColor: color },
+      ]}
+    />
+    <Text style={styles.legendText}>{label}</Text>
+  </View>
+);
 
 const TimesheetCalendar: React.FC = () => {
   // The modal draws edge-to-edge (RN 0.81), so pad for the status bar here.
   const insets = useSafeAreaInsets();
-  const today = new Date().toISOString().split("T")[0];
+  const today = toISO(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [modalVisible, setModalVisible] = useState(false);
   const [tasksByDate, setTasksByDate] = useState<{ [date: string]: TimesheetTask[] }>({});
@@ -58,13 +137,10 @@ const TimesheetCalendar: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const [currentVisibleMonth, setCurrentVisibleMonth] = useState(() => {
     const now = new Date();
-    return {
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
-    };
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
   });
 
   useEffect(() => {
@@ -89,13 +165,6 @@ const TimesheetCalendar: React.FC = () => {
       setHourCountSummary(summary);
     } catch (error) {}
   };
-
-  const handleMonthChange = useCallback((month: any) => {
-    setCurrentVisibleMonth({
-      year: month.year,
-      month: month.month,
-    });
-  }, []);
 
   const openTimesheetModal = useCallback(
     async (day: { dateString: string }) => {
@@ -122,7 +191,7 @@ const TimesheetCalendar: React.FC = () => {
 
   const refreshData = useCallback(async () => {
     setRefreshing(true);
-    
+
     try {
       clearCache();
       await loadHourCountData();
@@ -139,38 +208,86 @@ const TimesheetCalendar: React.FC = () => {
   const handleTasksUpdated = useCallback(async () => {
     await Promise.all([
       loadHourCountData(),
-      selectedDate ? getTasksByDate(selectedDate).then(tasks => 
+      selectedDate ? getTasksByDate(selectedDate).then(tasks =>
         setTasksByDate(prev => ({ ...prev, [selectedDate]: tasks }))
       ) : Promise.resolve()
     ]);
   }, [selectedDate]);
 
-  const markedDates: MarkedDates = useMemo(() => {
-    const base: MarkedDates = {};
+  const showErrorAlert = (title: string, message: string) => {
+    dialog.alert(title, message, "error");
+  };
 
-    if (selectedDate) {
-      base[selectedDate] = { selected: true, selectedColor: C.accent };
-    }
+  const showWarningAlert = (title: string, message: string) => {
+    dialog.alert(title, message, "warning");
+  };
 
-    Object.keys(hourCountSummary).forEach((date) => {
-      const summary = hourCountSummary[date];
-      if (summary && summary.hasTimesheet && summary.totalMinutes > 0) {
-        const hours = summary.totalMinutes / 60;
-        let dotColor = "#EF4444";
+  // ─── Month paging: one month rendered at a time = instant dates ─────────
+  const monthKey = monthKeyOf(currentVisibleMonth.year, currentVisibleMonth.month);
+  const now = new Date();
+  const isCurrentMonth =
+    currentVisibleMonth.year === now.getFullYear() && currentVisibleMonth.month === now.getMonth() + 1;
 
-        if (hours >= 8) dotColor = "#10B981";
-        else if (hours >= 4) dotColor = "#F59E0B";
+  const slide = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(1)).current;
+  const calendarWidth = useRef(360);
+  const animating = useRef(false);
 
-        base[date] = { ...(base[date] || {}), marked: true, dotColor };
-      }
-    });
+  const shiftMonth = useCallback(
+    (delta: number) => {
+      if (animating.current) return;
+      const target = new Date(currentVisibleMonth.year, currentVisibleMonth.month - 1 + delta, 1);
+      if (delta > 0 && target > new Date(now.getFullYear(), now.getMonth(), 1)) return; // no future months
+      animating.current = true;
+      const w = calendarWidth.current;
+      Animated.parallel([
+        Animated.timing(slide, { toValue: -delta * w * 0.35, duration: 130, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+        Animated.timing(fade, { toValue: 0, duration: 130, useNativeDriver: true }),
+      ]).start(() => {
+        setCurrentVisibleMonth({ year: target.getFullYear(), month: target.getMonth() + 1 });
+        slide.setValue(delta * w * 0.35);
+        Animated.parallel([
+          Animated.spring(slide, { toValue: 0, friction: 9, tension: 90, useNativeDriver: true }),
+          Animated.timing(fade, { toValue: 1, duration: 180, useNativeDriver: true }),
+        ]).start(() => {
+          animating.current = false;
+        });
+      });
+    },
+    [currentVisibleMonth, now]
+  );
 
-    if (!base[today]?.marked) {
-      base[today] = { ...(base[today] || {}), dotColor: "orange" };
-    }
+  const goToToday = () => {
+    if (isCurrentMonth) return;
+    setCurrentVisibleMonth({ year: now.getFullYear(), month: now.getMonth() + 1 });
+  };
 
-    return base;
-  }, [selectedDate, hourCountSummary, today]);
+  // Horizontal swipe on the calendar body changes month.
+  const shiftRef = useRef(shiftMonth);
+  shiftRef.current = shiftMonth;
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 14 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+        onPanResponderMove: (_e, g) => slide.setValue(g.dx * 0.35),
+        onPanResponderRelease: (_e, g) => {
+          if (g.dx < -50) shiftRef.current(1);
+          else if (g.dx > 50) shiftRef.current(-1);
+          else Animated.spring(slide, { toValue: 0, useNativeDriver: true }).start();
+        },
+        onPanResponderTerminate: () => Animated.spring(slide, { toValue: 0, useNativeDriver: true }).start(),
+      }),
+    []
+  );
+
+  // Built once — rebuilding it each render forces the library to restyle.
+  const calendarTheme = useMemo(
+    () => ({
+      calendarBackground: "transparent",
+      textDayFontWeight: "600" as const,
+    }),
+    []
+  );
 
   const monthlyTotals = useMemo(() => {
     const monthlyData = Object.values(hourCountSummary).filter(summary => {
@@ -184,20 +301,32 @@ const TimesheetCalendar: React.FC = () => {
     const totalHours = monthlyData.reduce((sum, day) => sum + (day.totalMinutes / 60), 0);
     const daysLogged = monthlyData.length;
     const totalTasks = monthlyData.reduce((sum, day) => sum + day.taskCount, 0);
-    
+
     return { hours: totalHours, days: daysLogged, tasks: totalTasks };
   }, [hourCountSummary, currentVisibleMonth]);
 
-  const showSuccessAlert = (title: string, message: string) => {
-    dialog.alert(title, message, "success");
-  };
+  const workingDays = workingDaysSoFar(currentVisibleMonth.year, currentVisibleMonth.month);
+  const targetHours = workingDays * DAILY_TARGET_HOURS;
+  const progress = targetHours ? Math.min(monthlyTotals.hours / targetHours, 1) : 0;
 
-  const showErrorAlert = (title: string, message: string) => {
-    dialog.alert(title, message, "error");
-  };
+  const motivation =
+    monthlyTotals.days === 0
+      ? "Tap any date above to log your work."
+      : progress >= 1
+        ? "Target reached for this month — great work!"
+        : `${monthlyTotals.days} of ${workingDays} working days logged${isCurrentMonth ? " so far" : ""}.`;
 
-  const showWarningAlert = (title: string, message: string) => {
-    dialog.alert(title, message, "warning");
+  // ─── Form modal header data ─────────────────────────────────────────────
+  const daySummary = hourCountSummary[selectedDate];
+  const dayMinutes = daySummary?.totalMinutes ?? 0;
+  const dayTasks = daySummary?.taskCount ?? 0;
+  const dayProgress = Math.min(dayMinutes / (DAILY_TARGET_HOURS * 60), 1);
+  const shiftDay = (delta: number) => {
+    const d = new Date(`${selectedDate}T00:00:00`);
+    d.setDate(d.getDate() + delta);
+    const iso = toISO(d);
+    if (iso > today) return;
+    setSelectedDate(iso); // the form reloads itself for the new date
   };
 
   if (initialLoading) {
@@ -213,114 +342,147 @@ const TimesheetCalendar: React.FC = () => {
     <View style={styles.container}>
       <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerSubtitle}>
-            Track your daily work hours • Tap dates to manage tasks
-          </Text>
-        </View>
-        
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={refreshData}
-          disabled={refreshing}
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshData}
+            colors={[C.accent]}
+            tintColor={C.accent}
+          />
+        }
+      >
+        {/* ── Calendar card ───────────────────────────────────────── */}
+        <View
+          style={styles.calendarCard}
+          onLayout={(e) => (calendarWidth.current = e.nativeEvent.layout.width)}
         >
-          {refreshing ? (
-            <ActivityIndicator size={16} color="white" />
-          ) : (
-            <FontAwesome name="refresh" size={16} color="white" />
-          )}
-        </TouchableOpacity>
-      </View>
+          <View style={styles.calHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.calMonth}>
+                {MONTH_NAMES[currentVisibleMonth.month - 1]}{" "}
+                <Text style={styles.calYear}>{currentVisibleMonth.year}</Text>
+              </Text>
+              <Text style={styles.calHint}>Tap a date to log time · swipe to change month</Text>
+            </View>
+            {!isCurrentMonth && (
+              <TouchableOpacity onPress={goToToday} style={styles.todayChip} activeOpacity={0.8}>
+                <Text style={styles.todayChipText}>Today</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => shiftMonth(-1)}
+              style={styles.navButton}
+              accessibilityLabel="Previous month"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <MaterialCommunityIcons name="chevron-left" size={22} color={C.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => shiftMonth(1)}
+              disabled={isCurrentMonth}
+              style={[styles.navButton, isCurrentMonth && styles.navButtonDisabled]}
+              accessibilityLabel="Next month"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <MaterialCommunityIcons name="chevron-right" size={22} color={C.accent} />
+            </TouchableOpacity>
+          </View>
 
-      {/* Calendar */}
-      <CalendarList
-        horizontal
-        pagingEnabled
-        scrollEnabled
-        markedDates={markedDates}
-        onDayPress={openTimesheetModal}
-        onMonthChange={handleMonthChange}
-        markingType="dot"
-        maxDate={today}
-        theme={{
-          calendarBackground: C.surface,
-          textSectionTitleColor: C.accent,
-          selectedDayBackgroundColor: C.primary,
-          selectedDayTextColor: '#ffffff',
-          todayTextColor: '#FF6B35',
-          dayTextColor: C.text,
-          textDisabledColor: C.textFaint,
-          dotColor: C.accent,
-          selectedDotColor: '#ffffff',
-          arrowColor: C.accent,
-          monthTextColor: C.accent,
-          textDayFontWeight: '600',
-          textMonthFontWeight: 'bold',
-        }}
-        style={styles.calendar}
-        calendarHeight={380}
-      />
+          <View style={styles.weekRow}>
+            {WEEKDAYS.map((d, i) => (
+              <Text key={i} style={[styles.weekDay, (i === 0 || i === 6) && styles.weekEnd]}>
+                {d}
+              </Text>
+            ))}
+          </View>
 
-      {/* Legend */}
-      <View style={styles.legend}>
+          <Animated.View
+            {...pan.panHandlers}
+            style={{ opacity: fade, transform: [{ translateX: slide }] }}
+          >
+            <Calendar
+              key={monthKey}
+              current={monthKey}
+              maxDate={today}
+              hideArrows
+              hideDayNames
+              disableMonthChange
+              customHeader={() => null}
+              theme={calendarTheme}
+              dayComponent={({ date, state }: any) => (
+                <DayCell
+                  date={date}
+                  state={state}
+                  summary={hourCountSummary[date.dateString]}
+                  isToday={date.dateString === today}
+                  isFuture={date.dateString > today}
+                  onPress={(dateString) => openTimesheetModal({ dateString })}
+                />
+              )}
+            />
+          </Animated.View>
+        </View>
+
+        {/* ── Legend ──────────────────────────────────────────────── */}
         <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-            <Text style={styles.legendText}>8+ hours</Text>
+          <LegendChip color="#10B981" label="8h+" />
+          <LegendChip color="#F59E0B" label="4–8h" />
+          <LegendChip color="#EF4444" label="Under 4h" />
+          <LegendChip color={C.accent} label="Today" outline />
+        </View>
+
+        {/* ── Month data strip ────────────────────────────────────── */}
+        <LinearGradient
+          colors={C.heroGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.strip}
+        >
+          <View style={styles.stripRing} />
+          <View style={styles.stripStats}>
+            <View style={styles.stat}>
+              <MaterialCommunityIcons name="clock-outline" size={16} color="#7DD3FC" />
+              <Text style={styles.statValue}>{formatHours(Number(monthlyTotals.hours.toFixed(1)))}</Text>
+              <Text style={styles.statLabel}>Month hours</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <MaterialCommunityIcons name="calendar-check-outline" size={16} color="#7DD3FC" />
+              <Text style={styles.statValue}>{monthlyTotals.days}</Text>
+              <Text style={styles.statLabel}>Days logged</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <MaterialCommunityIcons name="format-list-checks" size={16} color="#7DD3FC" />
+              <Text style={styles.statValue}>{monthlyTotals.tasks}</Text>
+              <Text style={styles.statLabel}>Total tasks</Text>
+            </View>
           </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
-            <Text style={styles.legendText}>4-8 hours</Text>
+          <View style={styles.progressRow}>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${Math.max(progress * 100, 2)}%` }]} />
+            </View>
+            <Text style={styles.progressText}>
+              {Math.round(progress * 100)}% of {targetHours}h
+            </Text>
           </View>
+        </LinearGradient>
+
+        {/* ── Illustration ────────────────────────────────────────── */}
+        <View style={styles.illustrationCard}>
+          <LottieView
+            source={require("../../assets/animations/workPeople.json")}
+            autoPlay
+            loop
+            resizeMode="contain"
+            style={styles.illustration}
+          />
+          <Text style={styles.illustrationText}>{motivation}</Text>
         </View>
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-            <Text style={styles.legendText}>Under 4 hours</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: 'orange' }]} />
-            <Text style={styles.legendText}>Today</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Summary */}
-      <View style={styles.summaryContainer}>
-        <View style={styles.summaryCard}>
-          <FontAwesome name="clock-o" size={20} color={C.accent} />
-          <Text style={styles.summaryValue}>{monthlyTotals.hours.toFixed(1)}h</Text>
-          <Text style={styles.summaryLabel}>Month Hours</Text>
-        </View>
-
-        <View style={styles.summaryDivider} />
-
-        <View style={styles.summaryCard}>
-          <FontAwesome name="calendar-check-o" size={20} color={C.accent} />
-          <Text style={styles.summaryValue}>{monthlyTotals.days}</Text>
-          <Text style={styles.summaryLabel}>Days Logged</Text>
-        </View>
-
-        <View style={styles.summaryDivider} />
-
-        <View style={styles.summaryCard}>
-          <FontAwesome name="tasks" size={20} color={C.accent} />
-          <Text style={styles.summaryValue}>{monthlyTotals.tasks}</Text>
-          <Text style={styles.summaryLabel}>Total Tasks</Text>
-        </View>
-      </View>
-
-      {/* Illustration */}
-      <View style={styles.illustrationContainer}>
-        <LottieView
-          source={require("../../assets/animations/workPeople.json")}
-          autoPlay
-          loop
-          style={styles.illustration}
-        />
-      </View>
+      </ScrollView>
 
       {/* Full-screen form modal */}
       <Modal
@@ -328,54 +490,80 @@ const TimesheetCalendar: React.FC = () => {
         transparent={false}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
-        statusBarTranslucent={false}
+        // Draw under both system bars; the header / action bar pad for them
+        // exactly once (non-translucent + insets padding = an extra strip).
+        statusBarTranslucent
+        navigationBarTranslucent
       >
         <View style={[styles.modalSafeArea, { paddingTop: insets.top }]}>
           <StatusBar backgroundColor="rgb(0, 41, 87)" barStyle="light-content" />
-          
-          {/* Modal Header */}
+
+          {/* Compact header: date + day progress + day navigation */}
           <LinearGradient
-            colors={["rgb(0, 41, 87)", "rgb(0, 86, 160)"]}
+            colors={C.primaryGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.modalHeader}
           >
-            <View style={styles.modalHeaderLeft}>
-              <FontAwesome name="calendar" size={20} color="white" />
-              <View style={styles.modalHeaderTextContainer}>
-                <Text style={styles.modalTitle}>
-                  {new Date(selectedDate).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </Text>
+            <View style={styles.modalTopRow}>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.headerButton}
+                accessibilityLabel="Close"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialCommunityIcons name="chevron-down" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
 
-                {hourCountSummary[selectedDate] && (
-                  <Text style={styles.modalSubtitle}>
-                    Total: {(hourCountSummary[selectedDate].totalMinutes / 60).toFixed(1)} hours logged
-                  </Text>
-                )}
+              <TouchableOpacity
+                onPress={() => shiftDay(-1)}
+                style={styles.dayNav}
+                accessibilityLabel="Previous day"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialCommunityIcons name="chevron-left" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <View style={styles.modalTitleBlock}>
+                <Text style={styles.modalTitle} numberOfLines={1}>
+                  {selectedDate === today
+                    ? "Today"
+                    : new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                </Text>
+                <Text style={styles.modalSubtitle} numberOfLines={1}>
+                  {formatHours(Number((dayMinutes / 60).toFixed(1)))} logged · {dayTasks} task
+                  {dayTasks === 1 ? "" : "s"}
+                </Text>
               </View>
+
+              <TouchableOpacity
+                onPress={() => shiftDay(1)}
+                disabled={selectedDate >= today}
+                style={[styles.dayNav, selectedDate >= today && styles.dayNavDisabled]}
+                accessibilityLabel="Next day"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialCommunityIcons name="chevron-right" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <View style={styles.headerButtonSpacer} />
             </View>
 
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={styles.closeButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <FontAwesome name="times" size={18} color="white" />
-            </TouchableOpacity>
+            <View style={styles.dayTrack}>
+              <View style={[styles.dayFill, { width: `${Math.max(dayProgress * 100, dayMinutes ? 3 : 0)}%` }]} />
+            </View>
           </LinearGradient>
 
           {/* Form Content */}
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             style={styles.modalContent}
             // Edge-to-edge: Android no longer resizes the window for the
             // keyboard, so pad on both platforms.
             behavior="padding"
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
             {loading ? (
               <LoadingScreen message="Loading tasks" submessage="Getting your entries for this day" showLogo={false} />
@@ -389,15 +577,6 @@ const TimesheetCalendar: React.FC = () => {
           </KeyboardAvoidingView>
         </View>
       </Modal>
-
-      {refreshing && (
-        <View style={styles.refreshingOverlay}>
-          <View style={styles.refreshingCard}>
-            <ActivityIndicator size="small" color={C.accent} />
-            <Text style={styles.refreshingText}>Refreshing...</Text>
-          </View>
-        </View>
-      )}
     </View>
   );
 };
@@ -409,212 +588,324 @@ const styles = themedStyles((c) => ({
     flex: 1,
     backgroundColor: c.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: c.primary,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+  scroll: {
+    flexGrow: 1,
+    padding: 16,
+    paddingBottom: 16,
   },
-  headerContent: {
-    flex: 1,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
-  },
-  refreshButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 12,
-    marginLeft: 16,
-  },
-  calendar: {
-    height: 360,
-  },
-  legend: {
+
+  // Calendar card
+  calendarCard: {
     backgroundColor: c.surface,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: c.border,
-    gap: 8,
+    borderRadius: 24,
+    paddingTop: 16,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: c.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
   },
+  calHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 8,
+    marginBottom: 12,
+  },
+  calMonth: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: c.text,
+  },
+  calYear: {
+    fontWeight: "600",
+    color: c.textSoft,
+  },
+  calHint: {
+    fontSize: 11.5,
+    color: c.textSoft,
+    marginTop: 2,
+  },
+  todayChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: c.primaryFaint,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  todayChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: c.accent,
+  },
+  navButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.surfaceAlt,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  navButtonDisabled: {
+    opacity: 0.35,
+  },
+  weekRow: {
+    flexDirection: "row",
+    paddingHorizontal: 4,
+    marginBottom: 2,
+  },
+  weekDay: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: c.textSoft,
+    letterSpacing: 0.5,
+  },
+  weekEnd: {
+    color: c.textFaint,
+  },
+
+  // Day cell
+  day: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayToday: {
+    borderWidth: 2,
+    borderColor: c.accent,
+  },
+  dayMuted: {
+    opacity: 0.3,
+  },
+  dayNum: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: c.text,
+  },
+  dayNumToday: {
+    color: c.accent,
+    fontWeight: "800",
+  },
+  dayHours: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    marginTop: 1,
+  },
+  dayHoursSpacer: {
+    height: 13,
+  },
+  todayDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 4,
+    marginBottom: 4,
+    backgroundColor: c.accent,
+  },
+
+  // Legend
   legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 8,
+    marginTop: 10,
   },
-  legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  legendChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  legendSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   legendText: {
     fontSize: 12,
+    fontWeight: "600",
     color: c.textSoft,
-    fontWeight: '600',
   },
-  summaryContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: c.surface,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+
+  // Data strip
+  strip: {
+    marginTop: 10,
+    borderRadius: 22,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    overflow: "hidden",
   },
-  summaryCard: {
-    flex: 1,
-    alignItems: 'center',
+  stripRing: {
+    position: "absolute",
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    top: -90,
+    right: -50,
+    borderWidth: 1,
+    borderColor: "rgba(125, 211, 252, 0.16)",
   },
-  summaryValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: c.accent,
-    marginTop: 4,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: c.textSoft,
-    fontWeight: '600',
-  },
-  summaryDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: c.surfaceAlt,
-    marginHorizontal: 16,
-  },
-  illustrationContainer: {
-    width: "100%",
-    height: 160,
-    justifyContent: "center",
+  stripStats: {
+    flexDirection: "row",
     alignItems: "center",
   },
-  illustration: {
-    width: "90%",
-    height: "100%",
+  stat: {
+    flex: 1,
+    alignItems: "center",
   },
-  
-  // ===== FIXED MODAL STYLES =====
+  statValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "rgba(255, 255, 255, 0.72)",
+    marginTop: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+    backgroundColor: "#7DD3FC",
+  },
+  progressText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "rgba(255, 255, 255, 0.85)",
+  },
+
+  // Illustration
+  illustrationCard: {
+    flex: 1,
+    minHeight: 120,
+    marginTop: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 4,
+    paddingBottom: 12,
+    overflow: "hidden",
+    borderRadius: 22,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  illustration: {
+    flex: 1,
+    width: "100%",
+    maxHeight: 220,
+  },
+  illustrationText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: c.textSoft,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+
+  // Form modal
   modalSafeArea: {
     flex: 1,
     backgroundColor: c.primary,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 16 : 12,
-    paddingBottom: 16,
-    backgroundColor: c.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
-  modalHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
+  modalTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  modalHeaderTextContainer: {
-    flex: 1,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
-  },
-  closeButton: {
+  headerButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    marginLeft: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+  },
+  headerButtonSpacer: {
+    width: 36,
+  },
+  dayNav: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+  },
+  dayNavDisabled: {
+    opacity: 0.3,
+  },
+  modalTitleBlock: {
+    flex: 1,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  modalSubtitle: {
+    fontSize: 12.5,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginTop: 1,
+  },
+  dayTrack: {
+    height: 4,
+    borderRadius: 2,
+    marginTop: 10,
+    marginHorizontal: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    overflow: "hidden",
+  },
+  dayFill: {
+    height: "100%",
+    borderRadius: 2,
+    backgroundColor: "#7DD3FC",
   },
   modalContent: {
     flex: 1,
     backgroundColor: c.background,
-  },
-  
-  // Loading & Refreshing Overlays
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: c.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingCard: {
-    backgroundColor: c.surface,
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: c.accent,
-    fontWeight: '600',
-  },
-  refreshingOverlay: {
-    position: 'absolute',
-    top: 100,
-    alignSelf: 'center',
-    zIndex: 1000,
-  },
-  refreshingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: c.surface,
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    elevation: 8,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  refreshingText: {
-    fontSize: 14,
-    color: c.accent,
-    fontWeight: '600',
   },
 }));
 

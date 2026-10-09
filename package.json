@@ -17,6 +17,7 @@
     "@react-navigation/drawer": "^6.5.0",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
+    "@shopify/react-native-skia": "2.2.12",
     "axios": "^1.7.7",
     "babel-plugin-inline-dotenv": "^1.7.0",
     "date-fns": "^4.1.0",

@@ -2,7 +2,7 @@
   "expo": {
     "name": "RKT Employee App",
     "slug": "essp202",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "runtimeVersion": {
       "policy": "appVersion"
     },
