@@ -15,9 +15,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { clearAllCache } from "../../Services/Timesheet/timesheetService";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 import { themedStyles, C, useTheme } from "../../Global/ThemeContext";
-import { cancelTimesheetReminders, runNotificationTest } from "../../src/hooks/useTimesheetReminder";
-import { dialog } from "../Feedback/AppDialog";
-
 export const CustomDrawerContent = ({
   onClose,
   isDrawerOpen,
@@ -102,16 +99,6 @@ export const CustomDrawerContent = ({
       icon: "payments",
       route: "Payroll",
     },
-    // TEMP: reminder diagnostics, remove once notifications are confirmed.
-    {
-      name: "Test notifications",
-      icon: "notifications-active",
-      route: "__notificationTest",
-      onPress: async () => {
-        const report = await runNotificationTest();
-        dialog.alert("Notification test", report, "info");
-      },
-    },
   ];
 
   const checkMachineStatus = async () => {
@@ -158,11 +145,6 @@ export const CustomDrawerContent = ({
         key={item.route}
         style={[styles.menuItem, isActive && styles.menuItemActive]}
         onPress={() => {
-          if (item.onPress) {
-            onClose();
-            item.onPress();
-            return;
-          }
           setCurrentRoute(item.route);
           navigation.navigate(item.route as never);
           onClose();
@@ -234,10 +216,6 @@ export const CustomDrawerContent = ({
     try {
       await AsyncStorage.clear();
       console.log(" [Logout] AsyncStorage cleared");
-
-      // Stop the 5:30 PM timesheet reminders for this device.
-      await cancelTimesheetReminders().catch(() => {});
-
       await clearAllCache();
       console.log(" [Logout] Service cache cleared");
 

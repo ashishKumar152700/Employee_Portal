@@ -43,7 +43,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "react-native";
 import { useOTAUpdate } from "./src/hooks/useOTAUpdate";
-import { useTimesheetReminder } from "./src/hooks/useTimesheetReminder";
+import { usePushNotifications } from "./src/hooks/usePushNotifications";
 import { restoreSession } from "./src/utils/session";
 
 const AuthStack = createNativeStackNavigator();
@@ -108,7 +108,7 @@ function AppStackScreen() {
 function Navigation() {
   const userDetails = useSelector((state: any) => state.userDetails);
   const isLoggedIn = userDetails && userDetails.user;
-  useTimesheetReminder(!!isLoggedIn);
+  usePushNotifications(isLoggedIn ? String(userDetails.user.employeecode ?? "") || null : null);
   const { mode, isDark } = useTheme();
 
   // "Keep me logged in": restore the saved session before choosing a stack

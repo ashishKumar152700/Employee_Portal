@@ -2,7 +2,7 @@
   "expo": {
     "name": "RKT Connect",
     "slug": "essp202",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -30,7 +30,8 @@
         "googleMaps": {
           "apiKey": "AIzaSyBTuDT9OJLrhj4XrIhOvUkdg2x54gSYEwU"
         }
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       [
