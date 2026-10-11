@@ -14,7 +14,7 @@ import { FAB } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../Global/Types";
 import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "@expo/vector-icons/MaterialIcons";
 import { themedStyles, C } from "../../Global/ThemeContext";
 
 export default function MyLeaveScreen() {

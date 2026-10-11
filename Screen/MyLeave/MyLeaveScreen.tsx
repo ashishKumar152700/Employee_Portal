@@ -14,7 +14,7 @@ import { getLeaves } from "../../Services/Leave/Leave.service";
 import { FAB } from "react-native-paper";
 import { RootStackParamList } from "../../Global/Types";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "@expo/vector-icons/MaterialIcons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 import { themedStyles, C } from "../../Global/ThemeContext";

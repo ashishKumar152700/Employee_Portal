@@ -3,7 +3,7 @@ import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from "react-nat
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import Icon from "react-native-vector-icons/FontAwesome";
+import Icon from "@expo/vector-icons/FontAwesome";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 import { C, themedStyles } from "../../Global/ThemeContext";
 

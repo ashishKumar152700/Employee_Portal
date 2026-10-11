@@ -28,6 +28,7 @@ import { loginservice } from "../../Services/Login/Login.service";
 import { useDispatch } from "react-redux";
 import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
 import { refreshBindingPassword } from "../../src/utils/secureStorage";
+import { setKeepLoggedIn as saveKeepLoggedIn } from "../../src/utils/session";
 
 // The login service throws this generic message for network/server failures;
 // anything else means the server rejected the credentials.
@@ -105,6 +106,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [secureTextEntry, setSecureTextEntry] = useState(true);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [biometricLoginError, setBiometricLoginError] = useState<string | null>(
     null,
@@ -385,6 +387,7 @@ const LoginScreen = () => {
 
   const onLoginSuccess = () => {
     // Navigate to main app after successful login (password or biometric)
+    saveKeepLoggedIn(keepLoggedIn).catch(() => {});
     navigation.replace("Main");
   };
 
@@ -522,6 +525,23 @@ const LoginScreen = () => {
                 </TouchableOpacity>
               }
             />
+
+            <TouchableOpacity
+              style={styles.keepRow}
+              onPress={() => setKeepLoggedIn((k) => !k)}
+              activeOpacity={0.7}
+              disabled={loading}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: keepLoggedIn }}
+              hitSlop={{ top: 6, bottom: 6 }}
+            >
+              <MaterialCommunityIcons
+                name={keepLoggedIn ? "checkbox-marked" : "checkbox-blank-outline"}
+                size={20}
+                color={keepLoggedIn ? C.accent : C.primaryMuted}
+              />
+              <Text style={styles.keepText}>Keep me logged in</Text>
+            </TouchableOpacity>
 
             <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
               <TouchableOpacity
@@ -794,6 +814,20 @@ const styles = themedStyles((c) => ({
     fontSize: 12,
     fontWeight: "600",
     color: c.dangerText,
+  },
+
+  keepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 8,
+    marginTop: 14,
+    marginLeft: 2,
+  },
+  keepText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: c.text,
   },
 
   // Buttons

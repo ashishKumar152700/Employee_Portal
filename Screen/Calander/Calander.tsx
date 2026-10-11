@@ -20,7 +20,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { CalendarList } from "react-native-calendars";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import Icon from "@expo/vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { calendarservice } from "../../Services/Calendar/Calendar.service";
 import { useDispatch } from "react-redux";
@@ -1710,7 +1710,7 @@ export default Schedule;
 //   UIManager,
 // } from "react-native";
 // import { CalendarList } from "react-native-calendars";
-// import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+// import Icon from "@expo/vector-icons/MaterialCommunityIcons";
 // import { Card, Badge, Divider } from "react-native-paper";
 // import { calendarservice } from "../../Services/Calendar/Calendar.service";
 // import { useDispatch } from "react-redux";

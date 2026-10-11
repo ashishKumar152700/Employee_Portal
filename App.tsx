@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { Provider, useSelector } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { applyMiddleware, legacy_createStore as createStore } from "redux";
 import { thunk } from "redux-thunk";
 import reducers from "./Global/reducers";
@@ -43,6 +43,8 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "react-native";
 import { useOTAUpdate } from "./src/hooks/useOTAUpdate";
+import { useTimesheetReminder } from "./src/hooks/useTimesheetReminder";
+import { restoreSession } from "./src/utils/session";
 
 const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
@@ -106,7 +108,16 @@ function AppStackScreen() {
 function Navigation() {
   const userDetails = useSelector((state: any) => state.userDetails);
   const isLoggedIn = userDetails && userDetails.user;
+  useTimesheetReminder(!!isLoggedIn);
   const { mode, isDark } = useTheme();
+
+  // "Keep me logged in": restore the saved session before choosing a stack
+  // (the animated splash covers this, so the login screen never flashes).
+  const dispatch = useDispatch();
+  const [restoring, setRestoring] = useState(true);
+  useEffect(() => {
+    restoreSession(dispatch).finally(() => setRestoring(false));
+  }, []);
 
   // Switching theme remounts the navigator (key={mode}) so every screen
   // re-renders with the new palette; the saved state puts the user back on
@@ -131,6 +142,8 @@ function Navigation() {
       },
     };
   }, [mode]);
+
+  if (restoring) return null;
 
   return (
     <NavigationContainer

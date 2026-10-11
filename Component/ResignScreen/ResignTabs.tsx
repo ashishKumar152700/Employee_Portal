@@ -1,7 +1,7 @@
 import React from "react";
 import { FlatList, View, Text, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import Icon from "react-native-vector-icons/FontAwesome";
+import Icon from "@expo/vector-icons/FontAwesome";
 import { themedStyles, C } from "../../Global/ThemeContext";
 
 const Tab = createBottomTabNavigator();

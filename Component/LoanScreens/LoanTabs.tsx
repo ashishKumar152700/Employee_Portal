@@ -6,7 +6,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import Icon from "react-native-vector-icons/FontAwesome";
+import Icon from "@expo/vector-icons/FontAwesome";
 import { themedStyles, C } from "../../Global/ThemeContext";
 
 const Tab = createBottomTabNavigator();
@@ -173,7 +173,7 @@ const styles = themedStyles((c) => ({
 //   ActivityIndicator,
 // } from "react-native";
 // import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-// import Icon from "react-native-vector-icons/FontAwesome";
+// import Icon from "@expo/vector-icons/FontAwesome";
 // import { getLoanHistory } from "../../Services/Loan/Loan.service";
 
 // const Tab = createBottomTabNavigator();

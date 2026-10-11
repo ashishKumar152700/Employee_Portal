@@ -24,7 +24,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../Global/Types";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "@expo/vector-icons/MaterialIcons";
 import { ActivityIndicator } from "react-native";
 import { useTabBarClearance } from "../../Component/BottomNav/TabBarTheme";
 import { AppDialog, DialogVariant } from "../../Component/Feedback/AppDialog";

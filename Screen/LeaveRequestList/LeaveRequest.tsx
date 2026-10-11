@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import {Swipeable, GestureHandlerRootView} from "react-native-gesture-handler";
 import {useSelector} from "react-redux";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "@expo/vector-icons/MaterialIcons";
 import {managerLeaveRequestClass} from "../../Services/LeaveRequest/LeaveRequest.service";
 import {useFocusEffect} from "@react-navigation/native";
 import { themedStyles, C } from "../../Global/ThemeContext";
@@ -620,7 +620,7 @@ export default LeaveRequest;
 // } from "react-native";
 // import { Swipeable, GestureHandlerRootView } from "react-native-gesture-handler";
 // import { useSelector } from "react-redux";
-// import Icon from "react-native-vector-icons/MaterialIcons";
+// import Icon from "@expo/vector-icons/MaterialIcons";
 // import { managerLeaveRequestClass } from "../../Services/LeaveRequest/LeaveRequest.service";
 //
 // const { width } = Dimensions.get('window');

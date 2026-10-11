@@ -12,7 +12,7 @@ import PunchScreen from '../../Screen/Attendance/Punch';
 import Schedule from '../../Screen/Calander/Calander';
 import LottieView from 'lottie-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from '@expo/vector-icons/FontAwesome';
 import { BRAND, GlassSurface } from '../../Global/GlassTheme';
 
 const BAR_INSET = 16;

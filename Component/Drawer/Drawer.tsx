@@ -14,8 +14,8 @@ import BottomNavForAsset from "../BottomNav/BottomNavForAsset";
 import MyTickets from "../../Screen/Asset/MyTickets";
 import CustomDrawerContent from "./DrawerContnet";
 import { LoadingScreen } from "../Feedback/LoadingScreen";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import FontAwesome from "react-native-vector-icons/FontAwesome";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import LeaveRequest from "../../Screen/LeaveRequestList/LeaveRequest";
 import ProfilePage from "../../Screen/Profile/Testing";
 import BottomTabNavigator from "../BottomNav/BottomNav";
@@ -34,7 +34,6 @@ import PayslipScreen from "../../Screen/Payroll/PayslipScreen";
 import TaxReportScreen from "../../Screen/Payroll/TaxReportScreen";
 import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
-import BurnDemo from "../../Screen/Dev/BurnDemo";
 import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { themedStyles } from "../../Global/ThemeContext";
@@ -135,13 +134,15 @@ function DrawerNavigator() {
     async function preloadFonts() {
       try {
         await Font.loadAsync({
-          Ionicons: require("react-native-vector-icons/Fonts/Ionicons.ttf"),
-          FontAwesome: require("react-native-vector-icons/Fonts/FontAwesome.ttf"),
+          ...Ionicons.font,
+          ...FontAwesome.font,
         });
-        iconFontsReady = true;
-        setFontsLoaded(true);
       } catch (error) {
         console.error("Error loading fonts:", error);
+      } finally {
+        // Never block the app on icon fonts; worst case icons render late.
+        iconFontsReady = true;
+        setFontsLoaded(true);
       }
     }
 
@@ -388,15 +389,6 @@ function DrawerNavigator() {
             </RouteProvider>
           )}
         </Stack.Screen>
-        {__DEV__ && (
-          <Stack.Screen name="BurnDemo">
-            {(props) => (
-              <RouteProvider onRouteChange={handleRouteChange}>
-                <ScreenWrapper {...props} component={BurnDemo} onMenuPress={openDrawer} />
-              </RouteProvider>
-            )}
-          </Stack.Screen>
-        )}
         <Stack.Screen name="TaxReport">
           {(props) => (
             <RouteProvider onRouteChange={handleRouteChange}>

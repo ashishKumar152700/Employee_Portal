@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "RKT Employee App",
+    "name": "RKT Connect",
     "slug": "essp202",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -10,7 +10,7 @@
       "url": "https://u.expo.dev/1fbc41dd-e388-48ed-93b5-b94c522fb277"
     },
     "orientation": "portrait",
-    "icon": "./assets/RktEss.png",
+    "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -20,11 +20,11 @@
     "android": {
       "package": "com.sudhirtbk9.essp202",
       "jsEngine": "hermes",
-      "icon": "./assets/RktEss.png",
+      "icon": "./assets/app-icon.png",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/RktEss.png",
-        "backgroundColor": "#FFFFFF"
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#002957"
       },
       "config": {
         "googleMaps": {
@@ -41,14 +41,15 @@
             "targetSdkVersion": 35,
             "minSdkVersion": 24,
             "usesCleartextTraffic": true,
-            "enableProguardInReleaseBuilds": true
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/RktLogo.jpg",
+          "icon": "./assets/notification-icon-white.png",
           "color": "#1B4D90"
         }
       ],
@@ -70,7 +71,8 @@
             "image": "./assets/splash-icon.png"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
