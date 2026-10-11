@@ -34,7 +34,7 @@ import PayslipScreen from "../../Screen/Payroll/PayslipScreen";
 import TaxReportScreen from "../../Screen/Payroll/TaxReportScreen";
 import { StatusBar } from "react-native";
 import TimesheetCalendar from "../../Screen/Timesheet/TimesheetCalendar";
-import { useNavigation, useRoute, NavigationContainer } from "@react-navigation/native";
+import { useNavigation, useRoute, NavigationContainer, getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { themedStyles } from "../../Global/ThemeContext";
 
@@ -44,10 +44,47 @@ const Stack = createNativeStackNavigator();
 // accounts for the bottom safe-area inset.
 const edgeToEdgeOptions = { contentStyle: { paddingBottom: 0 } };
 
+// Header titles per route. Screens hosting bottom tabs are keyed by tab name
+// ("Route/Tab") so the title follows the active tab.
+const SCREEN_TITLES: Record<string, string> = {
+  Attendance: "Attendance",
+  "Attendance/Punch": "Attendance",
+  "Attendance/Calendar": "Attendance History",
+  MyLeaves: "My Leaves",
+  "MyLeaves/Leave Details": "My Leaves",
+  "MyLeaves/Apply for Leaves": "Apply for Leave",
+  Timesheet: "Timesheet",
+  AssetModule: "Assets",
+  "AssetModule/Asset": "Request an Asset",
+  "AssetModule/My Assets": "My Assets",
+  "AssetModule/My Tickets": "Asset Tickets",
+  MyTickets: "My Tickets",
+  LeaveRequest: "Leave Approvals",
+  Profile: "My Profile",
+  DashBoard: "Dashboard",
+  LoanRequest: "Loan Request",
+  SalaryAdvanceRequest: "Salary Advance",
+  Reimbursement: "Reimbursement",
+  AddMember: "Add Team Member",
+  OvertimeRequest: "Overtime Request",
+  SeparationRequest: "Resignation",
+  TaxModule: "Income Tax",
+  Payroll: "Payroll",
+  PayrollDetail: "Payroll Details",
+  Payslip: "Payslip",
+  TaxReport: "Tax Report",
+};
+
+const screenTitle = (route: any) => {
+  const tab = getFocusedRouteNameFromRoute(route);
+  return (
+    (tab && SCREEN_TITLES[`${route.name}/${tab}`]) ||
+    SCREEN_TITLES[route.name] ||
+    route.name.replace(/([A-Z])/g, " $1").trim()
+  );
+};
+
 const CustomHeader = ({ navigation, title, onMenuPress }) => {
-  const formatTitle = (text) => {
-    return text.replace(/([A-Z])/g, " $1").trim();
-  };
 
   return (
     <View style={styles.headerContainer}>
@@ -68,7 +105,9 @@ const CustomHeader = ({ navigation, title, onMenuPress }) => {
         />
       </View>
 
-      <Text style={styles.headerText}>{formatTitle(title)}</Text>
+      <Text style={styles.headerText} numberOfLines={1}>
+        {title}
+      </Text>
 
       <TouchableOpacity
         onPress={() => navigation.navigate("Profile")}
@@ -103,7 +142,7 @@ const ScreenWrapper = ({ component: Component, onMenuPress, ...props }) => {
     <>
       <CustomHeader 
         navigation={navigation} 
-        title={route.name}
+        title={screenTitle(route)}
         onMenuPress={onMenuPress}
       />
       <Component {...props} />

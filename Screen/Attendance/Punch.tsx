@@ -109,7 +109,7 @@ const PunchOverlay: React.FC<PunchOverlayProps> = ({ phase, punchType }) => {
   if (phase) lastPhase.current = phase;
   const shown = lastPhase.current;
   const config = getPhaseConfig()[shown];
-  const actionLabel = punchType === "in" ? "Clock In" : "Clock Out";
+  const actionLabel = punchType === "in" ? "Punch In" : "Punch Out";
   const steps: NonNullable<PunchPhase>[] = ["locating", "processing", "success"];
   const activeIndex = shown === "error" ? -1 : steps.indexOf(shown);
   const isActive = shown === "locating" || shown === "processing";
@@ -277,7 +277,7 @@ const ClockButton: React.FC<ClockButtonProps> = ({
             onPressIn={() => springTo(0.94)}
             onPressOut={() => springTo(1)}
             accessibilityRole="button"
-            accessibilityLabel={type === "in" ? "Clock in" : "Clock out"}
+            accessibilityLabel={type === "in" ? "Punch in" : "Punch out"}
             style={[
               styles.orbShadow,
               { shadowColor: gradientColors[1] },
@@ -303,7 +303,7 @@ const ClockButton: React.FC<ClockButtonProps> = ({
                     color="#FFFFFF"
                   />
                   <Text style={styles.buttonText}>
-                    {type === "in" ? "CLOCK IN" : "CLOCK OUT"}
+                    {type === "in" ? "PUNCH IN" : "PUNCH OUT"}
                   </Text>
                 </>
               )}
@@ -665,7 +665,7 @@ const PunchScreen: React.FC = () => {
       ? "out"
       : null;
   const status = !hasClockIn
-    ? { label: "Not clocked in", color: "#FBBF24", icon: "clock-alert-outline" }
+    ? { label: "Not punched in", color: "#FBBF24", icon: "clock-alert-outline" }
     : !hasClockOut
       ? { label: "On duty", color: "#34D399", icon: "radar" }
       : { label: "Shift complete", color: NEON, icon: "check-circle-outline" };
@@ -733,7 +733,7 @@ const PunchScreen: React.FC = () => {
           ) : (
             <View style={styles.timerRow}>
               <MaterialCommunityIcons name="gesture-tap" size={15} color={NEON} />
-              <Text style={styles.timerLabel}>Tap Clock In to start your day</Text>
+              <Text style={styles.timerLabel}>Tap Punch In to start your day</Text>
             </View>
           )}
         </LinearGradient>
@@ -808,8 +808,8 @@ const PunchScreen: React.FC = () => {
 
           <View style={styles.footer}>
             <View style={styles.footerItem}>
-              <Text style={styles.footerValue}>{clockInTime || "Punch In"}</Text>
-              <Text style={styles.footerText}>Clock In</Text>
+              <Text style={styles.footerValue}>{clockInTime || "--:--"}</Text>
+              <Text style={styles.footerText}>Punch In</Text>
             </View>
             <View style={styles.footerDivider} />
             <View style={styles.footerItem}>
@@ -818,8 +818,8 @@ const PunchScreen: React.FC = () => {
             </View>
             <View style={styles.footerDivider} />
             <View style={styles.footerItem}>
-              <Text style={styles.footerValue}>{clockOutTime || "Punch Out"}</Text>
-              <Text style={styles.footerText}>Clock Out</Text>
+              <Text style={styles.footerValue}>{clockOutTime || "--:--"}</Text>
+              <Text style={styles.footerText}>Punch Out</Text>
             </View>
           </View>
         </View>
@@ -849,7 +849,7 @@ const PunchScreen: React.FC = () => {
               <View style={{ flex: 1 }}>
                 <Text style={styles.mapTitle}>Punch location</Text>
                 <Text style={styles.mapSubtitle}>
-                  {punchType === "out" ? "Clock out" : "Clock in"} recorded here
+                  {punchType === "out" ? "Punch out" : "Punch in"} recorded here
                 </Text>
               </View>
             </LinearGradient>

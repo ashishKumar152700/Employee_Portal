@@ -1682,9 +1682,10 @@ const styles = themedStyles((c) => ({
     marginTop: 4,
   },
   deviceIconSmall: {
-    width: 52,
-    height: 52,
-    marginLeft: 8,
+    // Images are trimmed to the device outline, so the full box is used.
+    width: 60,
+    height: 72,
+    marginLeft: 10,
   },
 }));
 

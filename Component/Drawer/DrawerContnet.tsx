@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { clearAllCache } from "../../Services/Timesheet/timesheetService";
 import { BRAND, GlassSurface } from "../../Global/GlassTheme";
 import { themedStyles, C, useTheme } from "../../Global/ThemeContext";
+import { canApproveLeaves } from "../../src/utils/roles";
 export const CustomDrawerContent = ({
   onClose,
   isDrawerOpen,
@@ -68,7 +69,7 @@ export const CustomDrawerContent = ({
     .map((word: string) => (word[0] ? word[0].toUpperCase() : ""))
     .join("");
 
-  const menuItems = [
+  const menuItems: { name: string; icon: string; route: string; approversOnly?: boolean }[] = [
     {
       name: "Attendance",
       icon: "fingerprint",
@@ -93,6 +94,7 @@ export const CustomDrawerContent = ({
       name: "Leave Approval",
       icon: "fact-check",
       route: "LeaveRequest",
+      approversOnly: true, // Manager / Admin / HR only
     },
     {
       name: "Payroll",
@@ -363,7 +365,9 @@ export const CustomDrawerContent = ({
         {renderMachineStatus()}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Menu</Text>
-          {menuItems.map((item) => renderMenuItem(item))}
+          {menuItems
+            .filter((item) => !item.approversOnly || canApproveLeaves(userDetails?.user?.role))
+            .map((item) => renderMenuItem(item))}
         </View>
       </ScrollView>
 

@@ -1,319 +1,669 @@
-import React, {useEffect, useState, useRef, useCallback} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
   Animated,
   Easing,
-  Modal,
-  Dimensions,
+  RefreshControl,
+  StyleSheet,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
-import {Swipeable, GestureHandlerRootView} from "react-native-gesture-handler";
-import {useSelector} from "react-redux";
-import Icon from "@expo/vector-icons/MaterialIcons";
-import {managerLeaveRequestClass} from "../../Services/LeaveRequest/LeaveRequest.service";
-import {useFocusEffect} from "@react-navigation/native";
+import { useSelector } from "react-redux";
+import { Swipeable, GestureHandlerRootView } from "react-native-gesture-handler";
+import { LinearGradient } from "expo-linear-gradient";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { managerLeaveRequestClass } from "../../Services/LeaveRequest/LeaveRequest.service";
 import { themedStyles, C } from "../../Global/ThemeContext";
+import { BRAND } from "../../Global/GlassTheme";
 import { AppDialog, DialogDetails, dialog } from "../../Component/Feedback/AppDialog";
 import { LoadingScreen } from "../../Component/Feedback/LoadingScreen";
+import { canApproveLeaves } from "../../src/utils/roles";
 
-const {width} = Dimensions.get('window');
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
-const LeaveRequest = () => {
-  const userDetails = useSelector((state: any) => state.userDetails);
-  const userID = userDetails?.user?.id;
+const NEON = "#7DD3FC";
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const AVATAR_GRADIENTS = [
+  ["#0B3D7A", "#1E6FD9"],
+  ["#4C1D95", "#7C3AED"],
+  ["#065F46", "#10B981"],
+  ["#9A3412", "#F97316"],
+  ["#831843", "#DB2777"],
+  ["#134E4A", "#14B8A6"],
+] as const;
 
-  const [leaveRequests, setLeaveRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [confirmationModal, setConfirmationModal] = useState({visible: false, type: '', request: null});
-  const [processingRequest, setProcessingRequest] = useState(null);
-  const swipeableRefs = useRef(new Map());
+type Decision = "approve" | "reject";
 
-  const fetchLeaveRequests = useCallback(async () => {
-    try {
-      setLoading(true);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-      const data =
-          await managerLeaveRequestClass.LeaveRequestGet(
-              userID
-          );
+const toDate = (value?: string | null): Date | null => {
+  if (!value) return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+};
 
-      setLeaveRequests(data.data);
-    } catch (error) {
-      console.error(
-          "Failed to fetch leave requests:",
-          error
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [userID]);
+const formatDate = (value?: string | null) => {
+  const d = toDate(value);
+  return d ? `${d.getDate()} ${MONTHS[d.getMonth()]}, ${d.getFullYear()}` : value || "—";
+};
 
-  useFocusEffect(
-      useCallback(() => {
-        fetchLeaveRequests();
-      }, [fetchLeaveRequests])
+const isHalfDay = (part?: string) => part === "first-half" || part === "second-half";
+
+const formatLeavePart = (part?: string) => {
+  switch (part) {
+    case "first-half":
+      return "First half";
+    case "second-half":
+      return "Second half";
+    case "full-day":
+      return "Full day";
+    default:
+      return part || "";
+  }
+};
+
+/** Inclusive calendar days between start and end; a single half-day counts 0.5. */
+const leaveDays = (item: any): number => {
+  const start = toDate(item.leavestart);
+  const end = toDate(item.leaveend) ?? start;
+  if (!start || !end) return 0;
+  const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.max(1, Math.round((day(end) - day(start)) / 86400000) + 1);
+  return days === 1 && isHalfDay(item.leavepart) ? 0.5 : days;
+};
+
+const formatDays = (n: number) => (n === 0.5 ? "½ day" : `${n} day${n === 1 ? "" : "s"}`);
+
+const appliedAgo = (value?: string | null) => {
+  const d = toDate(value);
+  if (!d) return "";
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
+  if (diff <= 0) return "Applied today";
+  if (diff === 1) return "Applied yesterday";
+  if (diff < 7) return `Applied ${diff} days ago`;
+  return `Applied ${formatDate(value)}`;
+};
+
+const initials = (name?: string) =>
+  (name || "?")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+
+const hashIndex = (text: string, size: number) => {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0;
+  return h % size;
+};
+
+// Leave-type pill tones, picked per type so each type keeps its colour.
+const typeTone = (type: string) => {
+  const tones = [
+    { bg: C.infoBg, fg: C.infoText },
+    { bg: C.violetBg, fg: C.violetText },
+    { bg: C.successBg, fg: C.successText },
+    { bg: C.warningBg, fg: C.warningText },
+  ];
+  return tones[hashIndex(String(type || "").toUpperCase(), tones.length)];
+};
+
+// ─── Pieces ───────────────────────────────────────────────────────────────────
+
+const DateTile = ({ value, label }: { value?: string; label: string }) => {
+  const d = toDate(value);
+  return (
+    <View style={styles.dateTile}>
+      <Text style={styles.dateTileLabel}>{label}</Text>
+      {d ? (
+        <>
+          <Text style={styles.dateTileDay}>{d.getDate()}</Text>
+          <Text style={styles.dateTileMonth}>
+            {WEEKDAYS[d.getDay()]}, {MONTHS[d.getMonth()]}
+          </Text>
+        </>
+      ) : (
+        <Text style={styles.dateTileDay}>—</Text>
+      )}
+    </View>
   );
+};
+
+// Revealed behind a card when it is swiped left. Brand-styled: Approve is the
+// primary navy action, Reject a quieter frosted outline. Tiles grow in with the drag.
+const SwipeActions = ({
+  progress,
+  onDecide,
+}: {
+  progress: Animated.AnimatedInterpolation<number>;
+  onDecide: (decision: Decision) => void;
+}) => {
+  const reveal = (start: number) => ({
+    opacity: progress.interpolate({
+      inputRange: [start, start + 0.55],
+      outputRange: [0, 1],
+      extrapolate: "clamp",
+    }),
+    transform: [
+      {
+        scale: progress.interpolate({
+          inputRange: [start, start + 0.7],
+          outputRange: [0.6, 1],
+          extrapolate: "clamp",
+        }),
+      },
+    ],
+  });
+  // The icon badge turns in slightly as the tile arrives.
+  const spin = (start: number) => ({
+    transform: [
+      {
+        rotate: progress.interpolate({
+          inputRange: [start, start + 0.8],
+          outputRange: ["-45deg", "0deg"],
+          extrapolate: "clamp",
+        }),
+      },
+    ],
+  });
+
+  return (
+    <View style={styles.swipeActions}>
+      {/* Approve: primary, navy gradient with hero rings */}
+      <Animated.View style={[styles.swipeTileWrap, reveal(0)]}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onDecide("approve")}
+          accessibilityRole="button"
+          accessibilityLabel="Approve"
+          style={styles.swipeTouch}
+        >
+          <LinearGradient
+            colors={C.heroGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.swipeTile}
+          >
+            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              <View style={[styles.tileRing, styles.tileRingLg]} />
+              <View style={[styles.tileRing, styles.tileRingSm]} />
+            </View>
+            <Animated.View style={[styles.approveBadge, spin(0)]}>
+              <MaterialCommunityIcons name="check-bold" size={20} color={C.primary} />
+            </Animated.View>
+            <Text style={styles.approveTileText}>Approve</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Reject: secondary, frosted surface with brand outline */}
+      <Animated.View style={[styles.swipeTileWrap, reveal(0.15)]}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onDecide("reject")}
+          accessibilityRole="button"
+          accessibilityLabel="Reject"
+          style={[styles.swipeTouch, styles.rejectTile]}
+        >
+          <View style={styles.rejectSheen} />
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <View style={[styles.rejectRing, styles.tileRingLg]} />
+            <View style={[styles.rejectRing, styles.rejectRingSm]} />
+          </View>
+          <Animated.View style={[styles.rejectBadge, spin(0.15)]}>
+            <MaterialCommunityIcons name="close-thick" size={18} color={C.accent} />
+          </Animated.View>
+          <Text style={styles.rejectTileText}>Reject</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+};
+
+const RequestCard = ({
+  item,
+  index,
+  processing,
+  peek,
+  registerRef,
+  onOpen,
+  onDecide,
+}: {
+  item: any;
+  index: number;
+  processing: Decision | null;
+  peek: boolean;
+  registerRef: (id: any, ref: Swipeable | null) => void;
+  onOpen: (id: any) => void;
+  onDecide: (decision: Decision, item: any) => void;
+}) => {
+  const enter = useRef(new Animated.Value(0)).current;
+  const swipeRef = useRef<Swipeable | null>(null);
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
+    Animated.timing(enter, {
       toValue: 1,
-      duration: 600,
-      easing: Easing.out(Easing.ease),
+      duration: 420,
+      delay: Math.min(index, 6) * 70,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
   }, []);
 
-  const showConfirmation = (type, request) => {
-    setConfirmationModal({visible: true, type, request});
-  };
+  // One-time hint: briefly slide the first card open so the gesture is discoverable.
+  useEffect(() => {
+    if (!peek) return;
+    const open = setTimeout(() => swipeRef.current?.openRight(), 900);
+    const close = setTimeout(() => swipeRef.current?.close(), 1900);
+    return () => {
+      clearTimeout(open);
+      clearTimeout(close);
+    };
+  }, [peek]);
 
-  const hideConfirmation = () => {
-    setConfirmationModal({visible: false, type: '', request: null});
-  };
+  const name = item.user?.name || "Unknown employee";
+  const gradient = AVATAR_GRADIENTS[hashIndex(name, AVATAR_GRADIENTS.length)];
+  const tone = typeTone(item.leavetype);
+  const days = leaveDays(item);
+  const sameDay = days <= 1;
 
-  const updateLeaveStatus = async (
-      request: any,
-      status: "approved" | "declined"
-  ) => {
-    setProcessingRequest(request.id);
-    hideConfirmation();
-
-    try {
-      await managerLeaveRequestClass.LeaveStatusUpdate(
-          request.id,
-          status
-      );
-
-      setLeaveRequests((prevRequests) =>
-          prevRequests.filter(
-              (req) => req.id !== request.id
-          )
-      );
-    } catch (error) {
-      console.error(
-          `Error updating leave status (${status}):`,
-          error
-      );
-      dialog.alert(
-          "Couldn't update request",
-          "The leave request could not be updated. Please try again.",
-          "error"
-      );
-    } finally {
-      setProcessingRequest(null);
-    }
-  };
-
-  const handleApprove = async (request: any) => {
-    await updateLeaveStatus(request, "approved");
-  };
-
-  const handleReject = async (request: any) => {
-    await updateLeaveStatus(request, "declined");
-  };
-
-  // Close all other swipeables when one is opened
-  const handleSwipeableOpen = (id) => {
-    swipeableRefs.current.forEach((ref, key) => {
-      if (key !== id && ref) {
-        ref.close();
-      }
-    });
-  };
-
-  const renderRightActions = (request) => (
-      <View style={styles.actions}>
-        <TouchableOpacity
-            style={styles.approve}
-            onPress={() => showConfirmation('approve', request)}
-        >
-          <Icon name="check" size={24} color="white"/>
-          <Text style={styles.actionText}>Approve</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-            style={styles.reject}
-            onPress={() => showConfirmation('reject', request)}
-        >
-          <Icon name="close" size={24} color="white"/>
-          <Text style={styles.actionText}>Reject</Text>
-        </TouchableOpacity>
-      </View>
-  );
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "Invalid Date";
-
-    try {
-      // Parse ISO date string
-      const date = new Date(dateString);
-
-      if (isNaN(date.getTime())) return dateString;
-
-      const months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-      ];
-
-      const day = date.getDate();
-      const month = months[date.getMonth()];
-      const year = date.getFullYear();
-
-      return `${day} ${month}, ${year}`;
-    } catch (error) {
-      console.error("Date formatting error:", error);
-      return dateString;
-    }
-  };
-
-  const renderItem = ({item, index}) => (
+  return (
+    <Animated.View
+      style={{
+        opacity: enter,
+        transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
+      }}
+    >
       <Swipeable
-          ref={(ref) => {
-            if (ref) {
-              swipeableRefs.current.set(item.id, ref);
-            } else {
-              swipeableRefs.current.delete(item.id);
-            }
-          }}
-          renderRightActions={() => renderRightActions(item)}
-          overshootFriction={8}
-          onSwipeableOpen={() => handleSwipeableOpen(item.id)}
-          enabled={processingRequest !== item.id}
+        ref={(ref) => {
+          swipeRef.current = ref;
+          registerRef(item.id, ref);
+        }}
+        enabled={!processing}
+        friction={1.6}
+        overshootRight={false}
+        rightThreshold={48}
+        containerStyle={styles.swipeContainer}
+        onSwipeableWillOpen={() => onOpen(item.id)}
+        renderRightActions={(progress) => (
+          <SwipeActions
+            progress={progress}
+            onDecide={(decision) => {
+              swipeRef.current?.close();
+              onDecide(decision, item);
+            }}
+          />
+        )}
       >
-        <View style={[styles.card, processingRequest === item.id && styles.processingCard]}>
-          {index === 0 && (
-              <View style={styles.instructionContainer}>
-                <Icon name="swipe" size={20} color={C.accent}/>
-                <Text style={styles.instructionText}>Swipe left to approve or reject</Text>
+        <View style={styles.card}>
+          {/* Techno backdrop: gradient wash, accent strip, rings, HUD corners, dot grid */}
+          <View pointerEvents="none" style={styles.cardDecor}>
+            <LinearGradient
+              colors={[C.surface, C.surfaceAlt]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={[C.primaryLight, NEON, C.primaryLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.cardAccent}
+            />
+            <View style={[styles.cardRing, styles.cardRingLg]} />
+            <View style={[styles.cardRing, styles.cardRingSm]} />
+            <View style={[styles.bracket, styles.bracketTR]} />
+            <View style={[styles.bracket, styles.bracketBL]} />
+            <View style={styles.dotGrid}>
+              {Array.from({ length: 15 }).map((_, i) => (
+                <View key={i} style={styles.dot} />
+              ))}
+            </View>
+          </View>
+
+          {/* Who */}
+          <View style={styles.cardHeader}>
+            <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials(name)}</Text>
+            </LinearGradient>
+            <View style={styles.headerContent}>
+              <Text style={styles.name} numberOfLines={1}>
+                {name}
+              </Text>
+              <View style={styles.metaRow}>
+                <MaterialCommunityIcons name="clock-outline" size={12} color={C.textFaint} />
+                <Text style={styles.metaText}>{appliedAgo(item.applydate)}</Text>
               </View>
+            </View>
+            {!!item.leavetype && (
+              <View style={[styles.typePill, { backgroundColor: tone.bg }]}>
+                <Text style={[styles.typePillText, { color: tone.fg }]}>{item.leavetype}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Glowing scan line between who and when */}
+          <LinearGradient
+            colors={["transparent", C.primaryMuted, NEON, C.primaryMuted, "transparent"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.scanLine}
+          />
+
+          {/* When */}
+          <View style={styles.dateRow}>
+            <DateTile value={item.leavestart} label="FROM" />
+            {!sameDay && (
+              <>
+                <MaterialCommunityIcons name="arrow-right" size={18} color={C.primaryMuted} />
+                <DateTile value={item.leaveend} label="TO" />
+              </>
+            )}
+            <View style={styles.daysBadge}>
+              <Text style={styles.daysValue}>{days === 0.5 ? "½" : days}</Text>
+              <Text style={styles.daysLabel}>{days <= 1 ? "day" : "days"}</Text>
+            </View>
+          </View>
+
+          {/* Why */}
+          {!!item.leavepart && (
+            <View style={styles.partRow}>
+              <MaterialCommunityIcons
+                name={isHalfDay(item.leavepart) ? "circle-half-full" : "circle"}
+                size={13}
+                color={C.accent}
+              />
+              <Text style={styles.partText}>{formatLeavePart(item.leavepart)}</Text>
+            </View>
+          )}
+          {!!item.reason && (
+            <View style={styles.reasonBox}>
+              <MaterialCommunityIcons name="format-quote-open" size={16} color={C.primaryMuted} />
+              <Text style={styles.reasonText} numberOfLines={4}>
+                {item.reason}
+              </Text>
+            </View>
           )}
 
-          {processingRequest === item.id ? (
-              <View style={styles.processingContainer}>
-                <ActivityIndicator size="large" color={C.accent}/>
-                <Text style={styles.processingText}>
-                  {confirmationModal.type === 'approve' ? 'Approving...' : 'Rejecting...'}
-                </Text>
-              </View>
-          ) : (
-              <>
-                <View style={styles.cardHeader}>
-                  <View style={styles.avatar}>
-                    <Icon name="person" size={24} color={C.accent}/>
-                  </View>
-                  <View style={styles.headerContent}>
-                    <Text style={styles.name}>{item.user?.name || "N/A"}</Text>
-                    <View style={styles.dateContainer}>
-                      <Icon name="event" size={16} color={C.textSoft}/>
-                      <Text style={styles.date}>
-                        {formatDate(item.leavestart)} to {formatDate(item.leaveend)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+          {/* Swipe affordance on the right edge */}
+          <View pointerEvents="none" style={styles.grabber}>
+            <MaterialCommunityIcons name="chevron-double-left" size={16} color={C.primaryMuted} />
+          </View>
 
-                <View style={styles.cardBody}>
-                  <View style={styles.detailRow}>
-                    <Icon name="work-outline" size={18} color={C.textSoft}/>
-                    <Text style={styles.detailText}>
-                      {item.leavetype} • {item.leavepart}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Icon name="chat-bubble-outline" size={18} color={C.textSoft}/>
-                    <Text style={styles.detailText}>{item.reason}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.cardFooter}>
-                  <View style={[styles.statusBadge,
-                    item.leavestatus === "approved" ? styles.approvedBadge :
-                        item.leavestatus === "declined" ? styles.rejectedBadge :
-                            styles.pendingBadge
-                  ]}>
-                    <Text style={styles.statusText}>{item.leavestatus || "Pending"}</Text>
-                  </View>
-                  <Text style={styles.applyDate}>
-                    Applied on {formatDate(item.applydate)}
-                  </Text>
-                </View>
-              </>
+          {processing && (
+            <View style={styles.processingOverlay}>
+              <ActivityIndicator
+                size="small"
+                color={C.accent}
+              />
+              <Text
+                style={[
+                  styles.processingText,
+                  { color: C.accent },
+                ]}
+              >
+                {processing === "approve" ? "Approving…" : "Rejecting…"}
+              </Text>
+            </View>
           )}
         </View>
       </Swipeable>
+    </Animated.View>
   );
+};
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+const LeaveRequest = () => {
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const userID = userDetails?.user?.id;
+  const allowed = canApproveLeaves(userDetails?.user?.role);
+
+  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{ type: Decision; request: any } | null>(null);
+  const [processing, setProcessing] = useState<{ id: any; type: Decision } | null>(null);
+  const [peekDone, setPeekDone] = useState(false);
+
+  // Only one card open at a time.
+  const swipeRefs = useRef(new Map<any, Swipeable>());
+  const registerRef = useCallback((id: any, ref: Swipeable | null) => {
+    if (ref) swipeRefs.current.set(id, ref);
+    else swipeRefs.current.delete(id);
+  }, []);
+  const closeOthers = useCallback((id: any) => {
+    swipeRefs.current.forEach((ref, key) => {
+      if (key !== id) ref.close();
+    });
+  }, []);
+
+  // Peek the first card once, shortly after the list first appears.
+  useEffect(() => {
+    if (peekDone || loading || leaveRequests.length === 0) return;
+    const t = setTimeout(() => setPeekDone(true), 2200);
+    return () => clearTimeout(t);
+  }, [peekDone, loading, leaveRequests.length]);
+
+  const fetchLeaveRequests = useCallback(
+    async (mode: "initial" | "refresh" = "initial") => {
+      if (!allowed || !userID) return;
+      mode === "refresh" ? setRefreshing(true) : setLoading(true);
+      try {
+        const data = await managerLeaveRequestClass.LeaveRequestGet(userID);
+        setLeaveRequests(Array.isArray(data?.data) ? data.data : []);
+        setLoadError(null);
+      } catch (error: any) {
+        console.error("Failed to fetch leave requests:", error);
+        setLoadError(error?.message || "Couldn't load leave requests.");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [userID, allowed],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchLeaveRequests();
+    }, [fetchLeaveRequests]),
+  );
+
+  const decide = async (request: any, type: Decision) => {
+    setConfirm(null);
+    setProcessing({ id: request.id, type });
+    try {
+      await managerLeaveRequestClass.LeaveStatusUpdate(
+        request.id,
+        type === "approve" ? "approved" : "declined",
+      );
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setLeaveRequests((prev) => prev.filter((r) => r.id !== request.id));
+    } catch (error) {
+      console.error(`Error updating leave status (${type}):`, error);
+      dialog.alert(
+        "Couldn't update request",
+        "The leave request could not be updated. Please try again.",
+        "error",
+      );
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const summary = useMemo(() => {
+    const totalDays = leaveRequests.reduce((sum, r) => sum + leaveDays(r), 0);
+    const starts = leaveRequests
+      .map((r) => toDate(r.leavestart))
+      .filter(Boolean)
+      .sort((a: any, b: any) => a - b) as Date[];
+    const next = starts[0];
+    return {
+      totalDays,
+      next: next ? `${next.getDate()} ${MONTHS[next.getMonth()]}` : "—",
+    };
+  }, [leaveRequests]);
+
+  if (!allowed) {
+    return (
+      <View style={styles.stateWrap}>
+        <View style={[styles.stateIcon, { backgroundColor: C.neutralBg }]}>
+          <MaterialCommunityIcons name="lock-outline" size={34} color={C.textSoft} />
+        </View>
+        <Text style={styles.stateTitle}>Managers only</Text>
+        <Text style={styles.stateText}>
+          Leave approvals are available to managers and admins.
+        </Text>
+      </View>
+    );
+  }
 
   if (loading) {
     return <LoadingScreen message="Loading leave requests" submessage="Fetching pending approvals" />;
   }
 
+  const count = leaveRequests.length;
+
+  const header = (
+    <LinearGradient colors={C.heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <View style={[styles.heroRing, styles.heroRingLg]} />
+        <View style={[styles.heroRing, styles.heroRingMd]} />
+        <View style={[styles.heroRing, styles.heroRingSm]} />
+      </View>
+
+      <View style={styles.heroBrand}>
+        <MaterialCommunityIcons name="clipboard-check-outline" size={14} color={NEON} />
+        <Text style={styles.heroBrandText}>LEAVE APPROVALS</Text>
+      </View>
+
+      <View style={styles.heroCountRow}>
+        <Text style={styles.heroCount}>{count}</Text>
+        <Text style={styles.heroCountLabel}>
+          {count === 1 ? "request awaiting\nyour decision" : "requests awaiting\nyour decision"}
+        </Text>
+      </View>
+
+      <View style={styles.heroStats}>
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>{formatDays(summary.totalDays)}</Text>
+          <Text style={styles.heroStatLabel}>Requested</Text>
+        </View>
+        <View style={styles.heroDivider} />
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>{summary.next}</Text>
+          <Text style={styles.heroStatLabel}>Earliest start</Text>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+
+  const empty = loadError ? (
+    <View style={styles.stateWrap}>
+      <View style={[styles.stateIcon, { backgroundColor: C.dangerBg }]}>
+        <MaterialCommunityIcons name="wifi-alert" size={34} color={C.dangerText} />
+      </View>
+      <Text style={styles.stateTitle}>Couldn't load requests</Text>
+      <Text style={styles.stateText}>{loadError}</Text>
+      <TouchableOpacity style={styles.stateBtn} onPress={() => fetchLeaveRequests()} activeOpacity={0.85}>
+        <MaterialCommunityIcons name="refresh" size={16} color="#FFFFFF" />
+        <Text style={styles.stateBtnText}>Try again</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <View style={styles.stateWrap}>
+      <View style={[styles.stateIcon, { backgroundColor: C.successBg }]}>
+        <MaterialCommunityIcons name="check-all" size={34} color={C.successText} />
+      </View>
+      <Text style={styles.stateTitle}>All caught up</Text>
+      <Text style={styles.stateText}>No leave requests are waiting for your approval.</Text>
+    </View>
+  );
+
   return (
-      <GestureHandlerRootView style={styles.container}>
-        <Animated.View style={[styles.animatedContainer, {opacity: fadeAnim}]}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Leave Requests</Text>
-            <Text style={styles.headerSubtitle}>
-              {leaveRequests.length} pending request{leaveRequests.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-
-          {leaveRequests.length > 0 ? (
-              <FlatList
-                  data={leaveRequests}
-                  renderItem={renderItem}
-                  keyExtractor={(item) => item.id.toString()}
-                  contentContainerStyle={styles.listContainer}
-                  showsVerticalScrollIndicator={false}
-              />
-          ) : (
-              <View style={styles.emptyContainer}>
-                <Icon name="inbox" size={64} color={C.textFaint}/>
-                <Text style={styles.emptyText}>No leave requests available</Text>
-                <Text style={styles.emptySubtext}>
-                  All leave requests have been processed
-                </Text>
+    <GestureHandlerRootView style={styles.container}>
+      <FlatList
+        data={leaveRequests}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item, index }) => (
+          <RequestCard
+            item={item}
+            index={index}
+            processing={processing?.id === item.id ? processing.type : null}
+            peek={index === 0 && !peekDone}
+            registerRef={registerRef}
+            onOpen={closeOthers}
+            onDecide={(type, request) => setConfirm({ type, request })}
+          />
+        )}
+        ListHeaderComponent={
+          <>
+            {header}
+            {count > 0 && (
+              <View style={styles.hintRow}>
+                <MaterialCommunityIcons name="gesture-swipe-left" size={16} color={C.accent} />
+                <Text style={styles.hintText}>Swipe a card left to approve or reject</Text>
               </View>
-          )}
-
-          {/* Approve / reject confirmation */}
-          <AppDialog
-              visible={confirmationModal.visible}
-              variant={confirmationModal.type === "approve" ? "confirm" : "danger"}
-              lottie={confirmationModal.type === "approve" ? null : undefined}
-              icon={confirmationModal.type === "approve" ? "check-decagram-outline" : undefined}
-              title={confirmationModal.type === "approve" ? "Confirm Approval" : "Confirm Rejection"}
-              message={`Are you sure you want to ${confirmationModal.type} ${confirmationModal.request?.user?.name || "this employee"}'s leave request?`}
-              secondaryLabel="Cancel"
-              onSecondary={hideConfirmation}
-              primaryLabel={confirmationModal.type === "approve" ? "Approve" : "Reject"}
-              onPrimary={() => {
-                if (confirmationModal.type === "approve") {
-                  handleApprove(confirmationModal.request);
-                } else {
-                  handleReject(confirmationModal.request);
-                }
-              }}
-          >
-            {confirmationModal.request && (
-                <DialogDetails
-                    rows={[
-                      { label: "Leave type", value: confirmationModal.request.leavetype },
-                      {
-                        label: "Duration",
-                        value: `${formatDate(confirmationModal.request.leavestart)} to ${formatDate(confirmationModal.request.leaveend)}`,
-                      },
-                      { label: "Reason", value: confirmationModal.request.reason },
-                    ]}
-                />
             )}
-          </AppDialog>
-        </Animated.View>
-      </GestureHandlerRootView>
+          </>
+        }
+        ListEmptyComponent={empty}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchLeaveRequests("refresh")}
+            colors={[BRAND.primary]}
+            tintColor={C.accent}
+          />
+        }
+      />
+
+      {/* Approve / reject confirmation */}
+      <AppDialog
+        visible={!!confirm}
+        variant="confirm"
+        lottie={null}
+        icon={confirm?.type === "approve" ? "check-decagram-outline" : "close-circle-outline"}
+        title={confirm?.type === "approve" ? "Approve leave?" : "Reject leave?"}
+        message={`${confirm?.type === "approve" ? "Approve" : "Reject"} ${
+          confirm?.request?.user?.name || "this employee"
+        }'s leave request?`}
+        secondaryLabel="Cancel"
+        onSecondary={() => setConfirm(null)}
+        primaryLabel={confirm?.type === "approve" ? "Approve" : "Reject"}
+        onPrimary={() => confirm && decide(confirm.request, confirm.type)}
+      >
+        {confirm?.request && (
+          <DialogDetails
+            rows={[
+              { label: "Leave type", value: confirm.request.leavetype },
+              {
+                label: "Duration",
+                value: `${formatDate(confirm.request.leavestart)} to ${formatDate(
+                  confirm.request.leaveend,
+                )} · ${formatDays(leaveDays(confirm.request))}`,
+              },
+              { label: "Reason", value: confirm.request.reason },
+            ]}
+          />
+        )}
+      </AppDialog>
+    </GestureHandlerRootView>
   );
 };
 
@@ -322,915 +672,507 @@ const styles = themedStyles((c) => ({
     flex: 1,
     backgroundColor: c.background,
   },
-  animatedContainer: {
-    flex: 1,
-  },
-  header: {
-    padding: 16,
-    backgroundColor: c.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: c.accent,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: c.textSoft,
-  },
   listContainer: {
     padding: 16,
+    paddingBottom: 32,
+    flexGrow: 1,
   },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  card: {
-    backgroundColor: c.surface,
-    borderRadius: 16,
-    padding: 16,
+
+  // Hero
+  hero: {
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 16,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    overflow: "hidden",
+    elevation: 6,
+    shadowColor: c.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
   },
-  processingCard: {
-    opacity: 0.8,
+  heroRing: {
+    position: "absolute",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(125, 211, 252, 0.12)",
   },
-  instructionContainer: {
+  heroRingLg: { width: 300, height: 300, top: -150, right: -120 },
+  heroRingMd: { width: 200, height: 200, top: -95, right: -70 },
+  heroRingSm: {
+    width: 110,
+    height: 110,
+    top: -45,
+    right: -25,
+    backgroundColor: "rgba(125, 211, 252, 0.05)",
+  },
+  heroBrand: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: c.primaryFaint,
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 12,
+    gap: 6,
   },
-  instructionText: {
+  heroBrandText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.75)",
+    letterSpacing: 2,
+  },
+  heroCountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 10,
+  },
+  heroCount: {
+    fontSize: 48,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    lineHeight: 54,
+  },
+  heroCountLabel: {
     fontSize: 14,
-    color: c.accent,
-    marginLeft: 8,
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.8)",
+    lineHeight: 19,
+  },
+  heroStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  heroStat: {
+    flex: 1,
+  },
+  heroStatValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  heroStatLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 2,
+  },
+  heroDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    marginHorizontal: 14,
+  },
+
+  // Card
+  card: {
+    backgroundColor: c.surface,
+    borderRadius: 20,
+    padding: 16,
+    paddingLeft: 20,
+    paddingRight: 26,
+    borderWidth: 1,
+    borderColor: c.borderStrong,
+    elevation: 3,
+    shadowColor: c.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+  },
+  cardDecor: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 19,
+    overflow: "hidden",
+  },
+  cardAccent: {
+    position: "absolute",
+    left: 0,
+    top: 18,
+    bottom: 18,
+    width: 4,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+  cardRing: {
+    position: "absolute",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  cardRingLg: { width: 170, height: 170, top: -90, right: -70 },
+  cardRingSm: {
+    width: 96,
+    height: 96,
+    top: -48,
+    right: -30,
+    backgroundColor: c.primaryFaint,
+  },
+  bracket: {
+    position: "absolute",
+    width: 14,
+    height: 14,
+    borderColor: c.primaryMuted,
+    opacity: 0.6,
+  },
+  bracketTR: {
+    top: 8,
+    right: 8,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+    borderTopRightRadius: 4,
+  },
+  bracketBL: {
+    bottom: 8,
+    left: 10,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+    borderBottomLeftRadius: 4,
+  },
+  dotGrid: {
+    position: "absolute",
+    right: 14,
+    bottom: 12,
+    width: 5 * 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    opacity: 0.55,
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: c.primaryMuted,
+  },
+  scanLine: {
+    height: 1.5,
+    marginTop: 14,
+    marginBottom: -2,
+    borderRadius: 1,
+    opacity: 0.8,
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: c.primaryFaint,
-    justifyContent: "center",
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
+  },
+  avatarText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   headerContent: {
     flex: 1,
   },
   name: {
     fontSize: 16,
-    fontWeight: "600",
-    color: c.accent,
-    marginBottom: 4,
+    fontWeight: "700",
+    color: c.text,
   },
-  dateContainer: {
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+    marginTop: 3,
   },
-  date: {
-    fontSize: 14,
-    color: c.textSoft,
-    marginLeft: 4,
-  },
-  cardBody: {
-    marginBottom: 12,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    color: c.textSoft,
-    marginLeft: 8,
-    flex: 1,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  pendingBadge: {
-    backgroundColor: c.warningBg,
-  },
-  approvedBadge: {
-    backgroundColor: c.successBg,
-  },
-  rejectedBadge: {
-    backgroundColor: c.dangerBg,
-  },
-  statusText: {
+  metaText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: c.accent,
-  },
-  applyDate: {
-    fontSize: 12,
-    color: c.textSoft,
-  },
-  actions: {
-    flexDirection: "column",
-    alignItems: "center",
-    height: "44%",
-    gap: 8,
-    paddingHorizontal: 10,
-  },
-  approve: {
-    backgroundColor: c.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    width: 80,
-    height: "100%",
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
-  },
-  reject: {
-    backgroundColor: c.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    width: 80,
-    height: "100%",
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
-  },
-  actionText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: c.textSoft,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
     color: c.textFaint,
-    textAlign: "center",
-  },
-  processingContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  processingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: c.accent,
     fontWeight: "500",
   },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: c.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+  typePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginLeft: 8,
   },
-  modalContainer: {
-    backgroundColor: c.surface,
+  typePillText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
+
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 14,
+    padding: 12,
     borderRadius: 16,
-    width: "100%",
-    maxWidth: 400,
+    backgroundColor: c.primaryFaint,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  dateTile: {
+    minWidth: 64,
+  },
+  dateTileLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: c.textFaint,
+    letterSpacing: 1.2,
+  },
+  dateTileDay: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: c.accent,
+    lineHeight: 27,
+  },
+  dateTileMonth: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: c.textSoft,
+  },
+  daysBadge: {
+    marginLeft: "auto",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 56,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: c.primaryFaint,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  daysValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: c.accent,
+    lineHeight: 24,
+  },
+  daysLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: c.textSoft,
+  },
+
+  partRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+  },
+  partText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: c.accent,
+  },
+  reasonBox: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 10,
+    paddingLeft: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: c.borderStrong,
+  },
+  reasonText: {
+    flex: 1,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: c.textSoft,
+  },
+
+  // Swipe
+  swipeContainer: {
+    marginBottom: 14,
+    borderRadius: 20,
+  },
+  swipeActions: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 8,
+    paddingLeft: 10,
+  },
+  swipeTileWrap: {
+    width: 86,
+  },
+  swipeTouch: {
+    flex: 1,
+    borderRadius: 20,
     overflow: "hidden",
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  swipeTile: {
+    flex: 1,
     alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
+    justifyContent: "center",
+    gap: 8,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
+  tileRing: {
+    position: "absolute",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(125, 211, 252, 0.18)",
+  },
+  tileRingLg: { width: 130, height: 130, top: -60, right: -60 },
+  tileRingSm: {
+    width: 70,
+    height: 70,
+    bottom: -30,
+    left: -26,
+    backgroundColor: "rgba(125, 211, 252, 0.06)",
+  },
+  approveBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 3,
+    borderColor: "rgba(125, 211, 252, 0.55)",
+    shadowColor: "#7DD3FC",
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  approveTileText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
+  },
+  rejectTile: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: c.surface,
+    borderWidth: 1.5,
+    borderColor: c.borderStrong,
+  },
+  rejectSheen: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "45%",
+    backgroundColor: c.primaryFaint,
+  },
+  rejectRing: {
+    position: "absolute",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: c.borderStrong,
+  },
+  rejectRingSm: {
+    width: 70,
+    height: 70,
+    bottom: -30,
+    left: -26,
+    backgroundColor: c.primaryFaint,
+  },
+  rejectBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.primaryFaint,
+    borderWidth: 1.5,
+    borderColor: c.borderStrong,
+  },
+  rejectTileText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: c.accent,
+    letterSpacing: 0.3,
+  },
+  grabber: {
+    position: "absolute",
+    right: 6,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    opacity: 0.7,
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: c.surface,
+    opacity: 0.94,
+  },
+  processingText: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  hintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: c.primaryFaint,
+  },
+  hintText: {
+    fontSize: 12.5,
+    fontWeight: "600",
     color: c.accent,
   },
-  closeButton: {
-    padding: 4,
+
+  // Empty / error / locked
+  stateWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 48,
+    backgroundColor: c.background,
   },
-  modalBody: {
-    padding: 16,
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: c.textSoft,
+  stateIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
-  requestDetails: {
-    backgroundColor: c.background,
-    borderRadius: 8,
-    padding: 12,
+  stateTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: c.text,
+    marginBottom: 6,
   },
-  detailLabel: {
+  stateText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: c.accent,
-    marginTop: 8,
-  },
-  detailValue: {
-    fontSize: 14,
+    lineHeight: 20,
     color: c.textSoft,
-    marginBottom: 4,
+    textAlign: "center",
   },
-  modalFooter: {
+  stateBtn: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: c.border,
-  },
-  cancelButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: c.background,
-  },
-  cancelButtonText: {
-    color: c.textSoft,
-    fontWeight: "600",
-  },
-  confirmButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  approveButton: {
+    alignItems: "center",
+    gap: 6,
+    marginTop: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 12,
     backgroundColor: c.primary,
   },
-  rejectButton: {
-    backgroundColor: "#dc3545",
-  },
-  confirmButtonText: {
-    color: "white",
-    fontWeight: "600",
+  stateBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 }));
 
 export default LeaveRequest;
-
-
-// import React, { useEffect, useState, useRef } from "react";
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   TouchableOpacity,
-//   ActivityIndicator,
-//   FlatList,
-//   Animated,
-//   Easing,
-//   Modal,
-//   Dimensions,
-// } from "react-native";
-// import { Swipeable, GestureHandlerRootView } from "react-native-gesture-handler";
-// import { useSelector } from "react-redux";
-// import Icon from "@expo/vector-icons/MaterialIcons";
-// import { managerLeaveRequestClass } from "../../Services/LeaveRequest/LeaveRequest.service";
-//
-// const { width } = Dimensions.get('window');
-//
-// const LeaveRequest = () => {
-//   const userDetails = useSelector((state: any) => state.userDetails);
-//   const userID = userDetails?.user?.id;
-//
-//   const [leaveRequests, setLeaveRequests] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [fadeAnim] = useState(new Animated.Value(0));
-//   const [confirmationModal, setConfirmationModal] = useState({ visible: false, type: '', request: null });
-//   const [processingRequest, setProcessingRequest] = useState(null);
-//   const swipeableRefs = useRef(new Map());
-//
-//   useEffect(() => {
-//     const fetchLeaveRequests = async () => {
-//       try {
-//         const data = await managerLeaveRequestClass.LeaveRequestGet(userID);
-//         setLeaveRequests(data.data);
-//       } catch (error) {
-//         console.error("Failed to fetch leave requests:", error);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//
-//     fetchLeaveRequests();
-//   }, [userID]);
-//
-//   useEffect(() => {
-//     Animated.timing(fadeAnim, {
-//       toValue: 1,
-//       duration: 600,
-//       easing: Easing.out(Easing.ease),
-//       useNativeDriver: true,
-//     }).start();
-//   }, []);
-//
-//   const showConfirmation = (type, request) => {
-//     setConfirmationModal({ visible: true, type, request });
-//   };
-//
-//   const hideConfirmation = () => {
-//     setConfirmationModal({ visible: false, type: '', request: null });
-//   };
-//
-//   const handleApprove = async (request) => {
-//     setProcessingRequest(request.id);
-//     hideConfirmation();
-//
-//     try {
-//       await managerLeaveRequestClass.LeaveStatusUpdate(request.id, "Approve");
-//
-//       // Remove the request after a short delay
-//       setTimeout(() => {
-//         setLeaveRequests((prevRequests) =>
-//           prevRequests.filter((req) => req.id !== request.id)
-//         );
-//         setProcessingRequest(null);
-//       }, 500);
-//     } catch (error) {
-//       console.error("Error approving request:", error);
-//       setProcessingRequest(null);
-//     }
-//   };
-//
-//   const handleReject = async (request) => {
-//     setProcessingRequest(request.id);
-//     hideConfirmation();
-//
-//     try {
-//       await managerLeaveRequestClass.LeaveStatusUpdate(request.id, "Decline");
-//
-//       // Remove the request after a short delay
-//       setTimeout(() => {
-//         setLeaveRequests((prevRequests) =>
-//           prevRequests.filter((req) => req.id !== request.id)
-//         );
-//         setProcessingRequest(null);
-//       }, 500);
-//     } catch (error) {
-//       console.error("Error rejecting request:", error);
-//       setProcessingRequest(null);
-//     }
-//   };
-//
-//   // Close all other swipeables when one is opened
-//   const handleSwipeableOpen = (id) => {
-//     swipeableRefs.current.forEach((ref, key) => {
-//       if (key !== id && ref) {
-//         ref.close();
-//       }
-//     });
-//   };
-//
-//   const renderRightActions = (request) => (
-//     <View style={styles.actions}>
-//       <TouchableOpacity
-//         style={styles.approve}
-//         onPress={() => showConfirmation('approve', request)}
-//       >
-//         <Icon name="check" size={24} color="white" />
-//         <Text style={styles.actionText}>Approve</Text>
-//       </TouchableOpacity>
-//       <TouchableOpacity
-//         style={styles.reject}
-//         onPress={() => showConfirmation('reject', request)}
-//       >
-//         <Icon name="close" size={24} color="white" />
-//         <Text style={styles.actionText}>Reject</Text>
-//       </TouchableOpacity>
-//     </View>
-//   );
-//
-//   const formatDate = (dateString) => {
-//     if (!dateString) return "Invalid Date";
-//
-//     try {
-//       // Parse ISO date string
-//       const date = new Date(dateString);
-//
-//       if (isNaN(date.getTime())) return dateString;
-//
-//       const months = [
-//         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-//         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-//       ];
-//
-//       const day = date.getDate();
-//       const month = months[date.getMonth()];
-//       const year = date.getFullYear();
-//
-//       return `${day} ${month}, ${year}`;
-//     } catch (error) {
-//       console.error("Date formatting error:", error);
-//       return dateString;
-//     }
-//   };
-//
-//   const renderItem = ({ item, index }) => (
-//     <Swipeable
-//       ref={(ref) => {
-//         if (ref) {
-//           swipeableRefs.current.set(item.id, ref);
-//         } else {
-//           swipeableRefs.current.delete(item.id);
-//         }
-//       }}
-//       renderRightActions={() => renderRightActions(item)}
-//       overshootFriction={8}
-//       onSwipeableOpen={() => handleSwipeableOpen(item.id)}
-//       enabled={processingRequest !== item.id}
-//     >
-//       <View style={[styles.card, processingRequest === item.id && styles.processingCard]}>
-//         {index === 0 && (
-//           <View style={styles.instructionContainer}>
-//             <Icon name="swipe" size={20} color="#002957" />
-//             <Text style={styles.instructionText}>Swipe left to approve or reject</Text>
-//           </View>
-//         )}
-//
-//         {processingRequest === item.id ? (
-//           <View style={styles.processingContainer}>
-//             <ActivityIndicator size="large" color="#002957" />
-//             <Text style={styles.processingText}>
-//               {confirmationModal.type === 'approve' ? 'Approving...' : 'Rejecting...'}
-//             </Text>
-//           </View>
-//         ) : (
-//           <>
-//             <View style={styles.cardHeader}>
-//               <View style={styles.avatar}>
-//                 <Icon name="person" size={24} color="#002957" />
-//               </View>
-//               <View style={styles.headerContent}>
-//                 <Text style={styles.name}>{item.user?.name || "N/A"}</Text>
-//                 <View style={styles.dateContainer}>
-//                   <Icon name="event" size={16} color="#6c757d" />
-//                   <Text style={styles.date}>
-//                     {formatDate(item.leavestart)} to {formatDate(item.leaveend)}
-//                   </Text>
-//                 </View>
-//               </View>
-//             </View>
-//
-//             <View style={styles.cardBody}>
-//               <View style={styles.detailRow}>
-//                 <Icon name="work-outline" size={18} color="#6c757d" />
-//                 <Text style={styles.detailText}>
-//                   {item.leavetype} • {item.leavepart}
-//                 </Text>
-//               </View>
-//
-//               <View style={styles.detailRow}>
-//                 <Icon name="chat-bubble-outline" size={18} color="#6c757d" />
-//                 <Text style={styles.detailText}>{item.reason}</Text>
-//               </View>
-//             </View>
-//
-//             <View style={styles.cardFooter}>
-//               <View style={[styles.statusBadge,
-//                 item.leavestatus === "Approve" ? styles.approvedBadge :
-//                 item.leavestatus === "Decline" ? styles.rejectedBadge :
-//                 styles.pendingBadge
-//               ]}>
-//                 <Text style={styles.statusText}>{item.leavestatus || "Pending"}</Text>
-//               </View>
-//               <Text style={styles.applyDate}>
-//                 Applied on {formatDate(item.applydate)}
-//               </Text>
-//             </View>
-//           </>
-//         )}
-//       </View>
-//     </Swipeable>
-//   );
-//
-//   if (loading) {
-//     return (
-//       <View style={styles.loaderContainer}>
-//         <ActivityIndicator size="large" color="#002957" />
-//       </View>
-//     );
-//   }
-//
-//   return (
-//     <GestureHandlerRootView style={styles.container}>
-//       <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim }]}>
-//         <View style={styles.header}>
-//           <Text style={styles.headerTitle}>Leave Requests</Text>
-//           <Text style={styles.headerSubtitle}>
-//             {leaveRequests.length} pending request{leaveRequests.length !== 1 ? 's' : ''}
-//           </Text>
-//         </View>
-//
-//         {leaveRequests.length > 0 ? (
-//           <FlatList
-//             data={leaveRequests}
-//             renderItem={renderItem}
-//             keyExtractor={(item) => item.id.toString()}
-//             contentContainerStyle={styles.listContainer}
-//             showsVerticalScrollIndicator={false}
-//           />
-//         ) : (
-//           <View style={styles.emptyContainer}>
-//             <Icon name="inbox" size={64} color={C.textFaint} />
-//             <Text style={styles.emptyText}>No leave requests available</Text>
-//             <Text style={styles.emptySubtext}>
-//               All leave requests have been processed
-//             </Text>
-//           </View>
-//         )}
-//
-//         {/* Custom Confirmation Modal */}
-//         <Modal
-//           visible={confirmationModal.visible}
-//           transparent={true}
-//           animationType="fade"
-//           onRequestClose={hideConfirmation}
-//         >
-//           <View style={styles.modalOverlay}>
-//             <View style={styles.modalContainer}>
-//               <View style={styles.modalHeader}>
-//                 <Text style={styles.modalTitle}>
-//                   {confirmationModal.type === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
-//                 </Text>
-//                 <TouchableOpacity onPress={hideConfirmation} style={styles.closeButton}>
-//                   <Icon name="close" size={24} color="#002957" />
-//                 </TouchableOpacity>
-//               </View>
-//
-//               <View style={styles.modalBody}>
-//                 <Text style={styles.modalMessage}>
-//                   Are you sure you want to {confirmationModal.type} {confirmationModal.request?.user?.name || 'this employee'}'s leave request?
-//                 </Text>
-//
-//                 {confirmationModal.request && (
-//                   <View style={styles.requestDetails}>
-//                     <Text style={styles.detailLabel}>Leave Type:</Text>
-//                     <Text style={styles.detailValue}>{confirmationModal.request.leavetype}</Text>
-//
-//                     <Text style={styles.detailLabel}>Duration:</Text>
-//                     <Text style={styles.detailValue}>
-//                       {formatDate(confirmationModal.request.leavestart)} to {formatDate(confirmationModal.request.leaveend)}
-//                     </Text>
-//
-//                     <Text style={styles.detailLabel}>Reason:</Text>
-//                     <Text style={styles.detailValue}>{confirmationModal.request.reason}</Text>
-//                   </View>
-//                 )}
-//               </View>
-//
-//               <View style={styles.modalFooter}>
-//                 <TouchableOpacity
-//                   onPress={hideConfirmation}
-//                   style={styles.cancelButton}
-//                 >
-//                   <Text style={styles.cancelButtonText}>Cancel</Text>
-//                 </TouchableOpacity>
-//
-//                 <TouchableOpacity
-//                   onPress={() => {
-//                     if (confirmationModal.type === 'approve') {
-//                       handleApprove(confirmationModal.request);
-//                     } else {
-//                       handleReject(confirmationModal.request);
-//                     }
-//                   }}
-//                   style={[
-//                     styles.confirmButton,
-//                     confirmationModal.type === 'approve' ? styles.approveButton : styles.rejectButton
-//                   ]}
-//                 >
-//                   <Text style={styles.confirmButtonText}>
-//                     {confirmationModal.type === 'approve' ? 'Approve' : 'Reject'}
-//                   </Text>
-//                 </TouchableOpacity>
-//               </View>
-//             </View>
-//           </View>
-//         </Modal>
-//       </Animated.View>
-//     </GestureHandlerRootView>
-//   );
-// };
-//
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#f8f9fa",
-//   },
-//   animatedContainer: {
-//     flex: 1,
-//   },
-//   header: {
-//     padding: 16,
-//     backgroundColor: "white",
-//     borderBottomWidth: 1,
-//     borderBottomColor: "#e9ecef",
-//   },
-//   headerTitle: {
-//     fontSize: 24,
-//     fontWeight: "bold",
-//     color: "#002957",
-//     marginBottom: 4,
-//   },
-//   headerSubtitle: {
-//     fontSize: 14,
-//     color: "#6c757d",
-//   },
-//   listContainer: {
-//     padding: 16,
-//   },
-//   loaderContainer: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   card: {
-//     backgroundColor: "#ffffff",
-//     borderRadius: 16,
-//     padding: 16,
-//     marginBottom: 16,
-//     shadowColor: "#000",
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 8,
-//     elevation: 3,
-//   },
-//   processingCard: {
-//     opacity: 0.8,
-//   },
-//   instructionContainer: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     backgroundColor: "#e9f0f7",
-//     padding: 8,
-//     borderRadius: 8,
-//     marginBottom: 12,
-//   },
-//   instructionText: {
-//     fontSize: 14,
-//     color: "#002957",
-//     marginLeft: 8,
-//     fontWeight: "500",
-//   },
-//   cardHeader: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     marginBottom: 12,
-//   },
-//   avatar: {
-//     width: 40,
-//     height: 40,
-//     borderRadius: 20,
-//     backgroundColor: "#e9f0f7",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     marginRight: 12,
-//   },
-//   headerContent: {
-//     flex: 1,
-//   },
-//   name: {
-//     fontSize: 16,
-//     fontWeight: "600",
-//     color: "#002957",
-//     marginBottom: 4,
-//   },
-//   dateContainer: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//   },
-//   date: {
-//     fontSize: 14,
-//     color: "#6c757d",
-//     marginLeft: 4,
-//   },
-//   cardBody: {
-//     marginBottom: 12,
-//   },
-//   detailRow: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     marginBottom: 8,
-//   },
-//   detailText: {
-//     fontSize: 14,
-//     color: "#495057",
-//     marginLeft: 8,
-//     flex: 1,
-//   },
-//   cardFooter: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//   },
-//   statusBadge: {
-//     paddingHorizontal: 12,
-//     paddingVertical: 6,
-//     borderRadius: 20,
-//   },
-//   pendingBadge: {
-//     backgroundColor: "#fff3cd",
-//   },
-//   approvedBadge: {
-//     backgroundColor: "#d4edda",
-//   },
-//   rejectedBadge: {
-//     backgroundColor: "#f8d7da",
-//   },
-//   statusText: {
-//     fontSize: 12,
-//     fontWeight: "600",
-//     color: "#002957",
-//   },
-//   applyDate: {
-//     fontSize: 12,
-//     color: "#6c757d",
-//   },
-//   actions: {
-//     flexDirection: "column",
-//     alignItems: "center",
-//     height: "44%",
-//     gap: 8,
-//     paddingHorizontal: 10,
-//   },
-//   approve: {
-//     backgroundColor: "#002957",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     width: 80,
-//     height: "100%",
-//     borderTopLeftRadius: 16,
-//     borderBottomLeftRadius: 16,
-//   },
-//   reject: {
-//     backgroundColor: "#1a4a7a",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     width: 80,
-//     height: "100%",
-//     borderTopRightRadius: 16,
-//     borderBottomRightRadius: 16,
-//   },
-//   actionText: {
-//     color: "#fff",
-//     fontSize: 12,
-//     fontWeight: "600",
-//     marginTop: 4,
-//   },
-//   emptyContainer: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//     padding: 40,
-//   },
-//   emptyText: {
-//     fontSize: 18,
-//     fontWeight: "600",
-//     color: "#6c757d",
-//     marginTop: 16,
-//     marginBottom: 8,
-//   },
-//   emptySubtext: {
-//     fontSize: 14,
-//     color: "#adb5bd",
-//     textAlign: "center",
-//   },
-//   processingContainer: {
-//     alignItems: "center",
-//     justifyContent: "center",
-//     padding: 20,
-//   },
-//   processingText: {
-//     marginTop: 10,
-//     fontSize: 16,
-//     color: "#002957",
-//     fontWeight: "500",
-//   },
-//   // Modal styles
-//   modalOverlay: {
-//     flex: 1,
-//     backgroundColor: "rgba(0, 0, 0, 0.5)",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     padding: 20,
-//   },
-//   modalContainer: {
-//     backgroundColor: "white",
-//     borderRadius: 16,
-//     width: "100%",
-//     maxWidth: 400,
-//     overflow: "hidden",
-//   },
-//   modalHeader: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     padding: 16,
-//     borderBottomWidth: 1,
-//     borderBottomColor: "#e9ecef",
-//   },
-//   modalTitle: {
-//     fontSize: 18,
-//     fontWeight: "bold",
-//     color: "#002957",
-//   },
-//   closeButton: {
-//     padding: 4,
-//   },
-//   modalBody: {
-//     padding: 16,
-//   },
-//   modalMessage: {
-//     fontSize: 16,
-//     color: "#495057",
-//     marginBottom: 16,
-//   },
-//   requestDetails: {
-//     backgroundColor: "#f8f9fa",
-//     borderRadius: 8,
-//     padding: 12,
-//   },
-//   detailLabel: {
-//     fontSize: 14,
-//     fontWeight: "600",
-//     color: "#002957",
-//     marginTop: 8,
-//   },
-//   detailValue: {
-//     fontSize: 14,
-//     color: "#495057",
-//     marginBottom: 4,
-//   },
-//   modalFooter: {
-//     flexDirection: "row",
-//     justifyContent: "flex-end",
-//     padding: 16,
-//     borderTopWidth: 1,
-//     borderTopColor: "#e9ecef",
-//   },
-//   cancelButton: {
-//     paddingHorizontal: 16,
-//     paddingVertical: 10,
-//     borderRadius: 8,
-//     marginRight: 12,
-//     backgroundColor: "#f8f9fa",
-//   },
-//   cancelButtonText: {
-//     color: "#6c757d",
-//     fontWeight: "600",
-//   },
-//   confirmButton: {
-//     paddingHorizontal: 16,
-//     paddingVertical: 10,
-//     borderRadius: 8,
-//   },
-//   approveButton: {
-//     backgroundColor: "#002957",
-//   },
-//   rejectButton: {
-//     backgroundColor: "#dc3545",
-//   },
-//   confirmButtonText: {
-//     color: "white",
-//     fontWeight: "600",
-//   },
-// });
-//
-// export default LeaveRequest;

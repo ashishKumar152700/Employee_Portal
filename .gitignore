@@ -34,3 +34,6 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 essMobileApp.zip
+
+# Local secrets (keystore passwords)
+*.local.cmd

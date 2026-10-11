@@ -38,3 +38,6 @@ essMobileApp.zip
 # EAS upload only (not needed for the build)
 essp with asset mod/
 *.log
+
+# Local secrets (keystore passwords)
+*.local.cmd
